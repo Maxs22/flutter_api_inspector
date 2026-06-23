@@ -1,0 +1,33 @@
+name: flutter_api_inspector
+description: >-
+  Manual API instrumentation and a debug-only in-app overlay timeline for
+  Flutter. Developers call ApiTrace.call(name, …, execute: …) at the call
+  site; the package records each call into an in-memory ring buffer and
+  renders a floating action button plus panel that lists calls in
+  chronological order with status, duration, and captured request /
+  response fields. The overlay is guarded by kDebugMode and tree-shaken
+  from flutter build --release binaries.
+version: 0.1.0
+publish_to: none
+
+environment:
+  sdk: ">=3.2.0 <4.0.0"
+  flutter: ">=3.16.0"
+
+dependencies:
+  flutter:
+    sdk: flutter
+
+dev_dependencies:
+  flutter_test:
+    sdk: flutter
+  # Justification: package:flutter_lints provides the official Flutter
+  # team lint ruleset (include: package:flutter_lints/flutter.yaml).
+  # This is the de-facto standard lint baseline for Dart/Flutter packages
+  # and is included in every flutter create --template=package scaffold.
+  # It is required by analysis_options.yaml and is the only non-SDK
+  # dependency in the package.
+  flutter_lints: ^3.0.0
+
+flutter:
+  uses-material-design: true
