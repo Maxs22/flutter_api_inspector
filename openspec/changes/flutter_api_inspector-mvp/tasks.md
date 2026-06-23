@@ -166,7 +166,7 @@ the spec (strict TDD applies to behavior, not to `pubspec.yaml`).
   - **Acceptance**: `dart analyze` clean; the barrel compiles against the empty `lib/src/` (with stub `export` lines temporarily pointing to placeholder paths that the Phase B + C + D tasks will create).
   - **Workload estimate**: ~20 lines.
 
-- [ ] **TASK-005: Run `dart format` and `dart analyze` baseline (expect clean)**
+- [x] **TASK-005: Run `dart format` and `dart analyze` baseline (expect clean)**
   - **What**: After TASK-001..004 land, run `dart format --set-exit-if-changed .` and `dart analyze` and confirm both are no-ops. Record the output in `apply-progress.md`.
   - **Why**: Establishes the lint/format baseline so subsequent tasks can be diffed against it. Per `openspec/config.yaml` → `quality.lint_commands` and `quality.format_commands`, both are required to be clean before `verify-report.md` can be green.
   - **Files**: (no production changes) → outputs are recorded in `openspec/changes/flutter_api_inspector-mvp/apply-progress.md`.
