@@ -5,7 +5,7 @@
 - **Branch**: `change/01-skeleton-model`
 - **Started**: 2026-06-23
 - **Strict TDD**: enforced (RED → GREEN → TRIANGULATE → REFACTOR for every behavior-shipping task)
-- **Status**: in-progress
+- **Status**: complete
 
 ## Scope of this PR
 
@@ -167,3 +167,48 @@ cycle below.
   - `ApiTraceRecord` (TASK-010)
 - **Internals not re-exported**: `Timeline` (TASK-012), `id` generator (TASK-008), `bodyCodec` (TASK-011).
 - **Commit**: `092e91d` — `feat(barrel): add public barrel lib/flutter_api_inspector.dart (TASK-004)`
+
+## TASK-005: Run dart format and dart analyze baseline (expect clean)
+
+- **REQ(s)**: (no spec REQ; baseline is the lint/format contract for verify-report.md to be green)
+- **Files**: (no production changes; outputs recorded here)
+- **No TDD cycle**: pure infrastructure
+- **Verification** (all three no-ops):
+  - `dart format --set-exit-if-changed .` → `Formatted 16 files (0 changed) in 0.07 seconds.` (exit 0)
+  - `dart analyze` → `No issues found!` (exit 0)
+  - `flutter test` → 60 tests pass, 0 failures, 0 errors (exit 0)
+- **Files covered by the baseline** (16 total):
+  - pubspec.yaml, analysis_options.yaml, README.md, CHANGELOG.md, LICENSE
+  - lib/flutter_api_inspector.dart
+  - lib/src/{detail,outcome,id,body_codec}.dart
+  - lib/src/model/{api_trace_record,api_trace_request,api_trace_response,timeline}.dart
+  - test/{detail,outcome,id,body_codec,timeline,api_trace_types,api_trace_record}_test.dart
+- **Commit**: `23ac2db` — `chore(sdd): record TASK-005 baseline (dart format + dart analyze clean)`
+
+## PR 1 final summary
+
+- **Commits added**: 12 (TASK-001..012, plus the TASK-005 baseline commit that includes the apply-progress.md)
+- **Test count**: 60 (all green)
+- **`dart analyze`**: clean
+- **`dart format --set-exit-if-changed .`**: no-op
+- **REQs covered by tests in this PR**:
+  - REQ-API-004 (default detail set = {minimal}) — via `test/detail_test.dart`
+  - REQ-MODEL-001 (ApiTraceRecord schema) — via `test/api_trace_types_test.dart`, `test/api_trace_record_test.dart`
+  - REQ-MODEL-002 (ApiTraceOutcome enum) — via `test/outcome_test.dart`
+  - REQ-MODEL-003 (ring buffer capacity) — via `test/timeline_test.dart`
+  - REQ-MODEL-004 (newest-first ordering) — via `test/timeline_test.dart`
+  - REQ-MODEL-005 (privacy-conscious default) — via `test/api_trace_record_test.dart`
+  - REQ-MODEL-006 (response body truncation) — via `test/body_codec_test.dart`
+  - REQ-MODEL-007 (reentrancy preserves records) — via `test/timeline_test.dart` (reentrancy scenario)
+  - REQ-MODEL-008 (in-memory only) — via `test/timeline_test.dart` (process-restart scenario)
+- **REQs not covered by tests in this PR** (deferred to PR 2/3):
+  - REQ-API-001 (async call signature) — PR 2 (TASK-014)
+  - REQ-API-002 (master switch short-circuit) — PR 2 (TASK-015)
+  - REQ-API-003 (overlay position/label enums) — PR 2 (TASK-013)
+  - REQ-API-005 (per-call detailOverride) — PR 2 (TASK-016)
+  - REQ-API-006 (kDebugMode default) — PR 2 (TASK-015)
+  - REQ-API-007 (error capture; the fromCapture outcome derivation IS tested in PR 1, the full error-capture contract is PR 2) — partially covered in PR 1
+  - REQ-API-008 (returned id is record's id) — PR 2 (TASK-014)
+  - REQ-API-009 (reentrancy preserves records) — PR 2 (TASK-017)
+  - REQ-UI-001..008 — PR 3 (TASK-018..025)
+- **Out of scope (PR 4)**: TASK-026..030 (example app, acceptance evidence)
