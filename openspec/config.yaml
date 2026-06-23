@@ -5,7 +5,7 @@
 # Edit with care. Re-run /sdd-init only when the stack or testing surface
 # changes substantially; otherwise update fields directly.
 
-schema_version: '1.0'
+schema_version: "1.0"
 
 project:
   name: flutter_api_inspector
