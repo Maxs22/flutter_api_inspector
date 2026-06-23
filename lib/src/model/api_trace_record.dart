@@ -12,6 +12,7 @@
 // (REQ-MODEL-001, REQ-MODEL-005) and `design.md` for the locked
 // semantics and the factory pseudocode.
 
+import 'package:flutter_api_inspector/src/body_codec.dart';
 import 'package:flutter_api_inspector/src/detail.dart';
 import 'package:flutter_api_inspector/src/id.dart';
 import 'package:flutter_api_inspector/src/model/api_trace_request.dart';
@@ -166,7 +167,7 @@ final class ApiTraceRecord {
     final ApiTraceResponse? redactedResponse;
     if (keepResponseObject && response != null) {
       final bodyForStorage = keepResponseBody
-          ? _truncateBody(response.responseBody, maxResponseBodyBytes)
+          ? truncate(response.responseBody, maxResponseBodyBytes)
           : null;
       final withBody = response.copyWith(
         responseBody: bodyForStorage,
@@ -223,26 +224,4 @@ ApiTraceOutcome _deriveOutcome({
   final code = response?.statusCode ?? 0;
   if (code >= 400 && code < 600) return ApiTraceOutcome.error;
   return ApiTraceOutcome.success;
-}
-
-/// Truncates the response body to `maxBytes`. The full bodyCodec
-/// lives in `body_codec.dart` (TASK-011); this inline helper keeps
-/// `fromCapture` self-contained for PR 1 and is replaced by a call
-/// to `bodyCodec.truncate` in the TASK-011 refactor.
-///
-/// Format contract (kept stable for TASK-011 to assert):
-/// - `null` body -> `null`.
-/// - `String` body -> prefix of length `min(body.length, maxBytes)`.
-/// - `List<int>` body -> prefix of length `min(bytes.length, maxBytes)`.
-/// - Other -> `Object.toString()` then prefix-truncated.
-Object? _truncateBody(Object? body, int maxBytes) {
-  if (body == null) return null;
-  if (body is String) {
-    return body.length <= maxBytes ? body : body.substring(0, maxBytes);
-  }
-  if (body is List<int>) {
-    return body.length <= maxBytes ? body : body.sublist(0, maxBytes);
-  }
-  final s = body.toString();
-  return s.length <= maxBytes ? s : s.substring(0, maxBytes);
 }
