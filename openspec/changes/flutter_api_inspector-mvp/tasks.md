@@ -122,7 +122,7 @@ configuration, the pub.dev-facing docs, the barrel export, and a
 tasks — they are pure infrastructure with no behavior to test against
 the spec (strict TDD applies to behavior, not to `pubspec.yaml`).
 
-- [ ] **TASK-001: Create `pubspec.yaml`**
+- [x] **TASK-001: Create `pubspec.yaml`**
   - **What**: Add the package manifest with metadata, runtime constraints, and the `flutter` / `flutter_test` dependencies. No third-party packages.
   - **Why**: Establishes the package identity (per `openspec/AGENTS.md` rule 10). Pins the runtime to `flutter >=3.16.0`, `dart >=3.2.0`, Android `minSdkVersion 21`, iOS `deployment_target 12.0` (per `openspec/config.yaml` → `stack.minimum_runtime`).
   - **Files**: `pubspec.yaml`
@@ -137,7 +137,7 @@ the spec (strict TDD applies to behavior, not to `pubspec.yaml`).
   - **Acceptance**: `flutter pub get` succeeds against the manifest; no `package:dio`, `package:http`, `package:uuid`, or `package:collection`.
   - **Workload estimate**: ~35 lines.
 
-- [ ] **TASK-002: Create `analysis_options.yaml` and `.gitignore`**
+- [x] **TASK-002: Create `analysis_options.yaml` and `.gitignore`**
   - **What**: Add strict lint configuration that surfaces issues early, and a `.gitignore` that ignores `.dart_tool/`, `.packages`, `build/`, `pubspec.lock` (the package convention is to commit `pubspec.lock` only for apps, not libraries — confirm with the project policy in `openspec/AGENTS.md`).
   - **Why**: `dart analyze` is the primary lint/typecheck command (per `openspec/config.yaml` → `quality.lint`). A strict baseline catches bugs before `flutter test` runs. The `.gitignore` is needed because `flutter pub get` produces a `.dart_tool/` directory.
   - **Files**: `analysis_options.yaml`, `.gitignore`
@@ -147,7 +147,7 @@ the spec (strict TDD applies to behavior, not to `pubspec.yaml`).
   - **Acceptance**: `dart analyze` returns "No issues found" against an empty `lib/` and `test/`.
   - **Workload estimate**: ~45 lines.
 
-- [ ] **TASK-003: Create `README.md`, `CHANGELOG.md`, and `LICENSE` (MIT)**
+- [x] **TASK-003: Create `README.md`, `CHANGELOG.md`, and `LICENSE` (MIT)**
   - **What**: Add the pub.dev-facing documentation. `README.md` explains what the package is, shows a 10-line `ApiTrace.call` example, links to `example/`, and documents the four guard call sites + the `enabled` opt-out. `CHANGELOG.md` starts at `0.1.0` with the MVP notes. `LICENSE` is the full MIT text.
   - **Why**: Required by `openspec/AGENTS.md` rule 10 and pub.dev conventions. The MIT license resolves the proposal's open question #8 (locked: MIT per the user's proposal answer round).
   - **Files**: `README.md`, `CHANGELOG.md`, `LICENSE`
@@ -157,7 +157,7 @@ the spec (strict TDD applies to behavior, not to `pubspec.yaml`).
     - `LICENSE` is the standard MIT text with copyright `2026, the flutter_api_inspector authors`.
   - **Workload estimate**: ~115 lines.
 
-- [ ] **TASK-004: Create `lib/flutter_api_inspector.dart` barrel export**
+- [x] **TASK-004: Create `lib/flutter_api_inspector.dart` barrel export**
   - **What**: Add the public barrel that re-exports the public surface. The barrel is the only public file in `lib/`; everything else lives under `lib/src/`.
   - **Why**: A single import surface (`package:flutter_api_inspector/flutter_api_inspector.dart`) is the pub.dev convention. The barrel is the only file the consumer ever imports.
   - **Files**: `lib/flutter_api_inspector.dart`
@@ -184,7 +184,7 @@ the id generator, the body codec, the `fromCapture` factory that
 enforces the privacy default, and the timeline ring buffer. Every
 task follows RED → GREEN → TRIANGULATE → REFACTOR.
 
-- [ ] **TASK-006: Implement `ApiTraceDetail` enum (REQ-API-004)**
+- [x] **TASK-006: Implement `ApiTraceDetail` enum (REQ-API-004)**
   - **What**: Create `lib/src/detail.dart` with `enum ApiTraceDetail { minimal, headers, request, response, full }` and `test/detail_test.dart` asserting the enum shape and ordering.
   - **Why**: REQ-API-004 requires the default `details` set to be `{ApiTraceDetail.minimal}` only; the enum shape must be locked before the config or record types can be built.
   - **Files**: `lib/src/detail.dart`, `test/detail_test.dart`
@@ -196,7 +196,7 @@ task follows RED → GREEN → TRIANGULATE → REFACTOR.
   - **Acceptance**: `test/detail_test.dart` passes; `dart analyze` clean.
   - **Workload estimate**: ~35 lines.
 
-- [ ] **TASK-007: Implement `ApiTraceOutcome` enum (REQ-MODEL-002)**
+- [x] **TASK-007: Implement `ApiTraceOutcome` enum (REQ-MODEL-002)**
   - **What**: Create `lib/src/outcome.dart` with `enum ApiTraceOutcome { success, error, cancelled }` and `test/outcome_test.dart` asserting the three-case shape.
   - **Why**: REQ-MODEL-002 requires the three-state outcome. `cancelled` is reserved for future use; v1 never produces it, but the enum shape is locked.
   - **Files**: `lib/src/outcome.dart`, `test/outcome_test.dart`
@@ -208,7 +208,7 @@ task follows RED → GREEN → TRIANGULATE → REFACTOR.
   - **Acceptance**: `test/outcome_test.dart` passes; `dart analyze` clean.
   - **Workload estimate**: ~25 lines.
 
-- [ ] **TASK-008: Implement `id.dart` id generator (no `package:uuid`)**
+- [x] **TASK-008: Implement `id.dart` id generator (no `package:uuid`)**
   - **What**: Create `lib/src/id.dart` exporting a single top-level function `String generateId()` that returns 32 hex characters from `Random.secure().nextBytes(16)`. Add `test/id_test.dart` asserting the format and uniqueness.
   - **Why**: Helper for `ApiTraceRecord.id` (REQ-MODEL-001). Per the proposal acceptance criteria and `design.md` Q6, the package must not depend on `package:uuid`.
   - **Files**: `lib/src/id.dart`, `test/id_test.dart`
@@ -220,7 +220,7 @@ task follows RED → GREEN → TRIANGULATE → REFACTOR.
   - **Acceptance**: `test/id_test.dart` passes; 10,000 generations produce 10,000 unique ids; format is exactly 32 lowercase hex chars.
   - **Workload estimate**: ~55 lines.
 
-- [ ] **TASK-009: Implement `ApiTraceRequest` and `ApiTraceResponse` types (REQ-MODEL-001)**
+- [x] **TASK-009: Implement `ApiTraceRequest` and `ApiTraceResponse` types (REQ-MODEL-001)**
   - **What**: Create `lib/src/model/api_trace_request.dart` (`ApiTraceRequest { Map<String,String> headers; Object? body; }`) and `lib/src/model/api_trace_response.dart` (`ApiTraceResponse { int statusCode; Map<String,String> requestHeaders; Map<String,String> responseHeaders; Object? requestBody; Object? responseBody; }`). Both are `final` classes with `const` constructors and `copyWith` helpers (used by the `fromCapture` factory in TASK-010).
   - **Why**: REQ-MODEL-001 requires the schema. The `copyWith` helpers are needed by TASK-010 to redact fields without losing other fields.
   - **Files**: `lib/src/model/api_trace_request.dart`, `lib/src/model/api_trace_response.dart`, `test/api_trace_types_test.dart`
@@ -232,7 +232,7 @@ task follows RED → GREEN → TRIANGULATE → REFACTOR.
   - **Acceptance**: `test/api_trace_types_test.dart` passes; `dart analyze` clean; `==` and `hashCode` not required (per design.md, records are identity-compared).
   - **Workload estimate**: ~100 lines.
 
-- [ ] **TASK-010: Implement `ApiTraceRecord` and `fromCapture` factory (REQ-MODEL-001, REQ-MODEL-005)**
+- [x] **TASK-010: Implement `ApiTraceRecord` and `fromCapture` factory (REQ-MODEL-001, REQ-MODEL-005)**
   - **What**: Create `lib/src/model/api_trace_record.dart` with the immutable `ApiTraceRecord` (all `final` fields per the design) and a `factory ApiTraceRecord.fromCapture({...})` that nulls out `request` / `response` body and header fields whose detail level is not in the captured detail set. The factory is the single chokepoint for the privacy default (per `design.md` → *Privacy-conscious default enforcement*).
   - **Why**: REQ-MODEL-001 requires the schema; REQ-MODEL-005 requires the privacy default (`{minimal}` capture → no body, no headers).
   - **Files**: `lib/src/model/api_trace_record.dart`, `test/api_trace_record_test.dart`
@@ -248,7 +248,7 @@ task follows RED → GREEN → TRIANGULATE → REFACTOR.
     - `dart analyze` clean.
   - **Workload estimate**: ~180 lines.
 
-- [ ] **TASK-011: Implement `body_codec.dart` (REQ-MODEL-006)**
+- [x] **TASK-011: Implement `body_codec.dart` (REQ-MODEL-006)**
   - **What**: Create `lib/src/body_codec.dart` exporting `truncateResponseBody(Object? body, int maxBytes)` (or a top-level `bodyCodec` namespace). For `String` bodies, the function returns the prefix of length `min(body.length, maxBytes)`. For `List<int>` bodies (bytes), it returns the prefix of length `min(bytes.length, maxBytes)`. For any other type, it serializes via `Object.toString()` and truncates.
   - **Why**: REQ-MODEL-006 requires response body truncation at `maxResponseBodyBytes` (default 4 KB). The codec is a small, pure helper — easy to unit-test independently of the API.
   - **Files**: `lib/src/body_codec.dart`, `test/body_codec_test.dart`
@@ -263,7 +263,7 @@ task follows RED → GREEN → TRIANGULATE → REFACTOR.
     - `dart analyze` clean.
   - **Workload estimate**: ~95 lines.
 
-- [ ] **TASK-012: Implement `Timeline` ring buffer (REQ-MODEL-003, REQ-MODEL-004, REQ-MODEL-007, REQ-MODEL-008)**
+- [x] **TASK-012: Implement `Timeline` ring buffer (REQ-MODEL-003, REQ-MODEL-004, REQ-MODEL-007, REQ-MODEL-008)**
   - **What**: Create `lib/src/model/timeline.dart` with the `Timeline` class: `final int capacity; final List<ApiTraceRecord> records; final ValueNotifier<String?> latest;` plus `void append(ApiTraceRecord r)` and `@visibleForTesting void clear()`. `append` is `_records.insert(0, r); if (_records.length > capacity) _records.removeLast(); latest.value = r.id;`. The list is exposed via `UnmodifiableListView` to prevent external mutation.
   - **Why**: REQ-MODEL-003 requires capacity-based eviction; REQ-MODEL-004 requires newest-first ordering with insertion-order tie-break; REQ-MODEL-007 requires reentrancy (handled implicitly by the single-isolate event-loop, but the append path is exercised by the test); REQ-MODEL-008 requires in-memory only (a process-restart reset is a test-time check).
   - **Files**: `lib/src/model/timeline.dart`, `test/timeline_test.dart`
