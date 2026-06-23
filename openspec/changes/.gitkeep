@@ -1,0 +1,3 @@
+# Placeholder so git tracks the empty openspec/changes/ directory.
+# The first sdd-proposal phase will create openspec/changes/<change-name>/
+# with the standard SDD artifacts (proposal.md, specs/, design.md, tasks.md).
