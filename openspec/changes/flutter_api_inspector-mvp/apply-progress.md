@@ -521,6 +521,19 @@ in-process contract).
 
 **No CRITICAL or BLOCKED deviations.**
 
+### Cross-cutting deviations (post-PR 3, 2026-06-24)
+
+7. **MINOR (identity drift)** — Two PR 3 finalization commits used the user's personal git identity instead of the locked Pi harness identity:
+
+   - `3dfb5db` `chore(config): sync active_change and chained PR status in config.yaml` — author `Maximiliano Mendez <mrmendez.dev@gmail.com>`
+   - `8d738ef` `docs(sdd): record TASK-025 commit hash and add PR 3 final summary in apply-progress.md` — author `Maximiliano Mendez <mrmendez.dev@gmail.com>`
+
+   **Root cause:** `git config user.name` / `user.email` were not set to the Pi harness identity on this host when those two commits were authored. The 8 behavior-shipping commits (TASK-018..025) correctly use `el Gentleman <el-gentleman@pi-harness.local>`. The two PR 3 verify commits (`ee5c9bb`, `50811e6`) were also authored correctly. Subsequent commits on PR 4 (`b8261a9` TASK-026, `9a9a78b` TASK-027) also use the correct harness identity, so the drift is a one-time orchestrator gap, not a recurring pattern.
+
+   **Resolution:** Local git config has been set to the harness identity (`git config --local user.name "el Gentleman" && git config --local user.email "el-gentleman@pi-harness.local"`) on 2026-06-24. The historical drift in `3dfb5db` and `8d738ef` is accepted as a known and acknowledged deviation, NOT rewritten. The deviation has no impact on the strict-TDD contract (both commits are documentation / metadata, not behavior), the spec scenarios (no REQ depends on the commit author), or the build artifacts (no `git log` query gates the release).
+
+   **Orchestrator lesson:** future `sdd-apply` agent briefs in this project MUST include an explicit "set git config first" precondition, or use `--local` config explicitly to avoid the host-level identity leaking into feature-branch commits.
+
 ### PR 3 boundary check
 
 - 8 task commits + 1 closeout `chore(sdd)` follow-up = 9 commits on `change/03-overlay-ui` (exact count to be confirmed in PR 3 verify gate)
@@ -529,6 +542,19 @@ in-process contract).
 - All 8 in-scope REQs (REQ-UI-001..008) have named tests; no REQ from PR 1 (REQ-API-004, REQ-MODEL-001..008) or PR 2 (REQ-API-001..009) regressed (verified by `flutter test` total: 153 = 60 + 38 + 55; the 55 PR 3 new tests + the 2 TASK-025 triangulation tests are additive, not replacing)
 - `git log --format='%an <%ae>' change/03-overlay-ui ^main` confirms all commits use `el Gentleman <el-gentleman@pi-harness.local>`
 
-### Next action
+### Next action (superseded 2026-06-24)
 
 `change/03-overlay-ui` is ready for the **PR 3 `sdd-verify` gate** (independent run + verify-report.md PR 3 section + recommended merge-to-main). After merge, the `sdd-apply` agent for PR 4 (TASK-026..030: example app + acceptance evidence) can begin on a new branch `change/04-example-and-acceptance`.
+
+### Live state (2026-06-24)
+
+The above "Next action" was completed in subsequent sessions:
+
+- **2026-06-24** — PR 3 verify gate completed by the `sdd-verify` subagent. Verdict: **GREEN-WITH-MINOR** (3 MINOR findings; the identity-drift MINOR is now documented as item #7 above). Recommendation: `merge-to-main-then-sdd-apply-pr4`. New verify-report.md section appended (commits `ee5c9bb` + `50811e6`).
+- **2026-06-24** — PR 3 merged to `main` (commit `284d00c Merge PR 3 of 4: overlay UI (TASK-018..025, REQ-UI-001..008)`, author `el Gentleman <el-gentleman@pi-harness.local>`). The two identity-drift commits (`3dfb5db`, `8d738ef`) are now in the history of `main` as part of the merge.
+- **2026-06-24** — PR 4 work started on `change/04-example-and-acceptance`:
+  - `b8261a9` `feat(example): add example/pubspec.yaml with local-path dep (TASK-026)` — author `el Gentleman <el-gentleman@pi-harness.local>` (identity-drift resolved going forward)
+  - `9a9a78b` `feat(example): add example/lib/main.dart with stub + real httpbin call (TASK-027)` — author `el Gentleman <el-gentleman@pi-harness.local>`
+- **2026-06-24** — Local git config set to the harness identity on this host (per deviation #7 resolution).
+
+**Remaining PR 4 scope:** TASK-028 (release-build smoke test, deferred to CI), TASK-029 (final TDD evidence table), TASK-030 (final verify-report.md + success metrics 1-5).
