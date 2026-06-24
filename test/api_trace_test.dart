@@ -340,4 +340,204 @@ void main() {
       );
     });
   });
+
+  group('ApiTrace.call — error capture (REQ-API-007)', () {
+    test('Thrown exception captured as error', () async {
+      // An exception thrown by execute is captured in record.error
+      // and the outcome is error. The call() future resolves to
+      // a non-null id (we do not rethrow).
+      final id = await ApiTrace.call(
+        'x',
+        method: 'GET',
+        url: Uri.parse('https://x/'),
+        execute: () async {
+          throw const FormatException('boom');
+        },
+      );
+      expect(id, isNotNull);
+      final record = ApiTrace.timeline.records.first;
+      expect(record.outcome, ApiTraceOutcome.error);
+      expect(record.error, isA<FormatException>());
+      expect((record.error! as FormatException).message, 'boom');
+    });
+
+    test('4xx response captured as error', () async {
+      // A response with a 4xx status code produces
+      // outcome = error. The response.statusCode is preserved.
+      final id = await ApiTrace.call(
+        'x',
+        method: 'GET',
+        url: Uri.parse('https://x/'),
+        execute: happyExecute(statusCode: 404),
+      );
+      expect(id, isNotNull);
+      final record = ApiTrace.timeline.records.first;
+      expect(record.outcome, ApiTraceOutcome.error);
+      expect(record.statusCode, 404);
+      expect(record.error, isNull);
+    });
+
+    test('5xx response captured as error', () async {
+      final id = await ApiTrace.call(
+        'x',
+        method: 'GET',
+        url: Uri.parse('https://x/'),
+        execute: happyExecute(statusCode: 503),
+      );
+      expect(id, isNotNull);
+      final record = ApiTrace.timeline.records.first;
+      expect(record.outcome, ApiTraceOutcome.error);
+      expect(record.statusCode, 503);
+    });
+
+    test('2xx response captured as success', () async {
+      final id = await ApiTrace.call(
+        'x',
+        method: 'GET',
+        url: Uri.parse('https://x/'),
+        execute: happyExecute(statusCode: 200),
+      );
+      expect(id, isNotNull);
+      final record = ApiTrace.timeline.records.first;
+      expect(record.outcome, ApiTraceOutcome.success);
+      expect(record.statusCode, 200);
+      expect(record.error, isNull);
+    });
+
+    test('TRIANGULATE: 1xx, 3xx are success', () async {
+      // 1xx (informational) and 3xx (redirection) are success.
+      for (final code in <int>[100, 199, 200, 299, 300, 399]) {
+        final id = await ApiTrace.call(
+          'x',
+          method: 'GET',
+          url: Uri.parse('https://x/'),
+          execute: happyExecute(statusCode: code),
+        );
+        final record = ApiTrace.timeline.records.first;
+        expect(record.outcome, ApiTraceOutcome.success,
+            reason: 'statusCode=$code should be success');
+        expect(record.statusCode, code);
+        expect(id, isNotNull);
+        ApiTrace.timeline.clear();
+      }
+    });
+
+    test('TRIANGULATE: 4xx and 5xx are both error (REQ-UI-008)', () async {
+      // 4xx and 5xx share the same outcome = error. The UI
+      // colors them the same red (REQ-UI-008).
+      for (final code in <int>[400, 404, 499, 500, 503, 599]) {
+        final id = await ApiTrace.call(
+          'x',
+          method: 'GET',
+          url: Uri.parse('https://x/'),
+          execute: happyExecute(statusCode: code),
+        );
+        final record = ApiTrace.timeline.records.first;
+        expect(record.outcome, ApiTraceOutcome.error,
+            reason: 'statusCode=$code should be error');
+        expect(record.statusCode, code);
+        expect(id, isNotNull);
+        ApiTrace.timeline.clear();
+      }
+    });
+  });
+
+  group('ApiTrace.call — reentrancy (REQ-API-009, REQ-MODEL-007)', () {
+    test('Reentrant call produces two distinct records', () async {
+      // The outer execute awaits a second ApiTrace.call before
+      // returning. Both calls produce a record; the two records
+      // have distinct ids.
+      String? innerId;
+      final outerId = await ApiTrace.call(
+        'outer',
+        method: 'GET',
+        url: Uri.parse('https://x/outer'),
+        execute: () async {
+          innerId = await ApiTrace.call(
+            'inner',
+            method: 'GET',
+            url: Uri.parse('https://x/inner'),
+            execute: happyExecute(),
+          );
+          return const ApiTraceResponse(statusCode: 200);
+        },
+      );
+      expect(outerId, isNotNull);
+      expect(innerId, isNotNull);
+      expect(outerId, isNot(equals(innerId)));
+      expect(ApiTrace.timeline.size, 2);
+      // Both records have their own duration and outcome.
+      final outer =
+          ApiTrace.timeline.records.firstWhere((r) => r.id == outerId);
+      final inner =
+          ApiTrace.timeline.records.firstWhere((r) => r.id == innerId);
+      expect(outer.outcome, ApiTraceOutcome.success);
+      expect(inner.outcome, ApiTraceOutcome.success);
+      expect(outer.duration.isNegative, isFalse);
+      expect(inner.duration.isNegative, isFalse);
+    });
+
+    test('Two concurrent calls each produce a record', () async {
+      // Two ApiTrace.call invocations launched without awaiting
+      // the first before starting the second. The natural
+      // single-isolate event-loop semantics interleave them; each
+      // produces exactly one record with a distinct id.
+      final f1 = ApiTrace.call(
+        'a',
+        method: 'GET',
+        url: Uri.parse('https://x/a'),
+        execute: () async {
+          // Yield to the event loop so f2 can start.
+          await Future<void>.delayed(Duration.zero);
+          return const ApiTraceResponse(statusCode: 200);
+        },
+      );
+      final f2 = ApiTrace.call(
+        'b',
+        method: 'GET',
+        url: Uri.parse('https://x/b'),
+        execute: () async {
+          await Future<void>.delayed(Duration.zero);
+          return const ApiTraceResponse(statusCode: 200);
+        },
+      );
+      final id1 = await f1;
+      final id2 = await f2;
+      expect(id1, isNotNull);
+      expect(id2, isNotNull);
+      expect(id1, isNot(equals(id2)));
+      expect(ApiTrace.timeline.size, 2);
+    });
+
+    test('TRIANGULATE: reentrant error path captures both errors', () async {
+      // The outer execute awaits a second ApiTrace.call whose
+      // execute throws. Both records are captured; both have
+      // outcome = error.
+      final outerId = await ApiTrace.call(
+        'outer',
+        method: 'GET',
+        url: Uri.parse('https://x/outer'),
+        execute: () async {
+          await ApiTrace.call(
+            'inner',
+            method: 'GET',
+            url: Uri.parse('https://x/inner'),
+            execute: () async {
+              throw const FormatException('inner boom');
+            },
+          );
+          return const ApiTraceResponse(statusCode: 200);
+        },
+      );
+      expect(outerId, isNotNull);
+      expect(ApiTrace.timeline.size, 2);
+      final outer =
+          ApiTrace.timeline.records.firstWhere((r) => r.id == outerId);
+      final inner =
+          ApiTrace.timeline.records.firstWhere((r) => r.id != outerId);
+      expect(outer.outcome, ApiTraceOutcome.success);
+      expect(inner.outcome, ApiTraceOutcome.error);
+      expect(inner.error, isA<FormatException>());
+    });
+  });
 }
