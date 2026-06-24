@@ -20,6 +20,7 @@ import 'package:flutter_api_inspector/src/overlay/fab_position.dart';
 import 'package:flutter_api_inspector/src/overlay/fab.dart';
 import 'package:flutter_api_inspector/src/overlay/timeline_row.dart';
 import 'package:flutter_api_inspector/src/overlay/timeline_panel.dart';
+import 'package:flutter_api_inspector/src/overlay/detail_screen.dart';
 
 void main() {
   group('outcomeColor helper (REQ-UI-008)', () {
@@ -737,6 +738,169 @@ void main() {
       await tester.pumpAndSettle();
       expect(find.text('getUser'), findsOneWidget);
       expect(find.text('listOrders'), findsNothing);
+    });
+  });
+
+  group('ApiTraceDetailScreen widget (REQ-UI-007)', () {
+    // Helper: build a record with optional response and
+    // request payloads.
+    ApiTraceRecord record({
+      String name = 'listOrders',
+      String method = 'GET',
+      Uri? url,
+      int? statusCode = 200,
+      ApiTraceOutcome outcome = ApiTraceOutcome.success,
+      ApiTraceRequest? request,
+      ApiTraceResponse? response,
+      Object? error,
+    }) {
+      final effectiveUrl =
+          url ?? Uri.parse('https://api.example.com/v1/orders');
+      final start = DateTime(2026, 1, 1, 12, 0, 0);
+      return ApiTraceRecord(
+        id: 'id',
+        name: name,
+        startedAt: start,
+        completedAt: start.add(const Duration(milliseconds: 50)),
+        method: method,
+        url: effectiveUrl,
+        statusCode: statusCode,
+        duration: const Duration(milliseconds: 50),
+        outcome: outcome,
+        capturedDetails: const <ApiTraceDetail>{
+          ApiTraceDetail.minimal,
+          ApiTraceDetail.headers,
+          ApiTraceDetail.response,
+        },
+        request: request,
+        response: response,
+        error: error,
+        extra: const <String, Object?>{},
+      );
+    }
+
+    Widget detailHost(ApiTraceRecord r) {
+      return MaterialApp(
+        home: ApiTraceDetailScreen(record: r),
+      );
+    }
+
+    testWidgets('detail screen shows name, method, url, statusCode, duration',
+        (tester) async {
+      // RED: import target missing for `detail_screen.dart`.
+      // REQ-UI-007: the read-only detail screen shows the
+      // captured fields.
+      final r = record();
+      await tester.pumpWidget(detailHost(r));
+      // The name appears in both the AppBar title and the
+      // body Overview section. find.text matches both, so we
+      // use findsNWidgets(2) to assert at least one body
+      // occurrence (the AppBar is a fixed location).
+      expect(find.text('listOrders'), findsNWidgets(2));
+      expect(find.textContaining('GET'), findsWidgets);
+      expect(find.text('https://api.example.com/v1/orders'), findsOneWidget);
+      // '200' is rendered for both the status code field
+      // (in body) and the response status (if shown). At
+      // least one occurrence is sufficient.
+      expect(find.textContaining('200'), findsWidgets);
+      // Duration '50 ms' should be present.
+      expect(find.textContaining('ms'), findsWidgets);
+    });
+
+    testWidgets('detail screen shows response body when captured',
+        (tester) async {
+      // REQ-UI-007: with response captured, the body is
+      // rendered in the detail screen.
+      final r = record(
+        response: const ApiTraceResponse(
+          statusCode: 200,
+          responseHeaders: <String, String>{'content-type': 'application/json'},
+          responseBody: <String, Object?>{
+            'items': <String>['a', 'b', 'c']
+          },
+        ),
+      );
+      await tester.pumpWidget(detailHost(r));
+      // The body renders via toString() because it's a Map.
+      // The string 'items' is unique to the body field (the
+      // URL does not contain it).
+      expect(find.textContaining('items'), findsOneWidget);
+    });
+
+    testWidgets('detail screen shows request headers when captured',
+        (tester) async {
+      // REQ-UI-007: with headers captured, the request
+      // headers are rendered.
+      final r = record(
+        request: const ApiTraceRequest(
+          headers: <String, String>{'authorization': 'Bearer x'},
+        ),
+      );
+      await tester.pumpWidget(detailHost(r));
+      expect(find.textContaining('authorization'), findsOneWidget);
+      expect(find.textContaining('Bearer x'), findsOneWidget);
+    });
+
+    testWidgets('detail screen shows error field when error is non-null',
+        (tester) async {
+      // REQ-UI-007: the error field is rendered when set.
+      final r = record(
+        outcome: ApiTraceOutcome.error,
+        error: const FormatException('boom'),
+      );
+      await tester.pumpWidget(detailHost(r));
+      expect(find.textContaining('boom'), findsOneWidget);
+    });
+
+    testWidgets('No button labelled "Copy as cURL" (REQ-UI-007 out of scope)',
+        (tester) async {
+      // REQ-UI-007 out-of-scope list: no Copy-as-cURL.
+      await tester.pumpWidget(detailHost(record()));
+      expect(find.text('Copy as cURL'), findsNothing);
+    });
+
+    testWidgets('No button labelled "Re-run" (REQ-UI-007 out of scope)',
+        (tester) async {
+      // REQ-UI-007 out-of-scope list: no Re-run.
+      await tester.pumpWidget(detailHost(record()));
+      expect(find.text('Re-run'), findsNothing);
+    });
+
+    testWidgets('No button labelled "Export" (REQ-UI-007 out of scope)',
+        (tester) async {
+      // REQ-UI-007 out-of-scope list: no Export.
+      await tester.pumpWidget(detailHost(record()));
+      expect(find.text('Export'), findsNothing);
+    });
+
+    testWidgets('TRIANGULATE: detail screen renders null body gracefully',
+        (tester) async {
+      // A record captured at {minimal} has null body / null
+      // headers. The detail screen must render without
+      // crashing.
+      final r = ApiTraceRecord(
+        id: 'id',
+        name: 'minimal',
+        startedAt: DateTime(2026, 1, 1, 0, 0, 0),
+        completedAt: DateTime(2026, 1, 1, 0, 0, 0, 10),
+        method: 'GET',
+        url: Uri.parse('https://api.example.com/x'),
+        statusCode: 200,
+        duration: const Duration(milliseconds: 10),
+        outcome: ApiTraceOutcome.success,
+        capturedDetails: const <ApiTraceDetail>{ApiTraceDetail.minimal},
+        request: null,
+        response: null,
+        error: null,
+        extra: const <String, Object?>{},
+      );
+      await tester.pumpWidget(detailHost(r));
+      // The screen renders without throwing. The name is
+      // shown in the AppBar title, the Overview Name field,
+      // and the Captured details list (since 'minimal' is
+      // one of the captured details). Assert at least 2
+      // occurrences (AppBar + body).
+      expect(find.text('minimal'), findsAtLeastNWidgets(2));
     });
   });
 }
