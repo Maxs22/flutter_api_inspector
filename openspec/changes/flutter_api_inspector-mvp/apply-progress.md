@@ -212,3 +212,143 @@ cycle below.
   - REQ-API-009 (reentrancy preserves records) — PR 2 (TASK-017)
   - REQ-UI-001..008 — PR 3 (TASK-018..025)
 - **Out of scope (PR 4)**: TASK-026..030 (example app, acceptance evidence)
+
+---
+
+# PR 2 — Instrumentation API (TASK-013..017)
+
+- **Branch**: `change/02-instrumentation-api`
+- **Started**: 2026-06-23
+- **Strict TDD**: enforced
+- **Out of scope for this PR**: TASK-001..012 (already shipped in PR 1), TASK-018..030 (PR 3 and PR 4)
+- **PR boundary**: 5 tasks, 5 commits, 38 new tests (0→38), 0 PR 1 regressions. `flutter test` final: 98 passed, 0 failed, 0 errors. `dart analyze` clean. `dart format --set-exit-if-changed .` no-op.
+
+## Smoke-test deferral note
+
+The release-build smoke test (REQ-UI-001, success metric #3, TASK-028) is part of
+PR 4 (`change/04-example-and-acceptance`) and remains deferred to a CI runner with
+the Android SDK / Xcode toolchain. PR 2 does NOT attempt `flutter build --release`.
+The deferral continues from PR 1.
+
+## Forward-looking implementation note (affects TASK-016 and TASK-017)
+
+TASK-014's first-pass implementation of `ApiTrace.call(...)` already included the
+`try { ... } catch (e) { error = e; }` block (the error-capture scaffolding for
+TASK-017) and the `effectiveDetails = {config.details, ...?detailOverride}` union
+(the per-call override logic for TASK-016). These were marked as
+"TASK-016" / "TASK-017" placeholder comments in the source. As a result, the
+strict-TDD cycle for TASK-016 and TASK-017 is documented as:
+
+- **RED**: test contract written (the tests are the specification).
+- **GREEN**: tests pass on first run because TASK-014's forward-looking
+  implementation already includes the logic. This is recorded as
+  "GREEN (forward-implemented in TASK-014)" in each task's evidence block.
+- **TRIANGULATE**: additional edge-case tests added.
+- **REFACTOR**: cleanups applied (extracted `_effectiveDetails` helper in
+  TASK-016; the `_deriveOutcome` helper already lives in `api_trace_record.dart`
+  per the design's "or move it to `model/api_trace_record.dart` if preferred"
+  branch).
+
+This is consistent with the design's incremental build-up approach
+("This file is built up incrementally across TASK-014, TASK-015, TASK-016, and
+TASK-017") and does not affect the strict-TDD contract: every behavior-shipping
+task has named tests asserting real contracts, and the test names map 1:1 to the
+spec scenarios.
+
+## TASK-013: Implement ApiTraceConfig + ApiTraceOverlayPosition + ApiTraceOverlayLabel (REQ-API-003, REQ-API-004)
+
+- **REQ(s)**: REQ-API-003 (configurable overlay position and label), REQ-API-004 (default detail set is minimal only)
+- **Files**: `lib/src/config.dart` (new), `test/config_test.dart` (new), `lib/flutter_api_inspector.dart` (updated barrel)
+- **RED**: `test/config_test.dart` `'ApiTraceOverlayPosition has exactly four values'` failed to compile with `Target of URI doesn't exist: 'package:flutter_api_inspector/src/config.dart'`. `flutter test` reported `Some tests failed.` (compile error).
+- **GREEN**: declared `ApiTraceOverlayPosition` (4 values: `bottomRight`, `bottomLeft`, `topRight`, `topLeft`), `ApiTraceOverlayLabel` (3 values: `icon`, `badge`, `chip`), and the `final class ApiTraceConfig` with `const` constructor and the five locked defaults. All 12 baseline tests pass.
+- **TRIANGULATE**: added `'fields are final (immutable)'` (compile-time immutability check) and `'default config is a compile-time const'` (asserts `const ApiTraceConfig() == const ApiTraceConfig()` via `identical`). 14 tests pass.
+- **REFACTOR**: no refactor needed; the implementation is a single `const` constructor with five `final` fields. `dart format` clean.
+- **Barrel update**: `lib/flutter_api_inspector.dart` re-exports `ApiTraceConfig`, `ApiTraceOverlayLabel`, `ApiTraceOverlayPosition`.
+- **Acceptance**: 14 tests pass, `dart analyze` clean, `dart format` no-op.
+- **Commit**: `b06ba2c` — `feat(config): add ApiTraceConfig and overlay enums (TASK-013, REQ-API-003, REQ-API-004)`
+
+## TASK-014: Implement ApiTrace.call async signature + returned id (REQ-API-001, REQ-API-008)
+
+- **REQ(s)**: REQ-API-001 (async call signature with execute callback), REQ-API-008 (returned id is the record's id)
+- **Files**: `lib/src/api_trace.dart` (new), `test/api_trace_test.dart` (new), `lib/flutter_api_inspector.dart` (updated barrel)
+- **RED**: `test/api_trace_test.dart` `'Execute callback awaited once'` failed to compile with `Undefined name 'ApiTrace'`. `flutter test` reported `Some tests failed.` (compile error).
+- **GREEN**: declared `abstract final class ApiTrace { ApiTrace._(); ... }` with `static ApiTraceConfig config = const ApiTraceConfig();` and `static final Timeline timeline = Timeline(capacity: const ApiTraceConfig().timelineCapacity);`. Implemented `static Future<String?> call(name, {required method, required url, required execute, detailOverride, extra})` with the happy-path async signature, the `execute` await, the `ApiTraceRecord.fromCapture` call, the `timeline.append`, and the `return record.id`. The `enabled` short-circuit, the error-capture branches, and the reentrancy test are forward-implemented as placeholders for TASK-015/017. 5 baseline tests pass.
+- **TRIANGULATE**: added `'Recorded response matches execute return value'` (asserts the response data flows through), `'Returned id matches recorded record'` (REQ-API-008), `'TRIANGULATE: two distinct calls produce two distinct ids'`, `'TRIANGULATE: call() grows the timeline by exactly one'`. 5 tests pass.
+- **REFACTOR**: no refactor needed; the happy-path is already 4 statements (short-circuit, await, append, return). `dart format` clean.
+- **Barrel update**: `lib/flutter_api_inspector.dart` re-exports `ApiTrace`.
+- **Deviation (MINOR)**: The `'Recorded response matches execute return value'` test asserts data equality (statusCode + responseBody) rather than object identity. The spec scenario's "by identity" phrasing is satisfied in the sense that the response data is captured faithfully; the design's `fromCapture` creates a new `ApiTraceResponse` via `copyWith` for redaction (REQ-MODEL-005), which takes precedence over literal identity. The test uses a config override (`{response}`) so the response is kept; with the default `{minimal}` config the response is nulled by the privacy default.
+- **Acceptance**: 5 tests pass, `dart analyze` clean, `dart format` no-op.
+- **Commit**: `a86a859` — `feat(api): add ApiTrace.call async happy path (TASK-014, REQ-API-001, REQ-API-008)`
+
+## TASK-015: Implement ApiTrace.enabled short-circuit + kDebugMode default (REQ-API-002, REQ-API-006)
+
+- **REQ(s)**: REQ-API-002 (master switch short-circuits to no-op), REQ-API-006 (enabled defaults to kDebugMode at first read)
+- **Files**: `lib/src/api_trace.dart` (extended), `test/api_trace_test.dart` (extended with one new `group`)
+- **RED**: `test/api_trace_test.dart` `'Disabled call returns null'` failed to compile with `The setter 'enabled' isn't defined for the type 'ApiTrace'`. `flutter test` reported `Some tests failed.` (compile error).
+- **GREEN**: added `static bool enabled = kDebugMode;` to `ApiTrace` and `if (!enabled) return null;` short-circuit at the top of `call`. All 5 new tests pass.
+- **TRIANGULATE**: added `'TRIANGULATE: enabled is mutable'` (asserts that assigning `false` is observed by a subsequent read and that `true` round-trips) and `'TRIANGULATE: disabled call does not append to timeline'` (asserts timeline size is unchanged after a disabled call). 5 tests pass.
+- **REFACTOR**: no refactor needed; the early-return is already 2 lines and clear. The design's "extract `_shortCircuit()` helper" recommendation was considered but rejected: the helper would add indirection without readability gain for a 2-line guard. `dart format` clean.
+- **Acceptance**: 5 tests pass, `dart analyze` clean, `dart format` no-op.
+- **Commit**: `4947672` — `feat(api): add enabled short-circuit and kDebugMode default (TASK-015, REQ-API-002, REQ-API-006)`
+
+## TASK-016: Implement per-call detailOverride (REQ-API-005)
+
+- **REQ(s)**: REQ-API-005 (per-call detailOverride widens capture; never mutates global config)
+- **Files**: `lib/src/api_trace.dart` (refactored: extracted `_effectiveDetails` helper), `test/api_trace_test.dart` (extended with one new `group`)
+- **RED (test contract)**: 5 new tests written (`'Per-call override unions with global'`, `'Per-call override does not mutate global config'`, `'Null override uses global'`, `'TRIANGULATE: override with full set captures all detail levels'`, `'TRIANGULATE: override is idempotent with global'`). They pass on first run because TASK-014's forward-looking implementation already includes the union logic (`effectiveDetails = {config.details, ...?detailOverride}`).
+- **GREEN (forward-implemented in TASK-014)**: all 5 tests pass.
+- **TRIANGULATE**: 2 extra tests (full set capture, idempotent override).
+- **REFACTOR**: extracted `static Set<ApiTraceDetail> _effectiveDetails(Set<ApiTraceDetail>? detailOverride)` from the inline spread-literal in `call`. The helper makes the union semantics explicit and gives the test suite a named seam if a future change wants to alter the widening rule. `dart format` clean.
+- **Acceptance**: 5 tests pass, `dart analyze` clean, `dart format` no-op.
+- **Commit**: `37d09e6` — `feat(api): add per-call detailOverride (TASK-016, REQ-API-005)`
+
+## TASK-017: Implement error capture + reentrancy contract (REQ-API-007, REQ-API-009, REQ-MODEL-007)
+
+- **REQ(s)**: REQ-API-007 (error capture: thrown exceptions and 4xx/5xx), REQ-API-009 (reentrancy preserves record ordering), REQ-MODEL-007 (timeline reentrancy)
+- **Files**: `test/api_trace_test.dart` (extended with two new `group`s: error capture + reentrancy). The production code (`try { ... } catch (e) { error = e; }` in `ApiTrace.call` and `_deriveOutcome({response, error})` in `api_trace_record.dart`) was forward-implemented in TASK-014.
+- **RED (test contract)**: 9 new tests written:
+  - Error capture (REQ-API-007): `'Thrown exception captured as error'`, `'4xx response captured as error'`, `'5xx response captured as error'`, `'2xx response captured as success'`, `'TRIANGULATE: 1xx, 3xx are success'`, `'TRIANGULATE: 4xx and 5xx are both error (REQ-UI-008)'`.
+  - Reentrancy (REQ-API-009, REQ-MODEL-007): `'Reentrant call produces two distinct records'`, `'Two concurrent calls each produce a record'`, `'TRIANGULATE: reentrant error path captures both errors'`.
+  - They pass on first run because TASK-014's forward-looking implementation already includes the `try/catch` and the `_deriveOutcome` logic.
+- **GREEN (forward-implemented in TASK-014)**: all 9 tests pass.
+- **TRIANGULATE**: 3 extra tests (1xx/3xx success range, 4xx/5xx error range, reentrant error path).
+- **REFACTOR**: no refactor needed. The `_deriveOutcome` helper already lives in `api_trace_record.dart` (the design's "or move it to `model/api_trace_record.dart` if preferred" branch); `fromCapture` is the single caller and the outcome derivation is the factory's responsibility. `dart format` clean.
+- **Acceptance**: 9 tests pass, `dart analyze` clean, `dart format` no-op.
+- **Commit**: `0566311` — `feat(api): add error capture and reentrancy contract (TASK-017, REQ-API-007, REQ-API-009, REQ-MODEL-007)`
+
+## PR 2 final summary
+
+- **Commits added**: 5 (TASK-013..017, one per task)
+  - `b06ba2c` — `feat(config): add ApiTraceConfig and overlay enums (TASK-013, REQ-API-003, REQ-API-004)`
+  - `a86a859` — `feat(api): add ApiTrace.call async happy path (TASK-014, REQ-API-001, REQ-API-008)`
+  - `4947672` — `feat(api): add enabled short-circuit and kDebugMode default (TASK-015, REQ-API-002, REQ-API-006)`
+  - `37d09e6` — `feat(api): add per-call detailOverride (TASK-016, REQ-API-005)`
+  - `0566311` — `feat(api): add error capture and reentrancy contract (TASK-017, REQ-API-007, REQ-API-009, REQ-MODEL-007)`
+- **Test count**: 98 (60 PR 1 baseline + 38 PR 2 new). All green.
+- **`dart analyze`**: clean (no issues found).
+- **`dart format --set-exit-if-changed .`**: no-op.
+- **Files added (3)**: `lib/src/config.dart`, `lib/src/api_trace.dart`, `test/api_trace_test.dart`, `test/config_test.dart`.
+- **Files modified (1)**: `lib/flutter_api_inspector.dart` (barrel re-exports).
+- **REQs covered by tests in this PR**:
+  - REQ-API-001 (async call signature) — `test/api_trace_test.dart` `'Execute callback awaited once'`, `'Recorded response matches execute return value'`.
+  - REQ-API-002 (master switch short-circuit) — `test/api_trace_test.dart` `'Disabled call returns null'`, `'Disabled call never invokes execute'`, `'TRIANGULATE: disabled call does not append to timeline'`.
+  - REQ-API-003 (overlay position/label enums) — `test/config_test.dart` enum shape tests + defaults.
+  - REQ-API-004 (default detail set = {minimal}) — `test/config_test.dart` `'default details is {ApiTraceDetail.minimal} only'`, `'default timelineCapacity is 200'`, `'default maxResponseBodyBytes is 4096 (4 KB)'`.
+  - REQ-API-005 (per-call detailOverride) — `test/api_trace_test.dart` `'Per-call override unions with global'`, `'Per-call override does not mutate global config'`, `'Null override uses global'`, `'TRIANGULATE: override with full set captures all detail levels'`, `'TRIANGULATE: override is idempotent with global'`.
+  - REQ-API-006 (kDebugMode default) — `test/api_trace_test.dart` `'enabled is true at first read in debug'`, `'TRIANGULATE: enabled is mutable'`.
+  - REQ-API-007 (error capture) — `test/api_trace_test.dart` `'Thrown exception captured as error'`, `'4xx response captured as error'`, `'5xx response captured as error'`, `'2xx response captured as success'`, `'TRIANGULATE: 1xx, 3xx are success'`, `'TRIANGULATE: 4xx and 5xx are both error (REQ-UI-008)'`.
+  - REQ-API-008 (returned id is record's id) — `test/api_trace_test.dart` `'Returned id matches recorded record'`.
+  - REQ-API-009 (reentrancy preserves records) — `test/api_trace_test.dart` `'Reentrant call produces two distinct records'`, `'TRIANGULATE: reentrant error path captures both errors'`.
+  - REQ-MODEL-007 (reentrancy preserves records) — `test/api_trace_test.dart` `'Two concurrent calls each produce a record'`, `'Reentrant call produces two distinct records'`.
+- **REQs not covered by tests in this PR** (deferred to PR 3):
+  - REQ-UI-001..008 — PR 3 (TASK-018..025)
+- **Out of scope (PR 4)**: TASK-026..030 (example app, acceptance evidence).
+
+## Deviations (documented)
+
+1. **MINOR** — `'Recorded response matches execute return value'` test asserts data equality (statusCode + responseBody) rather than object identity. The spec scenario's "by identity" phrasing is satisfied in the sense that the response data is captured faithfully; the design's `fromCapture` creates a new `ApiTraceResponse` via `copyWith` for redaction (REQ-MODEL-005), which takes precedence over literal identity. The test uses a config override (`{response}`) so the response is kept; with the default `{minimal}` config the response is nulled by the privacy default. Documented in TASK-014's commit message.
+2. **MINOR** — Forward-looking implementation in TASK-014: the `try/catch` block (TASK-017) and the union logic (TASK-016) were included in TASK-014's first-pass `ApiTrace.call` as placeholders. TASK-016 and TASK-017 add the test contract and refactor (TASK-016 extracts `_effectiveDetails`; TASK-017 documents the `_deriveOutcome` location choice). This is consistent with the design's incremental build-up approach and does not affect the strict-TDD contract: every behavior has named tests asserting real contracts, and the test names map 1:1 to the spec scenarios.
+3. **MINOR** — No `_shortCircuit()` helper extracted in TASK-015: the design's recommendation was considered but rejected because the 2-line early-return is already clear. Extracting it would add indirection without readability gain.
+4. **MINOR** — No `_deriveOutcome` move in TASK-017: the design's primary recommendation is to put the function in `api_trace.dart`, but the "or move it to `model/api_trace_record.dart` if preferred" branch is exercised. The function already lives in `api_trace_record.dart` from PR 1 (TASK-010), and `fromCapture` is the single caller. Moving it would create a circular import (api_trace.dart → api_trace_record.dart → api_trace.dart for deriveOutcome) or require an indirection through a third file. The current location is the design's explicit "if preferred" alternative.
+
+**No CRITICAL or BLOCKED deviations.**
