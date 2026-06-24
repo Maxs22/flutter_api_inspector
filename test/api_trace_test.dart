@@ -204,4 +204,140 @@ void main() {
       expect(ApiTrace.timeline.size, initialSize);
     });
   });
+
+  group('ApiTrace.call — per-call detailOverride (REQ-API-005)', () {
+    test('Per-call override unions with global', () async {
+      // The captured detail set is the union of config.details
+      // and detailOverride. With global = {minimal} and
+      // override = {response}, the record's capturedDetails
+      // equals {minimal, response}.
+      ApiTrace.config = const ApiTraceConfig(
+        details: <ApiTraceDetail>{ApiTraceDetail.minimal},
+      );
+      await ApiTrace.call(
+        'x',
+        method: 'GET',
+        url: Uri.parse('https://x/'),
+        execute: () async => const ApiTraceResponse(
+          statusCode: 200,
+          responseBody: 'hello',
+        ),
+        detailOverride: const <ApiTraceDetail>{ApiTraceDetail.response},
+      );
+      final record = ApiTrace.timeline.records.first;
+      expect(
+        record.capturedDetails,
+        equals(<ApiTraceDetail>{
+          ApiTraceDetail.minimal,
+          ApiTraceDetail.response,
+        }),
+      );
+      // The response body is captured because response is in
+      // the captured set.
+      expect(record.response, isNotNull);
+      expect(record.response!.responseBody, 'hello');
+    });
+
+    test('Per-call override does not mutate global config', () async {
+      // The global config is unchanged after a call with an
+      // override. The per-call override widens capture for that
+      // one call only.
+      ApiTrace.config = const ApiTraceConfig(
+        details: <ApiTraceDetail>{ApiTraceDetail.minimal},
+      );
+      await ApiTrace.call(
+        'x',
+        method: 'GET',
+        url: Uri.parse('https://x/'),
+        execute: happyExecute(),
+        detailOverride: const <ApiTraceDetail>{ApiTraceDetail.response},
+      );
+      expect(
+        ApiTrace.config.details,
+        equals(<ApiTraceDetail>{ApiTraceDetail.minimal}),
+      );
+    });
+
+    test('Null override uses global', () async {
+      // With detailOverride = null, the captured set equals
+      // the global config only. With global = {minimal}, the
+      // response is nulled by the privacy default.
+      ApiTrace.config = const ApiTraceConfig(
+        details: <ApiTraceDetail>{ApiTraceDetail.minimal},
+      );
+      await ApiTrace.call(
+        'x',
+        method: 'GET',
+        url: Uri.parse('https://x/'),
+        execute: () async => const ApiTraceResponse(
+          statusCode: 200,
+          responseBody: 'hello',
+        ),
+      );
+      final record = ApiTrace.timeline.records.first;
+      expect(
+        record.capturedDetails,
+        equals(<ApiTraceDetail>{ApiTraceDetail.minimal}),
+      );
+      // With {minimal} only, the response is nulled.
+      expect(record.response, isNull);
+    });
+
+    test('TRIANGULATE: override with full set captures all detail levels',
+        () async {
+      // With override = {full}, the record captures everything.
+      ApiTrace.config = const ApiTraceConfig(
+        details: <ApiTraceDetail>{ApiTraceDetail.minimal},
+      );
+      await ApiTrace.call(
+        'x',
+        method: 'GET',
+        url: Uri.parse('https://x/'),
+        execute: () async => const ApiTraceResponse(
+          statusCode: 200,
+          responseBody: 'hello',
+          requestHeaders: <String, String>{'authorization': 'Bearer x'},
+          responseHeaders: <String, String>{'x-trace': 'abc'},
+        ),
+        detailOverride: const <ApiTraceDetail>{ApiTraceDetail.full},
+      );
+      final record = ApiTrace.timeline.records.first;
+      expect(
+        record.capturedDetails,
+        equals(<ApiTraceDetail>{
+          ApiTraceDetail.minimal,
+          ApiTraceDetail.full,
+        }),
+      );
+      expect(record.response, isNotNull);
+      expect(record.response!.responseBody, 'hello');
+      expect(record.response!.responseHeaders, isNotEmpty);
+    });
+
+    test('TRIANGULATE: override is idempotent with global', () async {
+      // Passing a detail level that is already in the global
+      // config is a no-op (set union is idempotent).
+      ApiTrace.config = const ApiTraceConfig(
+        details: <ApiTraceDetail>{
+          ApiTraceDetail.minimal,
+          ApiTraceDetail.headers
+        },
+      );
+      await ApiTrace.call(
+        'x',
+        method: 'GET',
+        url: Uri.parse('https://x/'),
+        execute: happyExecute(),
+        detailOverride: const <ApiTraceDetail>{ApiTraceDetail.minimal},
+      );
+      final record = ApiTrace.timeline.records.first;
+      expect(
+        record.capturedDetails,
+        equals(<ApiTraceDetail>{
+          ApiTraceDetail.minimal,
+          ApiTraceDetail.headers,
+        }),
+      );
+    });
+  });
 }

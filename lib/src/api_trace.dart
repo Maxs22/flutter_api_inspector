@@ -107,13 +107,11 @@ abstract final class ApiTrace {
     }
     final completedAt = DateTime.now();
 
-    // TASK-016: union `config.details` with `detailOverride`. For
-    // TASK-014 the per-call override is ignored — the global
-    // config is used as-is.
-    final effectiveDetails = <ApiTraceDetail>{
-      ...config.details,
-      ...?detailOverride,
-    };
+    // Per-call override widens capture for this one call only;
+    // the global config is never mutated (REQ-API-005). The
+    // effective detail set is the union of the global config's
+    // details and the per-call override.
+    final effectiveDetails = _effectiveDetails(detailOverride);
 
     final record = ApiTraceRecord.fromCapture(
       name: name,
@@ -131,5 +129,18 @@ abstract final class ApiTrace {
 
     timeline.append(record);
     return record.id;
+  }
+
+  /// Computes the effective detail set for a single call: the
+  /// union of `ApiTrace.config.details` and the per-call
+  /// `detailOverride`. A null override falls through to the
+  /// global config unchanged (REQ-API-005).
+  static Set<ApiTraceDetail> _effectiveDetails(
+    Set<ApiTraceDetail>? detailOverride,
+  ) {
+    return <ApiTraceDetail>{
+      ...config.details,
+      ...?detailOverride,
+    };
   }
 }
