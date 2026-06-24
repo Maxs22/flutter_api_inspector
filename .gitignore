@@ -30,6 +30,10 @@ coverage/
 **/*.g.dart
 **/*.freezed.dart
 
+# Pi / gentle-pi harness artifacts (do not commit)
+.pi/
+.atl/
+
 # Misc
 *.log
 .env
