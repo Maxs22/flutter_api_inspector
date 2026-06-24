@@ -17,6 +17,7 @@ import 'package:flutter_api_inspector/flutter_api_inspector.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:flutter_api_inspector/src/overlay/colors.dart';
 import 'package:flutter_api_inspector/src/overlay/fab_position.dart';
+import 'package:flutter_api_inspector/src/overlay/fab.dart';
 
 void main() {
   group('outcomeColor helper (REQ-UI-008)', () {
@@ -84,6 +85,212 @@ void main() {
         fabAlignment(ApiTraceOverlayPosition.topLeft),
       };
       expect(values, hasLength(4));
+    });
+  });
+
+  group('ApiTraceFab widget (REQ-UI-003, REQ-UI-004)', () {
+    // Helper: pump a MaterialApp with the FAB at the centre of
+    // a Stack so we can find it by subtree. We don't need a
+    // Navigator or a Scaffold for the FAB itself.
+    Widget host(ApiTraceFab fab) {
+      return MaterialApp(
+        home: Scaffold(
+          body: Stack(
+            children: <Widget>[fab],
+          ),
+        ),
+      );
+    }
+
+    testWidgets('renders the developer_mode icon (REQ-UI-004 default)',
+        (tester) async {
+      // RED: import target missing for `fab.dart`.
+      await tester.pumpWidget(host(
+        ApiTraceFab(
+          onPressed: () {},
+          config: const ApiTraceConfig(),
+          recordCount: 1,
+        ),
+      ));
+      expect(find.byIcon(Icons.developer_mode), findsOneWidget);
+    });
+
+    testWidgets('default label is icon-only (no count Text inside FAB subtree)',
+        (tester) async {
+      // REQ-UI-004: with overlayLabel == icon (default), the
+      // FAB subtree contains the icon and no Text widget
+      // rendering the record count.
+      await tester.pumpWidget(host(
+        ApiTraceFab(
+          onPressed: () {},
+          config: const ApiTraceConfig(),
+          recordCount: 7,
+        ),
+      ));
+      // Find the FloatingActionButton subtree and check it
+      // contains no Text widgets.
+      final fabFinder = find.byType(FloatingActionButton);
+      expect(fabFinder, findsOneWidget);
+      // No text widgets should appear in the FAB subtree at
+      // all (icon-only means no count label).
+      final textsInFab = find.descendant(
+        of: fabFinder,
+        matching: find.byType(Text),
+      );
+      expect(textsInFab, findsNothing);
+    });
+
+    testWidgets('badge label shows count text when count > 0', (tester) async {
+      // REQ-UI-004: with overlayLabel == badge and 7 records,
+      // a Text widget rendering the literal string "7" is
+      // found inside the FAB subtree.
+      await tester.pumpWidget(host(
+        ApiTraceFab(
+          onPressed: () {},
+          config: const ApiTraceConfig(
+            overlayLabel: ApiTraceOverlayLabel.badge,
+          ),
+          recordCount: 7,
+        ),
+      ));
+      final fabFinder = find.byType(FloatingActionButton);
+      expect(fabFinder, findsOneWidget);
+      final countText = find.descendant(
+        of: fabFinder,
+        matching: find.text('7'),
+      );
+      expect(countText, findsOneWidget);
+    });
+
+    testWidgets('badge label hides count when count is 0', (tester) async {
+      // REQ-UI-004: with overlayLabel == badge and an empty
+      // timeline, no Text widget rendering the count is
+      // inside the FAB subtree.
+      await tester.pumpWidget(host(
+        ApiTraceFab(
+          onPressed: () {},
+          config: const ApiTraceConfig(
+            overlayLabel: ApiTraceOverlayLabel.badge,
+          ),
+          recordCount: 0,
+        ),
+      ));
+      final fabFinder = find.byType(FloatingActionButton);
+      final countText = find.descendant(
+        of: fabFinder,
+        matching: find.byType(Text),
+      );
+      expect(countText, findsNothing);
+    });
+
+    testWidgets('chip label shows "API N" when count > 0', (tester) async {
+      // REQ-UI-004: with overlayLabel == chip and 17 records,
+      // a Text widget rendering the literal "API 17" is found
+      // inside the FAB subtree.
+      await tester.pumpWidget(host(
+        ApiTraceFab(
+          onPressed: () {},
+          config: const ApiTraceConfig(
+            overlayLabel: ApiTraceOverlayLabel.chip,
+          ),
+          recordCount: 17,
+        ),
+      ));
+      final fabFinder = find.byType(FloatingActionButton);
+      final chipText = find.descendant(
+        of: fabFinder,
+        matching: find.text('API 17'),
+      );
+      expect(chipText, findsOneWidget);
+    });
+
+    testWidgets('chip label hides "API" text when count is 0', (tester) async {
+      // REQ-UI-004: with overlayLabel == chip and an empty
+      // timeline, no Text widget rendering the chip is inside
+      // the FAB subtree.
+      await tester.pumpWidget(host(
+        ApiTraceFab(
+          onPressed: () {},
+          config: const ApiTraceConfig(
+            overlayLabel: ApiTraceOverlayLabel.chip,
+          ),
+          recordCount: 0,
+        ),
+      ));
+      final fabFinder = find.byType(FloatingActionButton);
+      final chipText = find.descendant(
+        of: fabFinder,
+        matching: find.textContaining('API'),
+      );
+      expect(chipText, findsNothing);
+    });
+
+    testWidgets('onPressed callback fires when the FAB is tapped',
+        (tester) async {
+      // The onPressed callback is wired up to the FAB.
+      var taps = 0;
+      await tester.pumpWidget(host(
+        ApiTraceFab(
+          onPressed: () => taps++,
+          config: const ApiTraceConfig(),
+          recordCount: 0,
+        ),
+      ));
+      await tester.tap(find.byType(FloatingActionButton));
+      expect(taps, 1);
+    });
+
+    testWidgets(
+        'TRIANGULATE: FAB subtree contains developer_mode icon for all '
+        'three label shapes', (tester) async {
+      // REQ-UI-004: the icon is present regardless of the
+      // label shape (icon, badge, chip).
+      for (final label in <ApiTraceOverlayLabel>[
+        ApiTraceOverlayLabel.icon,
+        ApiTraceOverlayLabel.badge,
+        ApiTraceOverlayLabel.chip,
+      ]) {
+        await tester.pumpWidget(host(
+          ApiTraceFab(
+            onPressed: () {},
+            config: ApiTraceConfig(overlayLabel: label),
+            recordCount: 3,
+          ),
+        ));
+        expect(
+          find.byIcon(Icons.developer_mode),
+          findsOneWidget,
+          reason: 'icon should be present for label=$label',
+        );
+      }
+    });
+
+    testWidgets(
+        'TRIANGULATE: FAB subtree contains developer_mode icon at every '
+        'corner (REQ-UI-003)', (tester) async {
+      // REQ-UI-003: the icon is present at all four corners.
+      // The fabAlignment helper is what positions the FAB; the
+      // FAB itself is content-only. This test pins the
+      // contract that the FAB does not depend on its position.
+      for (final position in <ApiTraceOverlayPosition>[
+        ApiTraceOverlayPosition.bottomRight,
+        ApiTraceOverlayPosition.bottomLeft,
+        ApiTraceOverlayPosition.topRight,
+        ApiTraceOverlayPosition.topLeft,
+      ]) {
+        await tester.pumpWidget(host(
+          ApiTraceFab(
+            onPressed: () {},
+            config: ApiTraceConfig(overlayPosition: position),
+            recordCount: 1,
+          ),
+        ));
+        expect(
+          find.byIcon(Icons.developer_mode),
+          findsOneWidget,
+          reason: 'icon should be present for position=$position',
+        );
+      }
     });
   });
 }
