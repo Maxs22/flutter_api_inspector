@@ -18,6 +18,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:flutter_api_inspector/src/overlay/colors.dart';
 import 'package:flutter_api_inspector/src/overlay/fab_position.dart';
 import 'package:flutter_api_inspector/src/overlay/fab.dart';
+import 'package:flutter_api_inspector/src/overlay/timeline_row.dart';
 
 void main() {
   group('outcomeColor helper (REQ-UI-008)', () {
@@ -291,6 +292,214 @@ void main() {
           reason: 'icon should be present for position=$position',
         );
       }
+    });
+  });
+
+  group('TimelineRow widget (REQ-UI-005, REQ-UI-008)', () {
+    // Helper: build a record with the given outcome and statusCode.
+    ApiTraceRecord record({
+      required String name,
+      required String method,
+      required int? statusCode,
+      required ApiTraceOutcome outcome,
+      String url = 'https://api.example.com/x',
+    }) {
+      final start = DateTime(2026, 1, 1, 0, 0, 0);
+      return ApiTraceRecord(
+        id: 'id-$name',
+        name: name,
+        startedAt: start,
+        completedAt: start.add(const Duration(milliseconds: 50)),
+        method: method,
+        url: Uri.parse(url),
+        statusCode: statusCode,
+        duration: const Duration(milliseconds: 50),
+        outcome: outcome,
+        capturedDetails: const <ApiTraceDetail>{ApiTraceDetail.minimal},
+        request: null,
+        response: null,
+        error: null,
+        extra: const <String, Object?>{},
+      );
+    }
+
+    Widget rowHost(TimelineRow row) {
+      return MaterialApp(
+        home: Scaffold(body: row),
+      );
+    }
+
+    testWidgets('row shows name, method, statusCode, duration', (tester) async {
+      // RED: import target missing for `timeline_row.dart`.
+      // REQ-UI-005: each row shows the record's name, method,
+      // statusCode, and duration.
+      await tester.pumpWidget(rowHost(
+        TimelineRow(
+          record: record(
+            name: 'listOrders',
+            method: 'GET',
+            statusCode: 200,
+            outcome: ApiTraceOutcome.success,
+          ),
+          onTap: () {},
+        ),
+      ));
+      expect(find.text('listOrders'), findsOneWidget);
+      expect(find.textContaining('GET'), findsOneWidget);
+      expect(find.textContaining('200'), findsOneWidget);
+      // The duration text contains '50 ms' (formatted).
+      expect(find.textContaining('ms'), findsOneWidget);
+    });
+
+    testWidgets('row handles null statusCode with placeholder', (tester) async {
+      // REQ-UI-005: when the call threw before a response was
+      // produced, statusCode is null. The row renders a
+      // placeholder ('—' or 'error') instead.
+      await tester.pumpWidget(rowHost(
+        TimelineRow(
+          record: record(
+            name: 'oops',
+            method: 'POST',
+            statusCode: null,
+            outcome: ApiTraceOutcome.error,
+          ),
+          onTap: () {},
+        ),
+      ));
+      // The status code text contains the em-dash placeholder '—'.
+      expect(find.textContaining('—'), findsOneWidget);
+    });
+
+    testWidgets('success row tints its Icon with the green color (REQ-UI-008)',
+        (tester) async {
+      // REQ-UI-008: outcome == success renders in green. The
+      // row's status Icon (the small leading indicator) is
+      // tinted with the green color from outcomeColor.
+      await tester.pumpWidget(rowHost(
+        TimelineRow(
+          record: record(
+            name: 'ok',
+            method: 'GET',
+            statusCode: 200,
+            outcome: ApiTraceOutcome.success,
+          ),
+          onTap: () {},
+        ),
+      ));
+      // Find the row's status Icon (Icons.check_circle for
+      // success) and assert its color matches the helper.
+      final iconFinder = find.byIcon(Icons.check_circle);
+      expect(iconFinder, findsOneWidget);
+      final iconWidget = tester.widget<Icon>(iconFinder);
+      expect(iconWidget.color, equals(Colors.green.shade600));
+    });
+
+    testWidgets('error row tints its Icon with the red color (REQ-UI-008)',
+        (tester) async {
+      await tester.pumpWidget(rowHost(
+        TimelineRow(
+          record: record(
+            name: 'bad',
+            method: 'GET',
+            statusCode: 500,
+            outcome: ApiTraceOutcome.error,
+          ),
+          onTap: () {},
+        ),
+      ));
+      // For outcome == error, the row's leading icon is
+      // Icons.error (per design.md). The icon is tinted with
+      // the red color from outcomeColor.
+      final iconFinder = find.byIcon(Icons.error);
+      expect(iconFinder, findsOneWidget);
+      final iconWidget = tester.widget<Icon>(iconFinder);
+      expect(iconWidget.color, equals(Colors.red.shade600));
+    });
+
+    testWidgets('4xx and 5xx rows have the same red color (REQ-UI-008)',
+        (tester) async {
+      // REQ-UI-008: 4xx and 5xx share the same red color.
+      // Asserts the two rows' icon colors are the same.
+      await tester.pumpWidget(rowHost(
+        TimelineRow(
+          record: record(
+            name: 'notfound',
+            method: 'GET',
+            statusCode: 404,
+            outcome: ApiTraceOutcome.error,
+          ),
+          onTap: () {},
+        ),
+      ));
+      Color? color4xx;
+      final icon4xx = tester.widget<Icon>(find.byIcon(Icons.error));
+      color4xx = icon4xx.color;
+      await tester.pumpWidget(rowHost(
+        TimelineRow(
+          record: record(
+            name: 'serverError',
+            method: 'GET',
+            statusCode: 503,
+            outcome: ApiTraceOutcome.error,
+          ),
+          onTap: () {},
+        ),
+      ));
+      final icon5xx = tester.widget<Icon>(find.byIcon(Icons.error));
+      expect(icon5xx.color, equals(color4xx));
+    });
+
+    testWidgets('onTap callback fires when the row is tapped', (tester) async {
+      // The whole row is tappable; tapping anywhere in the
+      // row fires onTap.
+      var taps = 0;
+      await tester.pumpWidget(rowHost(
+        TimelineRow(
+          record: record(
+            name: 'tapme',
+            method: 'GET',
+            statusCode: 200,
+            outcome: ApiTraceOutcome.success,
+          ),
+          onTap: () => taps++,
+        ),
+      ));
+      await tester.tap(find.byType(TimelineRow));
+      expect(taps, 1);
+    });
+
+    testWidgets('TRIANGULATE: row text color matches the outcome color',
+        (tester) async {
+      // The row's text color is the outcome color too, so
+      // both the icon and the text are tinted. We assert the
+      // name's text style color matches the helper.
+      await tester.pumpWidget(rowHost(
+        TimelineRow(
+          record: record(
+            name: 'styled',
+            method: 'GET',
+            statusCode: 200,
+            outcome: ApiTraceOutcome.success,
+          ),
+          onTap: () {},
+        ),
+      ));
+      final nameText = tester.widget<Text>(find.text('styled'));
+      expect(nameText.style?.color, equals(Colors.green.shade600));
+
+      await tester.pumpWidget(rowHost(
+        TimelineRow(
+          record: record(
+            name: 'errored',
+            method: 'GET',
+            statusCode: 500,
+            outcome: ApiTraceOutcome.error,
+          ),
+          onTap: () {},
+        ),
+      ));
+      final errorText = tester.widget<Text>(find.text('errored'));
+      expect(errorText.style?.color, equals(Colors.red.shade600));
     });
   });
 }
