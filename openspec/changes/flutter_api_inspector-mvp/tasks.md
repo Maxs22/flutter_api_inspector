@@ -497,7 +497,7 @@ These tasks create the `example/` app that proves the package works
 end-to-end and is the substrate for the debug-build / release-build
 smoke tests.
 
-- [ ] **TASK-026: Create `example/pubspec.yaml`**
+- [x] **TASK-026: Create `example/pubspec.yaml`**
   - **What**: Add the example app's manifest. It depends on `flutter` and the local `flutter_api_inspector` package via `path:`.
   - **Why**: Per `openspec/AGENTS.md` rule 10, the example app is part of the official pub.dev package layout. The local-path dependency is the standard pattern for in-repo examples.
   - **Files**: `example/pubspec.yaml`
@@ -510,7 +510,7 @@ smoke tests.
   - **Acceptance**: `flutter pub get` against `example/` resolves the local package without errors.
   - **Workload estimate**: ~20 lines.
 
-- [ ] **TASK-027: Create `example/lib/main.dart` (stub + one real call)**
+- [x] **TASK-027: Create `example/lib/main.dart` (stub + one real call)**
   - **What**: Implement a minimal `MaterialApp(home: ...)` example with two buttons: **"Run stub call"** (synchronous, returns a fake `ApiTraceResponse` with `statusCode == 200`) and **"Run real call to httpbin"** (one real call to `https://httpbin.org/get` using `dart:io`'s `HttpClient` — *no* `package:http`, no `package:dio`). The example wraps `runApp` with `ApiTrace.runApp` so the overlay mounts automatically.
   - **Why**: Per the proposal's locked answer to Q7, the example app exercises a stub (offline reliability) and one real call (smoke testing against a public test API).
   - **Files**: `example/lib/main.dart`
@@ -535,7 +535,7 @@ These tasks are not "implementation" — they are the acceptance gates
 that the proposal, the spec, and `openspec/AGENTS.md` rule 4 require.
 They produce the artifacts that `sdd-verify` consumes.
 
-- [ ] **TASK-028: Record release-build smoke test in `apply-progress.md` (REQ-UI-001 out-of-band)**
+- [x] **TASK-028: Record release-build smoke test in `apply-progress.md` (REQ-UI-001 out-of-band)**
   - **What**: Run `flutter build apk --release` (or `flutter build ios --release --no-codesign` on macOS) against the example, with and without the `flutter_api_inspector` dependency, and record: (a) the binary size delta (target ≤ 5 KB per proposal success metric #3), (b) the absence of the `ApiTraceOverlay` string in the release symbol table (`strings build/app/outputs/flutter-apk/app-release.apk | grep ApiTraceOverlay` returns nothing), and (c) the absence of `ApiTraceFab` / `ApiTraceOverlay` in the release widget tree (verified by an integration-style debug that imports the example and inspects the tree). Record the actual command, exit code, and output in `apply-progress.md`.
   - **Why**: REQ-UI-001 requires the release-mode tree-shake; the proposal's success metric #3 requires the binary size delta. The `flutter test` widget test in TASK-023 covers the in-process `kReleaseMode` simulation, but the actual `flutter build --release` is out-of-band.
   - **Files**: `openspec/changes/flutter_api_inspector-mvp/apply-progress.md` (append a *Release-build smoke test* section)
@@ -547,7 +547,7 @@ They produce the artifacts that `sdd-verify` consumes.
     - If the host does **not** have an Android SDK or Xcode toolchain, this task is **deferred** to a follow-up environment; the deferred status is recorded in `apply-progress.md` and the open question #8 is escalated to `sdd-verify`.
   - **Workload estimate**: ~50 lines of recorded output.
 
-- [ ] **TASK-029: Finalize TDD evidence table in `apply-progress.md`**
+- [x] **TASK-029: Finalize TDD evidence table in `apply-progress.md`**
   - **What**: For each of TASK-001..027, ensure `apply-progress.md` has a row in a *TDD Cycle Evidence* table with: task id, REQ(s), RED command + result, GREEN command + result, TRIANGULATE command + result, REFACTOR command + result. The table is the proof that strict TDD was followed end-to-end.
   - **Why**: Per `openspec/AGENTS.md` rule 4 and `openspec/config.yaml` → `strict_tdd: true`, every shipped behavior must have RED → GREEN → TRIANGULATE → REFACTOR evidence.
   - **Files**: `openspec/changes/flutter_api_inspector-mvp/apply-progress.md` (consolidate the per-task evidence)
@@ -558,7 +558,7 @@ They produce the artifacts that `sdd-verify` consumes.
     - Every REQ-* from the three spec files is referenced in at least one row.
   - **Workload estimate**: ~80 lines of table.
 
-- [ ] **TASK-030: Write `verify-report.md` final pass + success metrics 1-5**
+- [x] **TASK-030: Write `verify-report.md` final pass + success metrics 1-5**
   - **What**: After TASK-001..029 are complete, run the full quality suite (`flutter test`, `dart analyze`, `dart format --set-exit-if-changed .`, `flutter test --coverage`) and record the results in `openspec/changes/flutter_api_inspector-mvp/verify-report.md`. Validate each of the five proposal success metrics: (1) time-to-first-trace ≤ 2 min via the example app, (2) install size delta ≤ 30 KB via `du -sh lib/`, (3) zero release-build impact (depends on TASK-028), (4) strict TDD evidence (depends on TASK-029), (5) privacy-conscious default (already covered by TASK-010's contract test).
   - **Why**: `sdd-verify` consumes `verify-report.md` to decide whether to green-light `sdd-sync` and `sdd-archive`. The five success metrics are the proposal's acceptance criteria.
   - **Files**: `openspec/changes/flutter_api_inspector-mvp/verify-report.md`

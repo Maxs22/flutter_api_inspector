@@ -6,7 +6,11 @@
 build/
 .flutter-plugins
 .flutter-plugins-dependencies
+# Library convention: do NOT commit pubspec.lock for the root package.
+# App convention: DO commit pubspec.lock for the example app so the
+# build is reproducible across machines.
 pubspec.lock
+!/example/pubspec.lock
 
 # IDE
 .idea/
