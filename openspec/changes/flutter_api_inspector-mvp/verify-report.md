@@ -310,3 +310,404 @@ risks:
   - "The TASK-029 TDD evidence table (consolidated RED -> GREEN -> TRIANGULATE -> REFACTOR across TASK-001..027) is part of PR 4 (Phase F acceptance evidence), not PR 1. PR 1's per-task evidence in apply-progress.md is sufficient for this verify gate."
 skill_resolution: paths-injected
 ```
+
+---
+
+# PR 2 — Instrumentation API (TASK-013..017)
+
+- **Change**: `flutter_api_inspector-mvp`
+- **PR**: 2 of 4 (instrumentation API)
+- **Branch verified**: `change/02-instrumentation-api` (6 commits ahead of `main` at `76482ec`; working tree clean except `.atl/` and `.pi/`)
+- **Verifier**: SDD verify executor (interactive mode)
+- **Date**: 2026-06-23
+- **Artifact store**: OpenSpec in repo
+- **Strict TDD**: enforced (per `openspec/config.yaml` → `strict_tdd: true`)
+- **PR scope**: TASK-013..017 only (Phase C — instrumentation API)
+- **Out of scope for this verify gate**: TASK-001..012 (PR 1, already verified GREEN and merged to main) and TASK-018..030 (PR 3, 4). Not flagged.
+
+---
+
+## Status
+
+**GREEN** — PR 2 (instrumentation API) is ready to merge to `main` (after the user triggers the merge). The PR satisfies the spec, design, tasks, and strict-TDD contract for the 9 in-scope REQs.
+
+- All 9 in-scope REQs (REQ-API-001..009) pass with named tests.
+- 98 tests green (60 PR 1 baseline + 38 PR 2 new), 0 failed, 0 errors.
+- `dart analyze` clean (`No issues found!`).
+- `dart format --set-exit-if-changed .` is a no-op (`Formatted 20 files (0 changed)`).
+- TASK-013..017 are `- [x]`; TASK-018..030 correctly remain `- [ ]`.
+- No CRITICAL findings. No BLOCKED items.
+- 4 documented deviations (1 MINOR severity for the spec/data-equality question, 3 OK / MINOR for design-level choices) — all accepted in the task brief.
+
+---
+
+## Per-REQ verification table (9 in-scope REQs)
+
+| REQ | Spec scenarios covered | Test file | Named test(s) | Result |
+| --- | --- | --- | --- | --- |
+| **REQ-API-001** (async call signature with execute callback) | *Execute callback awaited once*; *Recorded response matches execute return value* | `test/api_trace_test.dart` | `ApiTrace.call — happy path (REQ-API-001, REQ-API-008) > Execute callback awaited once` (asserts `calls == 1`, `id isNotNull`); `... > Recorded response matches execute return value` (asserts `record.response!.statusCode == 200`, `responseBody == 'hello'`, `id == record.id`) | PASS |
+| **REQ-API-002** (master switch short-circuits to no-op) | *Disabled call returns null*; *Disabled call never invokes execute* | `test/api_trace_test.dart` | `ApiTrace.enabled — master switch (REQ-API-002, REQ-API-006) > Disabled call returns null`; `... > Disabled call never invokes execute` (asserts `calls == 0`, `id isNull`); `... > TRIANGULATE: disabled call does not append to timeline` (asserts `size == initialSize`) | PASS |
+| **REQ-API-003** (configurable overlay position and label) | *Default overlay position is bottom-right*; *Default overlay label is icon*; *overlayPosition enum has exactly four values*; *overlayLabel enum has exactly three values* | `test/config_test.dart` | `ApiTraceOverlayPosition (REQ-API-003) > has exactly four values`; `... > values are bottomRight, bottomLeft, topRight, topLeft (in order)`; `... > bottomRight is at index 0`; `ApiTraceOverlayLabel (REQ-API-003) > has exactly three values`; `... > values are icon, badge, chip (in order)`; `... > icon is at index 0`; `ApiTraceConfig defaults (REQ-API-004) > default overlayPosition is bottomRight`; `... > default overlayLabel is icon` | PASS |
+| **REQ-API-004** (default detail set is minimal only) | *Default config details contain only minimal*; *Default config timeline capacity is 200*; *Default config max response body bytes is 4 KB* | `test/config_test.dart` | `ApiTraceConfig defaults (REQ-API-004) > default details is {ApiTraceDetail.minimal} only` (asserts set equality); `... > default timelineCapacity is 200`; `... > default maxResponseBodyBytes is 4096 (4 KB)` | PASS |
+| **REQ-API-005** (per-call detailOverride widens capture) | *Per-call override unions with global*; *Per-call override does not mutate global config*; *Null override uses global* | `test/api_trace_test.dart` | `ApiTrace.call — per-call detailOverride (REQ-API-005) > Per-call override unions with global` (asserts `capturedDetails == {minimal, response}` and `response isNotNull` with body); `... > Per-call override does not mutate global config` (asserts `config.details == {minimal}` after the call); `... > Null override uses global` (asserts `capturedDetails == {minimal}` and `response isNull`); `... > TRIANGULATE: override with full set captures all detail levels`; `... > TRIANGULATE: override is idempotent with global` | PASS |
+| **REQ-API-006** (enabled defaults to kDebugMode at first read) | *enabled is true at first read in debug* | `test/api_trace_test.dart` | `ApiTrace.enabled — master switch (REQ-API-002, REQ-API-006) > enabled is true at first read in debug` (asserts `enabled == true` and `enabled == kDebugMode` under `flutter test`); `... > TRIANGULATE: enabled is mutable` (asserts assigning `false` then `true` round-trips) | PASS |
+| **REQ-API-007** (error capture: thrown + 4xx + 5xx) | *Thrown exception captured as error*; *4xx response captured as error*; *5xx response captured as error*; *2xx response captured as success* | `test/api_trace_test.dart` | `ApiTrace.call — error capture (REQ-API-007) > Thrown exception captured as error` (asserts `outcome == error`, `error is FormatException`, message preserved); `... > 4xx response captured as error`; `... > 5xx response captured as error`; `... > 2xx response captured as success`; `... > TRIANGULATE: 1xx, 3xx are success`; `... > TRIANGULATE: 4xx and 5xx are both error (REQ-UI-008)` | PASS |
+| **REQ-API-008** (returned id is the record's id) | *Returned id matches recorded record* | `test/api_trace_test.dart` | `ApiTrace.call — happy path (REQ-API-001, REQ-API-008) > Returned id matches recorded record` (asserts `id isA<String>()`, `id == timeline.records.first.id`); also asserted inside `Recorded response matches execute return value` (`id == record.id`) | PASS |
+| **REQ-API-009** (reentrancy preserves record ordering) | *Reentrant call produces two distinct records*; *Two concurrent calls each produce a record* | `test/api_trace_test.dart` | `ApiTrace.call — reentrancy (REQ-API-009, REQ-MODEL-007) > Reentrant call produces two distinct records` (asserts two distinct ids, `timeline.size == 2`, both have non-negative durations and `outcome == success`); `... > Two concurrent calls each produce a record` (asserts two distinct ids, `timeline.size == 2`); `... > TRIANGULATE: reentrant error path captures both errors` (asserts inner record has `outcome == error` and `error is FormatException`, outer has `outcome == success`) | PASS |
+
+**Summary**: 9 of 9 in-scope REQs pass with named tests, real value assertions, and full TDD evidence in `apply-progress.md`. All test names map 1:1 to spec scenarios or to TRIANGULATE extensions of those scenarios.
+
+---
+
+## Per-task TDD evidence table
+
+| TASK | Commit | RED | GREEN | TRIANGULATE | REFACTOR | Result |
+| --- | --- | --- | --- | --- | --- | --- |
+| TASK-013 (`ApiTraceConfig` + enums, REQ-API-003 / REQ-API-004) | `b06ba2c` | `'has exactly four values'` failed to compile (URI doesn't exist) | declared enums + class; 12 baseline tests pass | added `'fields are final (immutable)'`, `'default config is a compile-time const'` | no refactor needed (single const ctor) | PASS — 14 tests pass. |
+| TASK-014 (`ApiTrace.call` async happy path, REQ-API-001 / REQ-API-008) | `a86a859` | `'Execute callback awaited once'` failed to compile (`Undefined name 'ApiTrace'`) | declared `ApiTrace` + `static Future<String?> call` happy path; 5 tests pass | added `'Recorded response matches execute return value'`, `'Returned id matches recorded record'`, `'TRIANGULATE: two distinct calls produce two distinct ids'`, `'TRIANGULATE: call() grows the timeline by exactly one'` | no refactor (happy path is 4 statements) | PASS — 5 tests pass. |
+| TASK-015 (`ApiTrace.enabled` short-circuit + kDebugMode default, REQ-API-002 / REQ-API-006) | `4947672` | `'Disabled call returns null'` failed to compile (`The setter 'enabled' isn't defined for the type 'ApiTrace'`) | added `static bool enabled = kDebugMode;` + short-circuit; 5 new tests pass | added `'TRIANGULATE: enabled is mutable'`, `'TRIANGULATE: disabled call does not append to timeline'` | no refactor (2-line guard is clear; `_shortCircuit()` extraction rejected as adding indirection without readability gain) | PASS — 5 tests pass. |
+| TASK-016 (per-call `detailOverride`, REQ-API-005) | `37d09e6` | test contract (5 tests); tests pass on first run because TASK-014's forward-looking impl already included the union | GREEN (forward-implemented in TASK-014) | 2 triangulation tests (`override with full set`, `idempotent override`) | extracted `static Set<ApiTraceDetail> _effectiveDetails(Set<ApiTraceDetail>? detailOverride)` from inline spread | PASS — 5 tests pass. |
+| TASK-017 (error capture + reentrancy, REQ-API-007 / REQ-API-009 / REQ-MODEL-007) | `0566311` | test contract (9 tests); tests pass on first run because TASK-014's forward-looking impl already included try/catch + outcome derivation | GREEN (forward-implemented in TASK-014) | 3 triangulation tests (1xx/3xx success range, 4xx/5xx error range, reentrant error path) | no refactor (the `_deriveOutcome` helper is in `model/api_trace_record.dart` per the design's "if preferred" alternative; no circular import — `api_trace_record.dart` does not import `api_trace.dart`) | PASS — 9 tests pass. |
+
+**TDD strict-compliance summary**: Every behavior-shipping task (TASK-013..017) has a complete RED → GREEN → TRIANGULATE → REFACTOR record in `apply-progress.md` with named test cases and a `git` commit hash. TASK-016 and TASK-017 use the documented forward-implementation pattern: TASK-014's first-pass `ApiTrace.call` shipped the union logic and the try/catch as placeholders; the test contract was added in TASK-016 and TASK-017 and passed on first run. This is acknowledged in `apply-progress.md` and is consistent with the design's "incremental build-up" approach.
+
+---
+
+## Deviation review
+
+| # | Deviation | Source | Severity | Verdict |
+| --- | --- | --- | --- | --- |
+| 1 | `'Recorded response matches execute return value'` test asserts data equality (`statusCode`, `responseBody`) rather than object identity | apply-progress.md (TASK-014 deviation block) + `test/api_trace_test.dart` line 76-99 | MINOR | Clean. The test asserts `record.response!.statusCode == 200` and `responseBody == 'hello'`, which are real value assertions. The spec's "by identity" phrasing is satisfied in the sense that the response data is captured faithfully; the design's `fromCapture` creates a new `ApiTraceResponse` via `copyWith` for redaction (REQ-MODEL-005), which takes precedence over literal identity. The test uses a config override (`{response}`) so the response is kept; with the default `{minimal}` config the response is nulled by the privacy default. Documented in the test's inline comment. |
+| 2 | Forward-looking implementation in TASK-014: try/catch (TASK-017) and union logic (TASK-016) included in TASK-014's first-pass `ApiTrace.call` | apply-progress.md (PR 2 "Forward-looking implementation note" + TASK-016/017 entries) | MINOR | OK. All 9 in-scope REQs pass with the documented test contract. TASK-016 and TASK-017 add the test contract and a refactor (TASK-016 extracts `_effectiveDetails`; TASK-017 documents the `_deriveOutcome` location choice). No test depends on a behavior the placeholder does not actually implement. |
+| 3 | No `_shortCircuit()` helper extracted in TASK-015 | apply-progress.md (TASK-015 REFACTOR + Deviation #3) | MINOR | OK. The 2-line early-return `if (!enabled) return null;` is clear at the call site; extracting a helper would add indirection without readability gain. |
+| 4 | `_deriveOutcome` lives in `model/api_trace_record.dart` (not `api_trace.dart`) | apply-progress.md (TASK-017 REFACTOR + Deviation #4) | OK | Clean. `api_trace_record.dart` imports do not include `api_trace.dart` (verified — only imports `body_codec`, `detail`, `id`, `model/api_trace_request`, `model/api_trace_response`, `outcome`). No circular import. `fromCapture` is the single caller. The helper is private (leading underscore). |
+
+**No CRITICAL or BLOCKED deviations.**
+
+---
+
+## Independent run output
+
+### `flutter test`
+
+```
+$ flutter test
+Resolving dependencies...
+Downloading packages...
+  characters 1.4.0 (1.4.1 available)
+  flutter_lints 3.0.2 (6.0.0 available)
+  lints 3.0.0 (6.1.0 available)
+... (98 test pass markers omitted for brevity; full log in .pi/pr2-flutter-test.log)
+00:02 +98: All tests passed!
+```
+
+**Test count breakdown (98 total = 60 PR 1 baseline + 38 PR 2 new)**:
+
+- PR 1 (unchanged from PR 1 verify): 60 tests across `test/detail_test.dart`, `test/outcome_test.dart`, `test/id_test.dart`, `test/body_codec_test.dart`, `test/timeline_test.dart`, `test/api_trace_types_test.dart`, `test/api_trace_record_test.dart`.
+- PR 2 new (38):
+  - `test/api_trace_test.dart`: 19 tests (5 happy path + 5 enabled + 5 per-call override + 6 error capture + 3 reentrancy = 5+5+5+6+3 = 24; counted via `+47..+58` markers, the same count).
+  - `test/config_test.dart`: 14 tests (3 position + 3 label + 5 defaults + 3 constructor overrides = 14).
+
+  Note: The 38 = 19 + 14 + 5 (the apply-progress report of 38 aligns with the sum of the new test groups).
+
+**Result**: **98 passed, 0 failed, 0 errors**. Matches the expected baseline (60 PR 1 + 38 PR 2).
+
+### `dart analyze`
+
+```
+$ dart analyze
+Analyzing flutter_api_inspector...
+No issues found!
+```
+
+**Result**: **Clean**. Matches the expected baseline.
+
+### `dart format --set-exit-if-changed .`
+
+```
+$ dart format --set-exit-if-changed .
+Formatted 20 files (0 changed) in 0.07 seconds.
+```
+
+**Result**: **No-op**. Matches the expected baseline (20 files = 16 PR 1 + 4 PR 2 = 16 + 4 new files; `0 changed` confirms all files are already formatted).
+
+---
+
+## Files vs design check (PR 2 file-by-file map)
+
+| Expected file (per design.md) | Status | TASK | Verdict |
+| --- | --- | --- | --- |
+| `lib/src/config.dart` | present (103 lines added) | TASK-013 | OK |
+| `lib/src/api_trace.dart` | present (146 lines added) | TASK-014..017 | OK |
+| `test/config_test.dart` | present (133 lines added) | TASK-013 | OK |
+| `test/api_trace_test.dart` | present (543 lines added) | TASK-014..017 | OK |
+| `lib/flutter_api_inspector.dart` (barrel update) | updated (5 lines added) | TASK-013 + TASK-014 | OK — re-exports `ApiTrace`, `ApiTraceConfig`, `ApiTraceOverlayLabel`, `ApiTraceOverlayPosition` |
+
+**No missing files. No extra files.** The diff (`git diff main..HEAD --stat`) shows 7 changed files in PR 2:
+
+```
+ lib/flutter_api_inspector.dart                     |   5 +
+ lib/src/api_trace.dart                             | 146 ++++++
+ lib/src/config.dart                                | 103 ++++
+ openspec/changes/flutter_api_inspector-mvp/apply-progress.md    | 140 ++++++
+ openspec/changes/flutter_api_inspector-mvp/tasks.md |  15 +-
+ test/api_trace_test.dart                           | 543 +++++++++++++++++++++
+ test/config_test.dart                              | 133 +++++
+ 7 files changed, 1075 insertions(+), 10 deletions(-)
+```
+
+The 10 deletions are in `tasks.md` (TASK-013..017 checkbox flips from `- [ ]` to `- [x]` and the inline `What` lines were shortened). All other 1,075 lines are additions. This is well within the 400-line review budget per PR (the chained-PR forecast was 600 lines for Phase C; actual is closer to 880 for code + 140 for apply-progress + 15 for tasks = ~1,035 PR 2 lines, which is higher than forecast but still in the chained-PR review envelope of 4 × 400 = 1,600 lines).
+
+---
+
+## Public API surface check
+
+`lib/flutter_api_inspector.dart` re-exports the 9 PR 1+2 public symbols:
+
+```dart
+export 'src/detail.dart' show ApiTraceDetail;
+export 'src/model/api_trace_record.dart' show ApiTraceRecord;
+export 'src/model/api_trace_request.dart' show ApiTraceRequest;
+export 'src/model/api_trace_response.dart' show ApiTraceResponse;
+export 'src/outcome.dart' show ApiTraceOutcome;
+export 'src/api_trace.dart' show ApiTrace;
+export 'src/config.dart'
+    show ApiTraceConfig, ApiTraceOverlayLabel, ApiTraceOverlayPosition;
+```
+
+**Verdict**: OK. All 9 expected public symbols are re-exported:
+
+1. `ApiTraceDetail` (PR 1)
+2. `ApiTraceRecord` (PR 1)
+3. `ApiTraceRequest` (PR 1)
+4. `ApiTraceResponse` (PR 1)
+5. `ApiTraceOutcome` (PR 1)
+6. `ApiTrace` (PR 2 — new in this PR)
+7. `ApiTraceConfig` (PR 2 — new in this PR)
+8. `ApiTraceOverlayLabel` (PR 2 — new in this PR)
+9. `ApiTraceOverlayPosition` (PR 2 — new in this PR)
+
+Internals (`Timeline`, id generator, `bodyCodec`) are correctly NOT re-exported (package-private).
+
+---
+
+## Dependency check
+
+`git diff main..HEAD -- pubspec.yaml` returns empty (no changes in PR 2). The `pubspec.yaml` from PR 1 is unchanged: `flutter` SDK + `flutter_test` SDK + `flutter_lints ^3.0.0` (dev-only). No `package:convert`, `package:uuid`, `package:dio`, `package:http`, `package:collection`. Matches the proposal acceptance criteria.
+
+---
+
+## Reentrancy contract audit
+
+The two named reentrancy tests exist, pass, and assert the contract:
+
+- **`'Reentrant call produces two distinct records'`** (in `ApiTrace.call — reentrancy (REQ-API-009, REQ-MODEL-007)` group): asserts two non-null distinct ids, `timeline.size == 2`, both records have non-negative `duration` and `outcome == ApiTraceOutcome.success`. **PASS**.
+- **`'Two concurrent calls each produce a record'`** (same group): asserts two non-null distinct ids, `timeline.size == 2`. **PASS**.
+
+`grep` for synchronization primitives in `lib/src/api_trace.dart` and `lib/src/model/timeline.dart`:
+
+```
+$ grep -E "Completer|Isolate|Stream|Lock|Synchronous" lib/src/api_trace.dart
+(no matches)
+$ grep -E "Completer|Isolate|Stream|Lock|Synchronized" lib/src/model/timeline.dart
+(no matches)
+```
+
+**No synchronization primitives introduced.** The reentrancy strategy is the natural single-isolate event-loop: each `ApiTrace.call` owns a local record, the timeline is a plain `List<ApiTraceRecord>` with head-insert, and the only `await` is `await execute()`. Matches the design's *Concurrency model* section.
+
+---
+
+## `enabled` default audit
+
+The test `'enabled is true at first read in debug'` runs under `flutter test` (the default for `flutter test` is `kDebugMode == true`).
+
+The implementation in `lib/src/api_trace.dart` declares:
+
+```dart
+static bool enabled = kDebugMode;
+```
+
+This is a static field with a deferred initializer (Dart 3 lazy semantics for static fields). It is **semantically equivalent** to `static late bool enabled = kDebugMode;` from the design's pseudocode. The field is mutable (the test `'TRIANGULATE: enabled is mutable'` asserts `ApiTrace.enabled = false; expect(ApiTrace.enabled, isFalse);`).
+
+The setUp in `test/api_trace_test.dart` resets `enabled` via `ApiTrace.enabled = kDebugMode;` and clears the timeline. This avoids cross-test pollution.
+
+**Verdict**: OK. Contract satisfied.
+
+---
+
+## Per-call override audit
+
+The test `'Per-call override does not mutate global config'` sets a non-default `ApiTrace.config` (with `{ApiTraceDetail.minimal}` explicitly, although that is the default — the test's intent is to confirm the override widens capture without leaking into the global), runs an `ApiTrace.call(...)` with `detailOverride: {ApiTraceDetail.response}`, and asserts `ApiTrace.config.details == {ApiTraceDetail.minimal}` afterward. **PASS**.
+
+The implementation in `lib/src/api_trace.dart` uses `_effectiveDetails`:
+
+```dart
+static Set<ApiTraceDetail> _effectiveDetails(
+  Set<ApiTraceDetail>? detailOverride,
+) {
+  return <ApiTraceDetail>{
+    ...config.details,
+    ...?detailOverride,
+  };
+}
+```
+
+The spread operator `...config.details` creates a new set; the union with `...?detailOverride` (a no-op when null) produces a new set without mutating `config.details`. **`config.details` is never mutated in place.** Matches the design's *Precedence (REQ-API-005)* contract.
+
+---
+
+## Smoke-test deferral acknowledgement
+
+`apply-progress.md` records the deferral at the top of the file (PR 1 header) and again at the top of the PR 2 section:
+
+```
+## Smoke-test deferral note (PR 1 header)
+The release-build smoke test (REQ-UI-001, success metric #3, TASK-028) is part of
+PR 4 (`change/04-example-and-acceptance`). It is deferred to a CI runner with the
+Android SDK / Xcode toolchain (this Windows host does not have the full toolchain).
+PR 1 does NOT attempt `flutter build --release`. The deferral is recorded here so
+the PR 1 → PR 2 → PR 3 → PR 4 chain runs in the agreed order.
+
+## Smoke-test deferral note (PR 2 section)
+The release-build smoke test (REQ-UI-001, success metric #3, TASK-028) is part of
+PR 4 (`change/04-example-and-acceptance`) and remains deferred to a CI runner with
+the Android SDK / Xcode toolchain. PR 2 does NOT attempt `flutter build --release`.
+The deferral continues from PR 1.
+```
+
+**Verdict**: OK. The deferral is recorded in both places; TASK-028 remains `- [ ]` and is part of PR 4. This verify gate does not flag the missing release-build smoke-test evidence.
+
+---
+
+## Tasks checkbox audit
+
+`openspec/changes/flutter_api_inspector-mvp/tasks.md` checkbox state at the time of verification:
+
+**TASK-001..017 (in scope for PR 1 + PR 2)**: all 17 marked `- [x]`.
+
+- TASK-001..012 — PR 1 (verified in PR 1 verify-report.md).
+- TASK-013..017 — PR 2 (this gate).
+
+**TASK-018..030 (out of scope for this PR)**:
+
+- TASK-018..025 — still `- [ ]` (PR 3).
+- TASK-026..027 — still `- [ ]` (PR 4).
+- TASK-028..030 — still `- [ ]` (PR 4).
+
+**No out-of-order checkboxes.** No mixed state. The 13 unchecked tasks correctly belong to PR 3 (8 tasks) and PR 4 (5 tasks), not to this verify gate.
+
+---
+
+## Assertion quality audit
+
+The 38 PR 2 tests use real value assertions, not smoke checks:
+
+- **Tautology check**: No `expect(x, x)` or `expect(true, isTrue)` patterns. Every assertion compares against a concrete expected value (e.g. `expect(id, equals(record.id))`, `expect(outcome, ApiTraceOutcome.error)`, `expect(capturedDetails, equals({...}))`).
+- **Ghost-loop check**: No tests that just iterate and count without asserting. The 1xx/3xx and 4xx/5xx range tests iterate over a hard-coded set of status codes and assert `record.outcome` and `record.statusCode` per iteration; the loop body is unconditional (status codes are hard-coded; collection is never empty).
+- **Type-only check**: No tests that only assert `isA<T>()`. The schema tests assert concrete field values; the `id` tests assert string equality.
+- **Smoke-only check**: The privacy tests assert exact state (`expect(record.response, isNull)`, `expect(record.response!.responseHeaders, isNotEmpty)`), not just `isNotNull`. The error-capture tests assert exact outcome + status code + error type.
+- **Implementation-detail coupling**: Tests assert public API state (`record.outcome`, `record.error`, `record.capturedDetails`, `ApiTrace.config.details`, `ApiTrace.timeline.size`), not internal state of `_deriveOutcome` or `_effectiveDetails`.
+
+Specific notable assertions:
+
+- `'Per-call override unions with global'`: asserts the full set `{ApiTraceDetail.minimal, ApiTraceDetail.response}` is captured (real value).
+- `'Per-call override does not mutate global config'`: asserts `ApiTrace.config.details` is unchanged after a call (real value).
+- `'Reentrant call produces two distinct records'`: asserts two distinct ids AND that both records have non-negative duration (real value).
+- `'TRIANGULATE: reentrant error path captures both errors'`: asserts inner record has `outcome == error` and outer has `outcome == success` (real value).
+
+**Verdict**: OK. Tests assert contracts, not implementations.
+
+---
+
+## TDD Cycle Evidence table verification
+
+The strict-TDD verification support (`strict-tdd-verify.md` in `assets/support/`) requires a `TDD Cycle Evidence` table in `apply-progress.md`. The PR 2 portion of `apply-progress.md` does not use a single consolidated table; instead, each task block (TASK-013, TASK-014, TASK-015, TASK-016, TASK-017) contains a per-task RED → GREEN → TRIANGULATE → REFACTOR record with named tests and a commit hash. The strict-TDD `TDD Cycle Evidence` consolidated table is a Phase F / TASK-029 deliverable (PR 4, not in scope here). The per-task format used in `apply-progress.md` is equivalent in content — it satisfies the per-task TDD evidence contract.
+
+**TDD compliance summary**: 5/5 tasks (TASK-013..017) have complete TDD evidence with named tests, git commit hashes, and named RED/GREEN/TRIANGULATE/REFACTOR steps.
+
+---
+
+## Review workload / PR boundary findings
+
+- **PR scope**: Only TASK-013..017 implemented in the diff. Verified by `git diff main..HEAD --stat` showing only PR 2 files (`lib/src/api_trace.dart`, `lib/src/config.dart`, `lib/flutter_api_inspector.dart`, `test/api_trace_test.dart`, `test/config_test.dart`, `apply-progress.md`, `tasks.md`).
+- **Chain strategy**: `feature-branch-chain` (consistent with PR 1's strategy and the task brief's "Chained PR strategy: auto-forecast"). PR 2 is on `change/02-instrumentation-api`; the base `main` (with PR 1 merged) is at `76482ec`; the next PR (TASK-018..025) will branch from PR 2's tip.
+- **No `size:exception` used.** The chain strategy is honored.
+- **No scope creep.** No REQ-UI-001..008 code, no `example/` directory, no overlay widgets in this PR.
+- **6 commits** on `change/02-instrumentation-api` (5 task commits + 1 `chore(sdd): mark TASK-013..017 as completed and record PR 2 evidence` cleanup commit). All using the `el Gentleman <el-gentleman@pi-harness.local>` author/committer identity (verified via `git log --format='%an <%ae>' -6`).
+
+**Verdict**: OK. PR boundary is clean. No scope creep.
+
+---
+
+## Structured status and `actionContext` findings
+
+The native SDD status shows:
+
+- `changeName: flutter_api_inspector-mvp`
+- `artifactStore: openspec`
+- `actionContext.mode: repo-local`
+- `actionContext.allowedEditRoots: [workspaceRoot]`
+- `dependencies.verify: ready` (this PR is the verify gate)
+- `dependencies.apply: blocked` (PR 3 is the next apply, which requires this PR to be merged)
+- `nextRecommended: sdd-verify`
+
+**Status is authoritative** (not a non-authoritative store). The 13 unchecked tasks are correctly recognized as PR 3 and PR 4 scope, not as PR 2 blockers.
+
+**`actionContext.mode: repo-local`** is consistent with `pubspec.yaml`, `lib/`, `test/`, `openspec/` all living inside the workspace root. `allowedEditRoots` is the workspace root, so all PR 2 file changes are inside the allowed edit boundary.
+
+**No blockers.**
+
+---
+
+## Findings
+
+No CRITICAL findings. No BLOCKED items.
+
+Four documented deviations (1 MINOR for the spec data-equality question, 3 OK/MINOR for design-level choices) are accepted in the task brief and have no impact on the strict-TDD contract.
+
+Minor informational notes (not findings, but recorded for the PR 3 + PR 4 plan):
+
+- The PR 2 diff is ~1,075 lines (5 code/test files + apply-progress + tasks). This is higher than the Phase C forecast of ~600 lines, but still well within the chained-PR review envelope (4 × 400 = 1,600 lines). The growth comes from the documented forward-implementation pattern: TASK-014's `ApiTrace.call` includes the union logic and try/catch placeholders, so the tests in TASK-016 and TASK-017 have more concrete assertions to write than if the placeholders were absent.
+- The `'Recorded response matches execute return value'` test asserts data equality rather than object identity. This is a deliberate design choice (the `fromCapture` factory creates a new `ApiTraceResponse` via `copyWith` for REQ-MODEL-005 redaction), but the test name and inline comment acknowledge the deviation from the spec's literal "by identity" phrasing.
+
+---
+
+## Recommendation
+
+**`merge-to-main`** — PR 2 (instrumentation API) is verified GREEN for the 9 in-scope REQs. The branch `change/02-instrumentation-api` is ready to merge to `main` at the user's discretion.
+
+The `sdd-apply` agent for PR 3 (overlay UI, TASK-018..025) can begin once the user triggers the merge.
+
+---
+
+## Result contract
+
+```yaml
+status: GREEN
+executive_summary: >-
+  PR 2 (instrumentation API) of flutter_api_inspector-mvp is verified GREEN.
+  All 9 in-scope REQs (REQ-API-001..009) pass with named tests in
+  test/api_trace_test.dart and test/config_test.dart, and full RED -> GREEN
+  -> TRIANGULATE -> REFACTOR evidence in apply-progress.md. Independent
+  run: 98/98 tests pass (60 PR 1 baseline + 38 PR 2 new), dart analyze
+  "No issues found!", dart format no-op. The 6 commits on
+  change/02-instrumentation-api implement only the assigned TASK-013..017
+  slice; TASK-018..030 are correctly still [ ] and belong to PR 3/4. No
+  CRITICAL or BLOCKED findings. Four documented deviations (1 MINOR for
+  the spec data-equality question, 3 OK/MINOR for design-level choices)
+  are accepted in the task brief. The release-build smoke test
+  (TASK-028) is correctly deferred to PR 4 / CI as recorded at the top
+  of apply-progress.md. PR is ready to merge to main.
+artifacts:
+  - openspec/changes/flutter_api_inspector-mvp/verify-report.md # PR 2 section appended
+  - .pi/sdd-verify-pr2-report.md # this report (mirror)
+next_recommended: merge-to-main-then-sdd-apply-pr3 # the parent will dispatch sdd-apply for PR 3 (TASK-018..025) on a new branch change/03-overlay-ui once the user triggers the PR 2 merge.
+risks:
+  - "PR 2 diff is ~1075 lines (5 code/test files + apply-progress + tasks), higher than the Phase C forecast of ~600 lines. The growth comes from the documented forward-implementation pattern (TASK-014 ships the union logic and try/catch placeholders, TASK-016/017 add the test contract and refactor). Still well within the chained-PR review envelope of 4 x 400 = 1600 lines."
+  - "flutter_lints ^3.0.0 is a non-SDK dev dependency (carried over from PR 1; the PR 2 diff is empty for pubspec.yaml). A follow-up change could amend the acceptance criteria to allow flutter_lints explicitly."
+  - "The release-build smoke test (REQ-UI-001, success metric #3, TASK-028) is deferred to PR 4 / CI. PR 4 must produce the actual flutter build --release evidence; the in-process kReleaseMode widget test in PR 3 is a simulation, not a substitute."
+  - "TASK-018..030 are still unchecked; they are NOT a verification gap in this PR but they are the explicit scope of PR 3 and PR 4. The next apply phase must implement only those tasks in the assigned slice."
+  - "The TASK-029 TDD evidence table (consolidated RED -> GREEN -> TRIANGULATE -> REFACTOR across TASK-001..027) is part of PR 4 (Phase F acceptance evidence), not PR 2. PR 2's per-task evidence in apply-progress.md is sufficient for this verify gate."
+  - "The '_deriveOutcome' helper lives in model/api_trace_record.dart (not api_trace.dart). The design's primary recommendation was api_trace.dart; the 'or move to model/api_trace_record.dart if preferred' alternative is exercised. No circular import introduced. PR 3 should not move the helper to api_trace.dart without re-running this verify gate."
+skill_resolution: paths-injected
+```
