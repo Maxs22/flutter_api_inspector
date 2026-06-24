@@ -141,34 +141,30 @@ quality:
       framework: "dart format"
 
 # --- Active change -----------------------------------------------------------
-# The flutter_api_inspector-mvp change is in flight. Chained PRs are the
-# delivery strategy (feature-branch-chain, see rules.tasks.protect_review_workload).
-# Do not start sdd-archive on a non-existent active change; this field is the
-# source of truth for the sdd-status engine.
+# No active change in flight as of 2026-06-24. The flutter_api_inspector-mvp
+# change was archived on 2026-06-24; its 4 chained PRs are merged to main and
+# its delta specs are promoted to openspec/specs/ as the canonical spec layer.
+# The historical record lives at:
+#   openspec/changes/archive/flutter_api_inspector-mvp/
+# The full archive report is at:
+#   openspec/changes/archive/flutter_api_inspector-mvp/archive-report.md
 #
-# Status (2026-06-24):
-#   PR 1 (TASK-001..012) — skeleton + model — merged to main
-#   PR 2 (TASK-013..017) — instrumentation API — merged to main
-#   PR 3 (TASK-018..025) — overlay UI — in flight on change/03-overlay-ui
-#   PR 4 (TASK-026..030) — example + acceptance — pending
-# Out of band: TASK-028 release-build smoke test deferred to PR 4 / CI.
-active_change: flutter_api_inspector-mvp
-active_change_strategy: feature-branch-chain
-active_change_branch: change/03-overlay-ui
-active_change_chained_prs:
-  - pr: 1
-    branch: change/01-skeleton-model
-    status: merged-to-main
-    head: 76482ec
-  - pr: 2
-    branch: change/02-instrumentation-api
-    status: merged-to-main
-    head: 158e188
-  - pr: 3
-    branch: change/03-overlay-ui
-    status: in-flight
-    next_task: TASK-025
-  - pr: 4
-    branch: change/04-example-and-acceptance
-    status: pending
-    deferred_tasks: [TASK-028]
+# To start a new change, run sdd-proposal; the new change will create a
+# fresh openspec/changes/<name>/ directory and set active_change to the new
+# name. Do not start sdd-archive on a non-existent active change; this field
+# is the source of truth for the sdd-status engine.
+#
+# Historical snapshot of the closed flutter_api_inspector-mvp chained PRs
+# (kept for traceability; not used by the sdd-status engine):
+#
+#   PR 1 (TASK-001..012) — skeleton + model — merged to main (head 76482ec)
+#   PR 2 (TASK-013..017) — instrumentation API — merged to main (head 158e188)
+#   PR 3 (TASK-018..025) — overlay UI — merged to main (head 284d00c)
+#   PR 4 (TASK-026..030) — example + acceptance — merged to main (squash at 1ab13eb; post-merge re-verify at b7ee9b0)
+#
+# Out of band: TASK-028 release-build smoke test recorded at PR 4;
+# iOS path verification deferred to a CI runner with Xcode.
+active_change: null
+# active_change_strategy / active_change_branch / active_change_chained_prs
+# were removed when the change was archived on 2026-06-24. They will be
+# re-introduced by the next sdd-proposal that creates a new active change.
