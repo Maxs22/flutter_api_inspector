@@ -27,3 +27,7 @@ export 'src/model/api_trace_record.dart' show ApiTraceRecord;
 export 'src/model/api_trace_request.dart' show ApiTraceRequest;
 export 'src/model/api_trace_response.dart' show ApiTraceResponse;
 export 'src/outcome.dart' show ApiTraceOutcome;
+
+// --- Instrumentation API (PR 2) ---------------------------------------------
+export 'src/config.dart'
+    show ApiTraceConfig, ApiTraceOverlayLabel, ApiTraceOverlayPosition;
