@@ -18,11 +18,39 @@ import 'package:flutter_api_inspector/flutter_api_inspector.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:flutter_api_inspector/src/overlay/colors.dart';
 import 'package:flutter_api_inspector/src/overlay/fab_position.dart';
-import 'package:flutter_api_inspector/src/overlay/fab.dart';
 import 'package:flutter_api_inspector/src/overlay/timeline_row.dart';
 import 'package:flutter_api_inspector/src/overlay/timeline_panel.dart';
-import 'package:flutter_api_inspector/src/overlay/detail_screen.dart';
-import 'package:flutter_api_inspector/src/overlay/api_trace_overlay.dart';
+
+/// Pumps a `MaterialApp` with the `ApiTraceBootstrap` wrapping
+/// a child. Centralizes the test harness for the overlay end-
+/// to-end scenarios (TASK-025).
+///
+/// - [child] is the developer's app (typically a `Scaffold`).
+/// - [config] is the optional `ApiTraceConfig` to set before
+///   pumping; defaults to `const ApiTraceConfig()`.
+/// - [records] is the optional list of records to inject into
+///   the `ApiTrace.timeline` before pumping; defaults to empty.
+Future<void> _pumpAppWithOverlay(
+  WidgetTester tester, {
+  Widget? child,
+  ApiTraceConfig? config,
+  List<ApiTraceRecord>? records,
+}) async {
+  // Reset state so tests are isolated.
+  ApiTrace.enabled = true;
+  ApiTrace.config = config ?? const ApiTraceConfig();
+  ApiTrace.timeline.clear();
+  if (records != null) {
+    for (final r in records) {
+      ApiTrace.timeline.append(r);
+    }
+  }
+  await tester.pumpWidget(ApiTraceBootstrap(
+    child: MaterialApp(
+      home: child ?? const Scaffold(body: Text('app body')),
+    ),
+  ));
+}
 
 void main() {
   group('outcomeColor helper (REQ-UI-008)', () {
@@ -1098,6 +1126,90 @@ void main() {
           .first;
       final align = tester.widget<Align>(alignFinder);
       expect(align.alignment, equals(Alignment.topLeft));
+    });
+  });
+
+  group('End-to-end developer flow (TASK-025, REQ-UI-001..008)', () {
+    // The end-to-end test uses the _pumpAppWithOverlay
+    // helper. The flow: developer makes an API call via
+    // ApiTrace.call, the call lands in the timeline, the
+    // developer taps the FAB, the panel opens, the
+    // developer taps the row, the detail screen is pushed.
+
+    testWidgets('end-to-end: call -> FAB -> panel -> row -> detail screen',
+        (tester) async {
+      // 1. The bootstrap mounts the overlay automatically.
+      await _pumpAppWithOverlay(tester);
+      // The overlay is in the tree.
+      expect(find.byType(ApiTraceOverlay), findsOneWidget);
+
+      // 2. The developer makes a successful API call.
+      await ApiTrace.call(
+        'getUser',
+        method: 'GET',
+        url: Uri.parse('https://api.example.com/user'),
+        execute: () async => const ApiTraceResponse(statusCode: 200),
+      );
+      // The timeline now has one record.
+      expect(ApiTrace.timeline.size, 1);
+      // Rebuild the widget tree (the ValueListenableBuilder
+      // subscribes to ApiTrace.timeline.latest; pump again
+      // to surface the new record).
+      await tester.pump();
+
+      // 3. The developer taps the FAB to open the panel.
+      await tester.tap(find.byType(FloatingActionButton));
+      await tester.pumpAndSettle();
+      // The panel is shown.
+      expect(find.byType(TimelinePanel), findsOneWidget);
+
+      // 4. The developer taps the row.
+      await tester.tap(find.byType(TimelineRow));
+      await tester.pumpAndSettle();
+      // The detail screen is on top.
+      expect(find.byType(ApiTraceDetailScreen), findsOneWidget);
+
+      // 5. Pop the detail screen and confirm the panel is
+      //    still there.
+      final NavigatorState navigator =
+          tester.state(find.byType(Navigator).first);
+      navigator.pop();
+      await tester.pumpAndSettle();
+      expect(find.byType(ApiTraceDetailScreen), findsNothing);
+      expect(find.byType(TimelinePanel), findsOneWidget);
+    });
+
+    testWidgets(
+        'TRIANGULATE: _pumpAppWithOverlay configures overlay at any corner',
+        (tester) async {
+      // The helper accepts a config; verify the overlay
+      // honours it. We test all four corners in a single
+      // test (loops over ApiTraceOverlayPosition).
+      for (final position in <ApiTraceOverlayPosition>[
+        ApiTraceOverlayPosition.bottomRight,
+        ApiTraceOverlayPosition.bottomLeft,
+        ApiTraceOverlayPosition.topRight,
+        ApiTraceOverlayPosition.topLeft,
+      ]) {
+        await _pumpAppWithOverlay(
+          tester,
+          config: ApiTraceConfig(overlayPosition: position),
+        );
+        // The Align wrapping the FAB has the expected alignment.
+        final alignFinder = find
+            .ancestor(
+                of: find.byType(FloatingActionButton),
+                matching: find.byType(Align))
+            .first;
+        final align = tester.widget<Align>(alignFinder);
+        expect(
+          align.alignment,
+          equals(fabAlignment(position)),
+          reason: 'position=$position',
+        );
+        // Reset for the next iteration.
+        await tester.pumpWidget(const SizedBox.shrink());
+      }
     });
   });
 }

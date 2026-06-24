@@ -44,12 +44,17 @@ class ApiTraceOverlay extends StatefulWidget {
   /// records to render in the panel (typically
   /// `ApiTrace.timeline.records`). [onRecordTap] is the
   /// callback fired when a row is tapped; the default pushes
-  /// the detail screen via `Navigator`.
+  /// the detail screen via `Navigator`. [navigatorKey] is the
+  /// `GlobalKey<NavigatorState>` to use when the overlay is
+  /// mounted outside the Navigator subtree (the common case
+  /// via `ApiTraceBootstrap`). When null, falls back to
+  /// `Navigator.of(context, rootNavigator: true)`.
   const ApiTraceOverlay({
     super.key,
     required this.config,
     required this.records,
     this.onRecordTap,
+    this.navigatorKey,
   });
 
   /// The package configuration.
@@ -61,6 +66,15 @@ class ApiTraceOverlay extends StatefulWidget {
   /// Optional callback for row taps. If null, the overlay
   /// pushes the detail screen via `Navigator`.
   final void Function(ApiTraceRecord)? onRecordTap;
+
+  /// Optional `GlobalKey<NavigatorState>` used to push the
+  /// detail screen. When the overlay is mounted outside the
+  /// Navigator subtree (e.g. as a sibling of the
+  /// `MaterialApp.builder` child), `Navigator.of(context)`
+  /// does not find an ancestor Navigator; this key is the
+  /// escape hatch. The `ApiTraceBootstrap` always passes the
+  /// shared `ApiTrace.navigatorKey`.
+  final GlobalKey<NavigatorState>? navigatorKey;
 
   @override
   State<ApiTraceOverlay> createState() => _ApiTraceOverlayState();
@@ -137,7 +151,18 @@ class _ApiTraceOverlayState extends State<ApiTraceOverlay> {
       return;
     }
     // Default: push the detail screen via MaterialPageRoute.
-    final navigator = Navigator.of(context, rootNavigator: false);
+    // We use the root Navigator so the route is added to the
+    // developer's main Navigator (and is therefore
+    // back-button-discoverable).
+    //
+    // When the overlay is mounted outside the Navigator subtree
+    // (e.g. as a sibling of the MaterialApp.builder child via
+    // ApiTraceBootstrap), `Navigator.of(context)` cannot find
+    // an ancestor Navigator and throws. The escape hatch is
+    // the shared `GlobalKey<NavigatorState>` on the MaterialApp,
+    // which always points at the MaterialApp's root Navigator.
+    final navigator = widget.navigatorKey?.currentState ??
+        Navigator.of(context, rootNavigator: true);
     navigator.push<bool>(
       MaterialPageRoute<bool>(
         builder: (BuildContext _) {

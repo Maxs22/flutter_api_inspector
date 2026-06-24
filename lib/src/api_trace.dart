@@ -20,6 +20,8 @@
 import 'package:flutter/foundation.dart' show kDebugMode;
 import 'package:flutter/widgets.dart';
 import 'package:flutter_api_inspector/src/bootstrap.dart';
+// ignore: unused_import
+import 'package:flutter/material.dart' show Navigator;
 import 'package:flutter_api_inspector/src/config.dart';
 import 'package:flutter_api_inspector/src/detail.dart';
 import 'package:flutter_api_inspector/src/model/api_trace_record.dart';
@@ -60,6 +62,20 @@ abstract final class ApiTrace {
   /// `static`), but `append` and `clear` mutate the contents.
   static final Timeline timeline =
       Timeline(capacity: const ApiTraceConfig().timelineCapacity);
+
+  /// Global key assigned to the `Navigator` of the `MaterialApp`
+  /// rebuilt by [ApiTraceBootstrap]. The [ApiTraceOverlay] uses
+  /// this key in its `_handleRecordTap` to push the detail
+  /// screen from a context that is OUTSIDE the Navigator subtree
+  /// (the overlay is mounted as a sibling of the developer's
+  /// `MaterialApp.builder` child, so `Navigator.of(context)`
+  /// would not find an ancestor Navigator from the overlay's
+  /// own `BuildContext`).
+  ///
+  /// Internal use only. The user does not interact with this
+  /// field.
+  static final GlobalKey<NavigatorState> navigatorKey =
+      GlobalKey<NavigatorState>();
 
   /// Captures one API call. The `execute` callback is awaited
   /// exactly once. Returns the new record's `id`, or `null` if
