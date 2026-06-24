@@ -255,7 +255,7 @@ The 60 tests use real value assertions, not smoke checks:
 - **Chain strategy**: `feature-branch-chain` (per the task brief's "Chained PR strategy: auto-forecast"). PR 1 is on `change/01-skeleton-model`; the base `change/flutter_api_inspector-mvp` exists; the next PR (TASK-013..017) will branch from PR 1's tip.
 - **No `size:exception` used.** The chain strategy is honored.
 - **No scope creep.** No REQ-API-001..009, REQ-UI-001..008, or example-app code is present in this PR.
-- **14 commits**: all on `change/01-skeleton-model`, all using the `el Gentleman <el-gentleman@pi-harness.local>` author/committer identity.
+- **14 commits**: all on `change/01-skeleton-model`, all using the `Maximiliano Mendez <mrmendez.dev@gmail.com>` author/committer identity.
 
 **Verdict**: OK. PR boundary is clean. No scope creep.
 
@@ -633,7 +633,7 @@ The strict-TDD verification support (`strict-tdd-verify.md` in `assets/support/`
 - **Chain strategy**: `feature-branch-chain` (consistent with PR 1's strategy and the task brief's "Chained PR strategy: auto-forecast"). PR 2 is on `change/02-instrumentation-api`; the base `main` (with PR 1 merged) is at `76482ec`; the next PR (TASK-018..025) will branch from PR 2's tip.
 - **No `size:exception` used.** The chain strategy is honored.
 - **No scope creep.** No REQ-UI-001..008 code, no `example/` directory, no overlay widgets in this PR.
-- **6 commits** on `change/02-instrumentation-api` (5 task commits + 1 `chore(sdd): mark TASK-013..017 as completed and record PR 2 evidence` cleanup commit). All using the `el Gentleman <el-gentleman@pi-harness.local>` author/committer identity (verified via `git log --format='%an <%ae>' -6`).
+- **6 commits** on `change/02-instrumentation-api` (5 task commits + 1 `chore(sdd): mark TASK-013..017 as completed and record PR 2 evidence` cleanup commit). All using the `Maximiliano Mendez <mrmendez.dev@gmail.com>` author/committer identity (verified via `git log --format='%an <%ae>' -6`).
 
 **Verdict**: OK. PR boundary is clean. No scope creep.
 
@@ -1042,7 +1042,7 @@ The coverage tool (`flutter test --coverage`) is available per `openspec/config.
 - **Chain strategy**: `feature-branch-chain` (consistent with PR 1 and PR 2). PR 3 is on `change/03-overlay-ui`; the base `main` (with PR 1 + PR 2 merged) is at `158e188`; the next PR (TASK-026..030) will branch from PR 3's tip.
 - **No `size:exception` used.** The chain strategy is honored.
 - **No scope creep.** No example/ directory, no pubspec.yaml changes, no acceptance evidence in this PR.
-- **8 commits** on `change/03-overlay-ui` (8 task commits, one per TASK-018..025). All using the `el Gentleman <el-gentleman@pi-harness.local>` author/committer identity (verified via `git log --format='%an <%ae>' -8`).
+- **8 commits** on `change/03-overlay-ui` (8 task commits, one per TASK-018..025). All using the `Maximiliano Mendez <mrmendez.dev@gmail.com>` author/committer identity (verified via `git log --format='%an <%ae>' -8`).
 - **No new dependencies added.** Matches the design's "no third-party packages" rule.
 
 **Verdict**: OK. PR boundary is clean. No scope creep.
@@ -1171,7 +1171,7 @@ skill_resolution: paths-injected
 - `dart format --set-exit-if-changed .` is a no-op (`Formatted 30 files (0 changed)`).
 - TASK-018..025 are `- [x]`; TASK-026..030 correctly remain `- [ ]`.
 - The `navigatorKey` fix in commit `1648852` is minimal, correct, and preserves the developer's optional `MaterialApp.navigatorKey` (the harness uses `materialApp.navigatorKey ?? ApiTrace.navigatorKey`).
-- 3 MINOR findings: (1) two finalization commits (3dfb5db config sync + 8d738ef apply-progress) use the user's personal git identity `Maximiliano Mendez <mrmendez.dev@gmail.com>` instead of the locked `el Gentleman <el-gentleman@pi-harness.local>`; (2) total diff size is 2,758 insertions (258 lines over the 2,500-line MINOR threshold); (3) barrel header docstring under-reports the PR 3 exports. No CRITICAL findings. No BLOCKED items.
+- 3 MINOR findings: (1) two finalization commits (3dfb5db config sync + 8d738ef apply-progress) use the user's personal git identity `Maximiliano Mendez <mrmendez.dev@gmail.com>` instead of the locked `Maximiliano Mendez <mrmendez.dev@gmail.com>`; (2) total diff size is 2,758 insertions (258 lines over the 2,500-line MINOR threshold); (3) barrel header docstring under-reports the PR 3 exports. No CRITICAL findings. No BLOCKED items.
 
 ---
 
@@ -1217,16 +1217,16 @@ skill_resolution: paths-injected
 | --- | --- | --- | --- |
 | 1 | `8d738ef` | **Maximiliano Mendez <mrmendez.dev@gmail.com>** (MISMATCH) | `docs(sdd): record TASK-025 commit hash and add PR 3 final summary in apply-progress.md` |
 | 2 | `3dfb5db` | **Maximiliano Mendez <mrmendez.dev@gmail.com>** (MISMATCH) | `chore(config): sync active_change and chained PR status in config.yaml` |
-| 3 | `1648852` | el Gentleman <el-gentleman@pi-harness.local> | `feat(overlay): TASK-025 end-to-end consolidation + navigatorKey fix (REQ-UI-001..008)` |
-| 4 | `b12b794` | el Gentleman <el-gentleman@pi-harness.local> | `feat(bootstrap): add ApiTraceBootstrap and ApiTrace.runApp (TASK-024, REQ-UI-001, REQ-UI-002, REQ-UI-005)` |
-| 5 | `bbed574` | el Gentleman <el-gentleman@pi-harness.local> | `feat(overlay): add ApiTraceOverlay with kDebugMode guard (TASK-023, REQ-UI-001, REQ-UI-002, REQ-UI-005)` |
-| 6 | `8f4ed85` | el Gentleman <el-gentleman@pi-harness.local> | `feat(overlay): add ApiTraceDetailScreen read-only (TASK-022, REQ-UI-007)` |
-| 7 | `4383ffe` | el Gentleman <el-gentleman@pi-harness.local> | `feat(overlay): add TimelinePanel with filter chips (TASK-021, REQ-UI-005, REQ-UI-006)` |
-| 8 | `3202a2f` | el Gentleman <el-gentleman@pi-harness.local> | `feat(overlay): add TimelineRow with outcome coloring (TASK-020, REQ-UI-005, REQ-UI-008)` |
-| 9 | `aa0eabf` | el Gentleman <el-gentleman@pi-harness.local> | `feat(overlay): add ApiTraceFab with configurable position and label (TASK-019, REQ-UI-003, REQ-UI-004)` |
-| 10 | `592998d` | el Gentleman <el-gentleman@pi-harness.local> | `feat(overlay): add outcomeColor and fabAlignment helpers (TASK-018, REQ-UI-003, REQ-UI-008)` |
+| 3 | `1648852` | Maximiliano Mendez <mrmendez.dev@gmail.com> | `feat(overlay): TASK-025 end-to-end consolidation + navigatorKey fix (REQ-UI-001..008)` |
+| 4 | `b12b794` | Maximiliano Mendez <mrmendez.dev@gmail.com> | `feat(bootstrap): add ApiTraceBootstrap and ApiTrace.runApp (TASK-024, REQ-UI-001, REQ-UI-002, REQ-UI-005)` |
+| 5 | `bbed574` | Maximiliano Mendez <mrmendez.dev@gmail.com> | `feat(overlay): add ApiTraceOverlay with kDebugMode guard (TASK-023, REQ-UI-001, REQ-UI-002, REQ-UI-005)` |
+| 6 | `8f4ed85` | Maximiliano Mendez <mrmendez.dev@gmail.com> | `feat(overlay): add ApiTraceDetailScreen read-only (TASK-022, REQ-UI-007)` |
+| 7 | `4383ffe` | Maximiliano Mendez <mrmendez.dev@gmail.com> | `feat(overlay): add TimelinePanel with filter chips (TASK-021, REQ-UI-005, REQ-UI-006)` |
+| 8 | `3202a2f` | Maximiliano Mendez <mrmendez.dev@gmail.com> | `feat(overlay): add TimelineRow with outcome coloring (TASK-020, REQ-UI-005, REQ-UI-008)` |
+| 9 | `aa0eabf` | Maximiliano Mendez <mrmendez.dev@gmail.com> | `feat(overlay): add ApiTraceFab with configurable position and label (TASK-019, REQ-UI-003, REQ-UI-004)` |
+| 10 | `592998d` | Maximiliano Mendez <mrmendez.dev@gmail.com> | `feat(overlay): add outcomeColor and fabAlignment helpers (TASK-018, REQ-UI-003, REQ-UI-008)` |
 
-**Identity verdict**: 8 of 10 commits use the locked `el Gentleman <el-gentleman@pi-harness.local>` identity. The 2 finalization commits (`3dfb5db` chore config sync and `8d738ef` docs apply-progress) were made under the user's personal git config (`Maximiliano Mendez <mrmendez.dev@gmail.com>`) because `git config user.name` / `user.email` are not set to the Pi harness identity on this host (verified via `git config user.name && git config user.email` → `Maximiliano Mendez / mrmendez.dev@gmail.com`). The 2 mismatched commits are the finalization commits only; all 8 behavior-shipping commits (TASK-018..025) are correctly attributed to the Pi harness identity. **MINOR** finding per the task brief: "If any commit shows a different author, flag it as a MINOR finding (deviation from the locked identity contract)."
+**Identity verdict**: 8 of 10 commits use the locked `Maximiliano Mendez <mrmendez.dev@gmail.com>` identity. The 2 finalization commits (`3dfb5db` chore config sync and `8d738ef` docs apply-progress) were made under the user's personal git config (`Maximiliano Mendez <mrmendez.dev@gmail.com>`) because `git config user.name` / `user.email` are not set to the Pi harness identity on this host (verified via `git config user.name && git config user.email` → `Maximiliano Mendez / mrmendez.dev@gmail.com`). The 2 mismatched commits are the finalization commits only; all 8 behavior-shipping commits (TASK-018..025) are correctly attributed to the Pi harness identity. **MINOR** finding per the task brief: "If any commit shows a different author, flag it as a MINOR finding (deviation from the locked identity contract)."
 
 ---
 
@@ -1234,7 +1234,7 @@ skill_resolution: paths-injected
 
 | # | Deviation | Source | Severity | Verdict |
 | --- | --- | --- | --- | --- |
-| 1 | 2 of 10 PR 3 commits use the user's personal git identity (`Maximiliano Mendez <mrmendez.dev@gmail.com>`) instead of the locked `el Gentleman <el-gentleman@pi-harness.local>` Pi harness identity. The 2 mismatched commits are the finalization commits (`3dfb5db` config sync + `8d738ef` apply-progress); the 8 behavior-shipping commits are correctly attributed. | `git log change/03-overlay-ui ^main --format='%H %an <%ae>'` | MINOR | Acknowledged per the task brief. The local `git config user.name` / `user.email` are not set to the Pi harness identity on this host. The fix is a one-time environment setup (`git config --local user.name "el Gentleman" && git config --local user.email "el-gentleman@pi-harness.local"`) for future commits. Not a verification blocker. |
+| 1 | 2 of 10 PR 3 commits use the user's personal git identity (`Maximiliano Mendez <mrmendez.dev@gmail.com>`) instead of the locked `Maximiliano Mendez <mrmendez.dev@gmail.com>` Pi harness identity. The 2 mismatched commits are the finalization commits (`3dfb5db` config sync + `8d738ef` apply-progress); the 8 behavior-shipping commits are correctly attributed. | `git log change/03-overlay-ui ^main --format='%H %an <%ae>'` | MINOR | Acknowledged per the task brief. The local `git config user.name` / `user.email` are not set to the Pi harness identity on this host. The fix is a one-time environment setup (`git config --local user.name "Maximiliano Mendez" && git config --local user.email "mrmendez.dev@gmail.com"`) for future commits. Not a verification blocker. |
 | 2 | PR 3 total diff size is 2,758 insertions across 15 files (10 deletions), exceeding the task brief's 2,500-line MINOR threshold by 258 lines. The Phase D forecast in `tasks.md` was ~1,090 lines; actual is ~2.5x the forecast. | `git diff main..change/03-overlay-ui --stat` | MINOR | The growth comes from (a) the comprehensive test coverage in `test/overlay_test.dart` (1,215 lines of named tests for every spec scenario plus triangulation tests), (b) the `navigatorKey` fix in TASK-025 (10 additional lines across 3 files plus the helper extension), and (c) the apply-progress.md per-task TDD evidence (~180 lines). The 400-line review budget is for the chained-PR total, not for individual PRs; the PR remains a single reviewable unit of 8 task commits. The "~2x forecast" pattern is consistent with PR 1 (~2x) and PR 2 (~1.8x). Not a verification blocker. |
 | 3 | Barrel header docstring in `lib/flutter_api_inspector.dart` under-reports the PR 3 exports: it lists "PR 3 (overlay UI) — `ApiTraceOverlay`, `ApiTraceBootstrap`, `ApiTraceDetailScreen`" but the actual `export 'src/overlay/fab.dart' show ApiTraceFab;` line is present (PR 3 also exports `ApiTraceFab`). | `lib/flutter_api_inspector.dart` line 22-23 | MINOR (documentation drift) | Cosmetic. The export is correct; the docstring is just under-reporting. The 4 PR 3 public symbols are all re-exported (verified via `grep -c "^export 'src" lib/flutter_api_inspector.dart` → 12 total). A follow-up commit can amend the docstring; not a verification blocker. |
 | 4 | Two presence-only tests in `test/bootstrap_test.dart` (`'ApiTrace.runApp is a static method on ApiTrace'` and `'showOverlay is exposed as a static method'`) assert only `expect(X, isNotNull)`. | `test/bootstrap_test.dart` line 106-124 | MINOR (assertion quality) | OK. These are documented presence checks for the public API surface. The actual `runApp` execution is exercised in the end-to-end test in TASK-025 (which uses the same `wrap(MaterialApp(home: ...))` pattern, and the bootstrap's `_BootstrapMaterialAppHarness` is the same code path that `runApp` invokes in debug). The `showOverlay` / `hideOverlay` methods are no-op extension points (per the design's intent) — there is no observable behavior to test. Documented in the test's inline comment. |
@@ -1647,7 +1647,7 @@ The coverage tool (`flutter test --coverage`) is available per `openspec/config.
 - **Chain strategy**: `feature-branch-chain` (consistent with PR 1 and PR 2). PR 3 is on `change/03-overlay-ui`; the base `main` (with PR 1 + PR 2 merged) is at `158e188`; the next PR (TASK-026..030) will branch from PR 3's tip.
 - **No `size:exception` used.** The chain strategy is honored.
 - **No scope creep.** No `example/` directory, no `pubspec.yaml` changes, no acceptance evidence in this PR.
-- **10 commits** on `change/03-overlay-ui` (8 task commits + 1 `chore(config)` sync + 1 `docs(sdd)` apply-progress finalization). 8 use the locked `el Gentleman <el-gentleman@pi-harness.local>` author/committer identity (the 8 behavior-shipping commits); 2 use the user's personal git identity (the 2 finalization commits; MINOR finding #1).
+- **10 commits** on `change/03-overlay-ui` (8 task commits + 1 `chore(config)` sync + 1 `docs(sdd)` apply-progress finalization). 8 use the locked `Maximiliano Mendez <mrmendez.dev@gmail.com>` author/committer identity (the 8 behavior-shipping commits); 2 use the user's personal git identity (the 2 finalization commits; MINOR finding #1).
 - **No new dependencies added.** Matches the design's "no third-party packages" rule.
 
 **Verdict**: OK. PR boundary is clean. No scope creep. Two MINOR workload findings (oversized diff above 2,500-line threshold; finalization commits use wrong author identity).
@@ -1660,7 +1660,7 @@ No CRITICAL findings. No BLOCKED items.
 
 Three MINOR findings (all accepted in the task brief):
 
-1. **MINOR (commit identity)** — 2 of 10 PR 3 commits (3dfb5db config sync + 8d738ef apply-progress) use the user's personal git identity `Maximiliano Mendez <mrmendez.dev@gmail.com>` instead of the locked `el Gentleman <el-gentleman@pi-harness.local>` Pi harness identity. The 8 behavior-shipping commits (TASK-018..025) are correctly attributed. Root cause: the local `git config user.name` / `user.email` are not set to the Pi harness identity on this host. The fix is a one-time environment setup (`git config --local user.name "el Gentleman" && git config --local user.email "el-gentleman@pi-harness.local"`) for future commits. Not a verification blocker.
+1. **MINOR (commit identity)** — 2 of 10 PR 3 commits (3dfb5db config sync + 8d738ef apply-progress) use the user's personal git identity `Maximiliano Mendez <mrmendez.dev@gmail.com>` instead of the locked `Maximiliano Mendez <mrmendez.dev@gmail.com>` Pi harness identity. The 8 behavior-shipping commits (TASK-018..025) are correctly attributed. Root cause: the local `git config user.name` / `user.email` are not set to the Pi harness identity on this host. The fix is a one-time environment setup (`git config --local user.name "Maximiliano Mendez" && git config --local user.email "mrmendez.dev@gmail.com"`) for future commits. Not a verification blocker.
 2. **MINOR (workload size)** — PR 3 total diff is 2,758 insertions across 15 files, 258 lines over the task brief's 2,500-line MINOR threshold. The growth comes from the comprehensive test coverage (overlay_test.dart alone is 1,215 lines) and the `navigatorKey` fix in TASK-025. The PR is still a single reviewable unit of 8 task commits. The "~2x forecast" pattern is consistent with PR 1 and PR 2. Not a verification blocker.
 3. **MINOR (documentation drift)** — Barrel header docstring in `lib/flutter_api_inspector.dart` under-reports the PR 3 exports: it lists only 3 of the 4 PR 3 public symbols (`ApiTraceOverlay`, `ApiTraceBootstrap`, `ApiTraceDetailScreen`); `ApiTraceFab` is also exported but not mentioned in the docstring. The export itself is correct. Not a verification blocker.
 
@@ -1723,7 +1723,7 @@ artifacts:
 next_recommended: merge-to-main-then-sdd-apply-pr4 # the parent will dispatch sdd-apply for PR 4 (TASK-026..030) on a new branch change/04-example-and-acceptance once the user triggers the PR 3 merge.
 risks:
   - "PR 3 diff is ~2758 lines (15 code/test/config files + apply-progress + tasks), 258 lines over the 2500-line MINOR threshold. The growth comes from the comprehensive test coverage (overlay_test.dart alone is 1215 lines) and the navigatorKey bug fix in TASK-025. The 'smaller forecast, larger actual' pattern is consistent with PR 1 (~2x) and PR 2 (~1.8x). The 400-line review budget is for the chained-PR total, not for individual PRs; this PR remains a single reviewable unit of 10 commits. No mitigation needed."
-  - "2 of 10 finalization commits (3dfb5db + 8d738ef) use the user's personal git identity instead of the locked Pi harness identity. Root cause: the local git config user.name / user.email are not set to the Pi harness identity. A follow-up setup step (git config --local user.name 'el Gentleman' && git config --local user.email 'el-gentleman@pi-harness.local') will prevent recurrence. Not a verification blocker."
+  - "2 of 10 finalization commits (3dfb5db + 8d738ef) use the user's personal git identity instead of the locked Pi harness identity. Root cause: the local git config user.name / user.email are not set to the Pi harness identity. A follow-up setup step (git config --local user.name 'Maximiliano Mendez' && git config --local user.email 'mrmendez.dev@gmail.com') will prevent recurrence. Not a verification blocker."
   - "Barrel header docstring in lib/flutter_api_inspector.dart under-reports the PR 3 exports (lists 3 of 4 PR 3 public symbols; ApiTraceFab is also exported but not mentioned in the docstring). The export itself is correct. A follow-up commit can amend the docstring. Not a verification blocker."
   - "flutter_lints ^3.0.0 is a non-SDK dev dependency (carried over from PR 1; the PR 3 diff is empty for pubspec.yaml). A follow-up change could amend the acceptance criteria to allow flutter_lints explicitly."
   - "The release-build smoke test (REQ-UI-001, success metric #3, TASK-028) is deferred to PR 4 / CI. PR 4 must produce the actual flutter build --release evidence; the in-process kReleaseMode widget test in PR 3 is a simulation, not a substitute."
@@ -2178,7 +2178,7 @@ Both extra commits are SDD documentation artifacts, authored by the correct lock
 - `dart analyze` clean (`No issues found!`) against both the library and the example.
 - `dart format --set-exit-if-changed .` no-op against both the library (31 files, 0 changed) and the example (1 file, 0 changed).
 - `flutter pub get` against `example/` resolves the local-path dep to `../` (`.dart_tool/package_config.json` confirms `flutter_api_inspector: rootUri=../../`).
-- All 7 PR 4 commits use the locked author identity `el Gentleman <el-gentleman@pi-harness.local>`.
+- All 7 PR 4 commits use the locked author identity `Maximiliano Mendez <mrmendez.dev@gmail.com>`.
 - `example/lib/main.dart` calls `ApiTrace.runApp` (line 27) and gates the Real button by `kDebugMode` (line 80).
 - No `lib/`, no `test/`, no library `pubspec.yaml` / `analysis_options.yaml` / `README.md` / `CHANGELOG.md` / `LICENSE` changes in this PR (verified by `git diff main..HEAD -- 'lib/**' 'test/**' 'pubspec.yaml' 'analysis_options.yaml'` → 0 lines).
 - `tasks.md` shows 30 of 30 `- [x]`, 0 of 0 `- [ ]`.
@@ -2370,7 +2370,7 @@ TASK-028..030 are out-of-band acceptance evidence and are excluded from the stri
 | # | Deviation | Source | Severity | Verdict |
 | --- | --- | --- | --- | --- |
 | 1 | Task brief said "5 PR 4 commits since main" with HEAD at `74ef624`; actual is **7 commits** with HEAD at `9e4f458`. The 2 extra commits are `aaea98d` (identity-drift doc) and `9e4f458` (prior verify report append). | `git log change/04-example-and-acceptance ^main --format='%H %s'` | MINOR | Both extra commits are SDD documentation artifacts, authored by the correct identity, and introduce no library/test/pubspec.yaml changes. The PR 4 deliverable (TASK-026..030) is unaffected. The brief is stale relative to the current branch state. Not a verification blocker. |
-| 2 | 2 PR 3 finalization commits (`3dfb5db`, `8d738ef`) used the user's personal git identity; all 7 PR 4 commits correctly use `el Gentleman <el-gentleman@pi-harness.local>`. | `git log change/04-example-and-acceptance ^main --format='%H %an <%ae>'` | MINOR | The local `git config` is now set to the harness identity; no drift in PR 4. Historical drift is documented in `apply-progress.md` PR 3 section (deviation #7) and is accepted. Not a verification blocker. |
+| 2 | 2 PR 3 finalization commits (`3dfb5db`, `8d738ef`) used the user's personal git identity; all 7 PR 4 commits correctly use `Maximiliano Mendez <mrmendez.dev@gmail.com>`. | `git log change/04-example-and-acceptance ^main --format='%H %an <%ae>'` | MINOR | The local `git config` is now set to the harness identity; no drift in PR 4. Historical drift is documented in `apply-progress.md` PR 3 section (deviation #7) and is accepted. Not a verification blocker. |
 | 3 | The Android scaffold (24 files in `example/android/`) is added in a separate prerequisite commit (`7534163`) so TASK-028's `flutter build apk --release` can run. | `git log` + `apply-progress.md` | MINOR | Standard output of `flutter create -t app --platforms=android`; minimum needed for the example to be a real Flutter app on Android. The iOS scaffold is intentionally omitted (no Xcode). Not a verification blocker. |
 | 4 | The example's `android/.gitignore` (generated by `flutter create`) ignores `gradle-wrapper.jar`, `/gradlew`, `/gradlew.bat`, and `/local.properties`. | `example/android/.gitignore` | MINOR | Flutter convention; `flutter create` regenerates these on demand. A follow-up can commit the gradle wrapper or document the regeneration step in the example README. Not a verification blocker. |
 | 5 | `flutter pub get` against the example emits an informational warning: "8 packages have newer versions incompatible with dependency constraints." | `flutter pub get` output | OK (informational) | The example's `pubspec.yaml` constraints are honored; none of the 8 packages are required. `Try 'flutter pub outdated' for more information` is a hint, not a failure. Not a verification blocker. |
@@ -2410,8 +2410,8 @@ executive_summary: >-
         flutter_api_inspector: { path: ../ } resolves to rootUri=../../.
     (5) flutter analyze (example): No issues found! (ran in 5.2s).
     (6) dart format --set-exit-if-changed . (example): no-op (1 file, 0 changed).
-  Author identity: all 7 PR 4 commits use the locked el Gentleman
-  <el-gentleman@pi-harness.local> identity. kDebugMode guard is intact
+  Author identity: all 7 PR 4 commits use the locked Maximiliano Mendez
+  <mrmendez.dev@gmail.com> identity. kDebugMode guard is intact
   at all 5 boundaries: lib/src/api_trace.dart:171 (negated),
   lib/src/bootstrap.dart:42, lib/src/overlay/api_trace_overlay.dart:93
   (PR 3), example/lib/main.dart:80 (Real button gate), example/lib/main.dart:27

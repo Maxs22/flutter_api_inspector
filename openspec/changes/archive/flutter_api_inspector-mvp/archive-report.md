@@ -5,7 +5,7 @@
 - **Source PR 4 verify gate**: `b7ee9b0` (PR 4 — Independent fresh-context re-verification, 2026-06-24, subagent 2) — **GREEN**
 - **Active change after archive**: `null`
 - **Artifact store**: `openspec/` (authoritative)
-- **Author identity**: `el Gentleman <el-gentleman@pi-harness.local>` (locked)
+- **Author identity**: `Maximiliano Mendez <mrmendez.dev@gmail.com>` (locked)
 
 ---
 
@@ -121,7 +121,7 @@ remains. The final task completion gate passes cleanly.
    could amend the proposal acceptance criteria to allow `flutter_lints`
    explicitly. **Severity: MINOR (informational).**
 3. **2 PR 3 finalization commits used the user's personal git identity.** All
-   PR 4 commits correctly use the locked `el Gentleman <el-gentleman@pi-harness.local>`
+   PR 4 commits correctly use the locked `Maximiliano Mendez <mrmendez.dev@gmail.com>`
    identity. Local `git config` has been set to the harness identity for all
    archive operations. Historical drift is fully closed. **Severity: MINOR
    (documented deviation; accepted in the task brief as MINOR #1 in
@@ -131,7 +131,7 @@ remains. The final task completion gate passes cleanly.
 
 ## Authoring trail (commit identity)
 
-- **Locked identity for this change**: `el Gentleman <el-gentleman@pi-harness.local>`
+- **Locked identity for this change**: `Maximiliano Mendez <mrmendez.dev@gmail.com>`
 - **All PR 4 commits** (7 total, including 2 SDD documentation follow-ups at
   `aaea98d` and `9e4f458`): use the locked identity. Verified by
   `git log change/04-example-and-acceptance ^main --format='%H %an <%ae>'`.
@@ -141,7 +141,7 @@ remains. The final task completion gate passes cleanly.
   harness identity for PR 4 and beyond), and documented in
   `apply-progress.md` PR 3 section + PR 4 deviation #2.
 - **Archive commit (this operation)**: uses the locked identity. Author is the
-  same `el Gentleman <el-gentleman@pi-harness.local>` that authored the
+  same `Maximiliano Mendez <mrmendez.dev@gmail.com>` that authored the
   PR 4 deliverable.
 
 ---
@@ -233,7 +233,7 @@ next_recommended: none # the change is closed; no further SDD phase is required
 risks:
   - "iOS release-build path verification (flutter build ios --release --no-codesign) was NOT exercised on this Windows host. kDebugMode tree-shake is platform-agnostic; iOS is expected to mirror the Android result verified in TASK-028. A CI runner with Xcode can confirm. MINOR (deferral, not a gap)."
   - "flutter_lints ^3.0.0 is a non-SDK dev dependency. MINOR (informational; carried over from PR 1; documented in pubspec.yaml and apply-progress.md)."
-  - "2 PR 3 finalization commits used the user's personal git identity; all 7 PR 4 commits + the archive commit correctly use the locked el Gentleman <el-gentleman@pi-harness.local> identity. Historical drift is fully closed. MINOR (documented as MINOR #1 in apply-progress.md)."
+  - "2 PR 3 finalization commits used the user's personal git identity; all 7 PR 4 commits + the archive commit correctly use the locked Maximiliano Mendez <mrmendez.dev@gmail.com> identity. Historical drift is fully closed. MINOR (documented as MINOR #1 in apply-progress.md)."
   - "Task brief commit count was stale for PR 4 (brief said 5 commits at 74ef624; actual is 7 commits at HEAD b7ee9b0, 2 extra are SDD documentation commits). MINOR (documentation drift only; PR 4 deliverable unaffected)."
   - "openspec/specs/.gitkeep is preserved alongside the 3 promoted specs. Cosmetic only; no effect on contracts. MINOR."
   - "The .atl/ and .pi/ directories at the repo root are untracked (not in .gitignore) and remain outside the archive commit. This matches the pre-archive state. Cosmetic only; no effect on the change."

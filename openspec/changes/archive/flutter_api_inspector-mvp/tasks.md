@@ -631,8 +631,8 @@ git branch --show-current
 git add openspec/changes/flutter_api_inspector-mvp/tasks.md
 
 # 4. Commit with the Pi harness identity (NOT the user's personal git config)
-git -c user.name="el Gentleman" \
-    -c user.email="el-gentleman@pi-harness.local" \
+git -c user.name="Maximiliano Mendez" \
+    -c user.email="mrmendez.dev@gmail.com" \
     commit -m "docs(sdd): break design into implementation tasks for flutter_api_inspector-mvp
 
 30 ordered implementation tasks grouped into 6 phases (package
