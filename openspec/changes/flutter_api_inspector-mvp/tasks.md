@@ -364,7 +364,7 @@ These tasks build the in-app debug-only overlay. Every task follows
 RED → GREEN → TRIANGULATE → REFACTOR. Widget tests use
 `flutter_test`'s `WidgetTester` and `pumpWidget`.
 
-- [ ] **TASK-018: Implement `outcomeColor` + `fabAlignment` helpers (REQ-UI-003, REQ-UI-008)**
+- [x] **TASK-018: Implement `outcomeColor` + `fabAlignment` helpers (REQ-UI-003, REQ-UI-008)**
   - **What**: Create `lib/src/overlay/colors.dart` with `Color outcomeColor(ApiTraceOutcome outcome)` (green for success, red for error, neutral for cancelled). Create `lib/src/overlay/fab_position.dart` with `AlignmentGeometry fabAlignment(ApiTraceOverlayPosition position)` (the four-corner mapping). Both are top-level pure functions; no widgets yet.
   - **Why**: These two helpers are used by `ApiTraceFab` and `TimelineRow`. Implementing them first lets TASK-019 and TASK-020 build on top.
   - **Files**: `lib/src/overlay/colors.dart`, `lib/src/overlay/fab_position.dart`, `test/overlay_test.dart` (initial scaffolding + helper tests)
@@ -379,7 +379,7 @@ RED → GREEN → TRIANGULATE → REFACTOR. Widget tests use
     - `dart analyze` clean.
   - **Workload estimate**: ~85 lines.
 
-- [ ] **TASK-019: Implement `ApiTraceFab` widget (REQ-UI-003, REQ-UI-004)**
+- [x] **TASK-019: Implement `ApiTraceFab` widget (REQ-UI-003, REQ-UI-004)**
   - **What**: Create `lib/src/overlay/fab.dart` with `ApiTraceFab({Key? key, required VoidCallback onPressed, required ApiTraceConfig config, required int recordCount})` (or similar). The widget renders a 40-px circular `FloatingActionButton` with `Icons.developer_mode`, positioned per `fabAlignment(config.overlayPosition)`, and the label shape per `config.overlayLabel` (icon-only / badge with count / chip with text).
   - **Why**: REQ-UI-003 requires the configurable position; REQ-UI-004 requires the configurable label shape (icon / badge / chip).
   - **Files**: `lib/src/overlay/fab.dart`, `test/overlay_test.dart` (extend with FAB scenarios)
@@ -396,7 +396,7 @@ RED → GREEN → TRIANGULATE → REFACTOR. Widget tests use
     - `dart analyze` clean.
   - **Workload estimate**: ~155 lines.
 
-- [ ] **TASK-020: Implement `TimelineRow` widget (REQ-UI-005, REQ-UI-008)**
+- [x] **TASK-020: Implement `TimelineRow` widget (REQ-UI-005, REQ-UI-008)**
   - **What**: Create `lib/src/overlay/timeline_row.dart` with `TimelineRow({Key? key, required ApiTraceRecord record, required VoidCallback onTap})`. The row renders the record's `name`, `method`, `statusCode` (or `—` placeholder when null), `duration`, and the outcome-tinted `Icon` (or text color). The whole row is tappable.
   - **Why**: REQ-UI-005 requires the row to display name, method, statusCode, duration; REQ-UI-008 requires the green/red outcome coloring.
   - **Files**: `lib/src/overlay/timeline_row.dart`, `test/overlay_test.dart` (extend with row scenarios)
@@ -412,7 +412,7 @@ RED → GREEN → TRIANGULATE → REFACTOR. Widget tests use
     - `dart analyze` clean.
   - **Workload estimate**: ~140 lines.
 
-- [ ] **TASK-021: Implement `TimelinePanel` widget + filter chips (REQ-UI-005, REQ-UI-006)**
+- [x] **TASK-021: Implement `TimelinePanel` widget + filter chips (REQ-UI-005, REQ-UI-006)**
   - **What**: Create `lib/src/overlay/timeline_panel.dart` with `TimelinePanel({Key? key, required List<ApiTraceRecord> records, required void Function(ApiTraceRecord) onTap})`. The panel renders the list (newest first, head-to-tail per the timeline), a `TextField` for the name substring filter, and three `FilterChip`s: *All*, *Success only*, *Error only*. Filters narrow the rendered list without mutating the underlying records.
   - **Why**: REQ-UI-005 requires the chronological panel; REQ-UI-006 requires the filter chips (success-only, error-only, name substring).
   - **Files**: `lib/src/overlay/timeline_panel.dart`, `test/overlay_test.dart` (extend with panel + filter scenarios)
@@ -428,7 +428,7 @@ RED → GREEN → TRIANGULATE → REFACTOR. Widget tests use
     - `dart analyze` clean.
   - **Workload estimate**: ~205 lines.
 
-- [ ] **TASK-022: Implement `ApiTraceDetailScreen` widget (REQ-UI-007)**
+- [x] **TASK-022: Implement `ApiTraceDetailScreen` widget (REQ-UI-007)**
   - **What**: Create `lib/src/overlay/detail_screen.dart` with `ApiTraceDetailScreen({Key? key, required ApiTraceRecord record})` (a `StatelessWidget` designed to be pushed via `Navigator.of(context).push(MaterialPageRoute(builder: (_) => ApiTraceDetailScreen(record: record)))` — per resolved Q3, the route is `MaterialPageRoute`). The screen renders every captured field in a `ListView`: name, method, url, statusCode, duration, startedAt, completedAt, captured details, request (if not null), response (if not null), error (if not null), extra. There are no action buttons (no "Copy as cURL", no "Re-run", no "Export" — per REQ-UI-007 out-of-scope).
   - **Why**: REQ-UI-007 requires the tap-to-detail read-only screen.
   - **Files**: `lib/src/overlay/detail_screen.dart`, `test/overlay_test.dart` (extend with detail scenarios)
@@ -444,7 +444,7 @@ RED → GREEN → TRIANGULATE → REFACTOR. Widget tests use
     - `dart analyze` clean.
   - **Workload estimate**: ~175 lines.
 
-- [ ] **TASK-023: Implement `ApiTraceOverlay` widget (REQ-UI-001, REQ-UI-002, REQ-UI-005)**
+- [x] **TASK-023: Implement `ApiTraceOverlay` widget (REQ-UI-001, REQ-UI-002, REQ-UI-005)**
   - **What**: Create `lib/src/overlay/api_trace_overlay.dart` with `class ApiTraceOverlay extends StatelessWidget`. The widget's `build` method first short-circuits to `SizedBox.shrink()` when `!kDebugMode` (REQ-UI-001); otherwise it renders a `Stack` containing a `Positioned.fill` of an `ApiTraceFab` (positioned via `Align(alignment: fabAlignment(config.overlayPosition))`) and a `TimelinePanel` shown when the FAB is tapped. The panel pushes the detail screen via `Navigator.of(context).push(MaterialPageRoute(...))`.
   - **Why**: REQ-UI-001 requires the `kDebugMode` guard; REQ-UI-002 requires the auto-mount in the overlay stack; REQ-UI-005 is exercised end-to-end by this widget.
   - **Files**: `lib/src/overlay/api_trace_overlay.dart`, `test/overlay_test.dart` (extend with overlay scenarios)
@@ -460,7 +460,7 @@ RED → GREEN → TRIANGULATE → REFACTOR. Widget tests use
     - `dart analyze` clean.
   - **Workload estimate**: ~165 lines.
 
-- [ ] **TASK-024: Implement `ApiTraceBootstrap` widget + `ApiTrace.runApp` + `showOverlay` / `hideOverlay` (REQ-UI-001, REQ-UI-002, REQ-UI-005)**
+- [x] **TASK-024: Implement `ApiTraceBootstrap` widget + `ApiTrace.runApp` + `showOverlay` / `hideOverlay` (REQ-UI-001, REQ-UI-002, REQ-UI-005)**
   - **What**: Create `lib/src/bootstrap.dart` with `class ApiTraceBootstrap extends StatelessWidget`. The widget's `build` method short-circuits to `child` when `!kDebugMode`; otherwise it wraps `child` with an `Overlay` insertion of `ApiTraceOverlay`. Extend `ApiTrace` in `lib/src/api_trace.dart` with `static void runApp(Widget app)` (which in release calls `WidgetsFlutterBinding.ensureInitialized(); runApp(app);` and in debug wraps `app` in `ApiTraceBootstrap`), plus `static void showOverlay(BuildContext context)` and `static void hideOverlay(BuildContext context)` for programmatic overlay control.
   - **Why**: REQ-UI-001 requires the release-mode pass-through; REQ-UI-002 requires the one-line auto-mount.
   - **Files**: `lib/src/bootstrap.dart`, `lib/src/api_trace.dart` (extend with `runApp`, `showOverlay`, `hideOverlay`), `test/bootstrap_test.dart`
@@ -475,7 +475,7 @@ RED → GREEN → TRIANGULATE → REFACTOR. Widget tests use
     - `dart analyze` clean.
   - **Workload estimate**: ~170 lines.
 
-- [ ] **TASK-025: Consolidate `test/overlay_test.dart` for all REQ-UI-001..008 scenarios**
+- [x] **TASK-025: Consolidate `test/overlay_test.dart` for all REQ-UI-001..008 scenarios**
   - **What**: Final pass on `test/overlay_test.dart`: ensure every REQ-UI scenario is covered (some are introduced in TASK-018..024; this task closes the loop with a final `group` that exercises the full overlay end-to-end). Add a `setUp` that resets `ApiTrace.timeline` via `clear()` and resets `ApiTrace.enabled` to `kDebugMode`.
   - **Why**: A single consolidated widget test file maps 1:1 to the 8 REQ-UI requirements and 17 scenarios, making `sdd-verify` straightforward.
   - **Files**: `test/overlay_test.dart` (final pass; no new production files)

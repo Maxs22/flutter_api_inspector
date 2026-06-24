@@ -32,3 +32,9 @@ export 'src/outcome.dart' show ApiTraceOutcome;
 export 'src/api_trace.dart' show ApiTrace;
 export 'src/config.dart'
     show ApiTraceConfig, ApiTraceOverlayLabel, ApiTraceOverlayPosition;
+
+// --- Overlay UI (PR 3) ------------------------------------------------------
+export 'src/bootstrap.dart' show ApiTraceBootstrap;
+export 'src/overlay/api_trace_overlay.dart' show ApiTraceOverlay;
+export 'src/overlay/detail_screen.dart' show ApiTraceDetailScreen;
+export 'src/overlay/fab.dart' show ApiTraceFab;
