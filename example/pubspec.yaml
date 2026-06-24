@@ -1,0 +1,30 @@
+name: flutter_api_inspector_example
+description: >-
+  Example app for the flutter_api_inspector package. Demonstrates manual
+  API instrumentation via ApiTrace.call with a stub call (offline
+  reliability) and a real call to httpbin.org (smoke test against a
+  public test API). The Real button is gated by kDebugMode so the
+  example is deterministic in release builds.
+publish_to: 'none'
+version: 0.1.0
+
+environment:
+  sdk: ">=3.2.0 <4.0.0"
+  flutter: ">=3.16.0"
+
+dependencies:
+  flutter:
+    sdk: flutter
+  # The local-path dependency is the standard pattern for in-repo
+  # examples per the official pub.dev package layout guidelines
+  # (https://dart.dev/effective-pub).
+  flutter_api_inspector:
+    path: ../
+
+dev_dependencies:
+  flutter_test:
+    sdk: flutter
+  flutter_lints: ^3.0.0
+
+flutter:
+  uses-material-design: true
