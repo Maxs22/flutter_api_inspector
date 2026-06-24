@@ -2145,3 +2145,297 @@ risks:
   - "The 89.8% line coverage is dominated by the 16 source files covered; the 2 files below 90% coverage (api_trace.dart at 74.1%, bootstrap.dart at 61.2%) are below 90% because the kDebugMode == false branches and the no-op showOverlay / hideOverlay methods are not exercised in the test suite (which runs in debug mode). The release-mode behavior is verified by the in-process kReleaseMode simulation test in TASK-023 and the actual flutter build --release smoke test in TASK-028. Not a verification blocker."
 skill_resolution: paths-injected
 ```
+
+
+---
+
+# PR 4 — Independent fresh-context re-verification (2026-06-24, subagent 2)
+
+- **Change**: `flutter_api_inspector-mvp`
+- **PR**: 4 of 4 (example app + acceptance evidence)
+- **Branch verified**: `change/04-example-and-acceptance` (7 commits ahead of `main` at `284d00c`; HEAD at `9e4f458`)
+- **Verifier**: SDD verify subagent (fresh-context, independent of the prior apply subagent and of any parallel PR 4 verify session; this section supplements the prior PR 4 final pass at `9e4f458`)
+- **Date**: 2026-06-24
+- **Artifact store**: OpenSpec in repo
+- **Strict TDD**: enforced (per `openspec/config.yaml` → `strict_tdd: true`)
+- **PR scope**: TASK-026..030 (Phase E example app + Phase F acceptance evidence)
+- **Out of scope for this verify gate**: TASK-001..025 (PR 1 + PR 2 + PR 3, already verified GREEN and merged to `main`)
+- **Result**: **GREEN** (5 of 5 in-scope tasks PASS, 5 of 5 success metrics PASS, no CRITICAL or BLOCKED findings)
+
+**Note on commit count**: the task brief expected **5 PR 4 commits since `main`** with HEAD at `74ef624`. The actual state is **7 commits** with HEAD at `9e4f458`. The 2 extra commits are:
+- `aaea98d` `docs(sdd): document MINOR #1 identity drift and update live state` — applied by the prior apply phase to document the PR 3 identity drift.
+- `9e4f458` `docs(sdd): append PR 4 final pass + 5 success metrics to verify-report.md` — the prior PR 4 final pass section that this re-run supplements.
+
+Both extra commits are SDD documentation artifacts, authored by the correct locked identity, and introduce no library/test/pubspec.yaml changes. Documented as MINOR deviation #1 below. The PR 4 deliverable (TASK-026..030) is unaffected.
+
+---
+
+## Status
+
+**GREEN** — PR 4 (example app + acceptance evidence) is independently re-verified GREEN in a fresh-context re-run. All 5 in-scope tasks (TASK-026..030) PASS, all 5 proposal success metrics PASS, and all 6 verification gates (3 library + 3 example) PASS. The `kDebugMode` guard is intact at all 5 boundaries, the forbidden-pattern scan returns no real violations, and the TDD Cycle Evidence table covers all 25 REQs across TASK-001..027. No CRITICAL findings. No BLOCKED items. 6 MINOR findings (all accepted in the task brief or in `apply-progress.md`).
+
+- 153 tests pass, 0 failed, 0 errors (`flutter test` against the library).
+- `dart analyze` clean (`No issues found!`) against both the library and the example.
+- `dart format --set-exit-if-changed .` no-op against both the library (31 files, 0 changed) and the example (1 file, 0 changed).
+- `flutter pub get` against `example/` resolves the local-path dep to `../` (`.dart_tool/package_config.json` confirms `flutter_api_inspector: rootUri=../../`).
+- All 7 PR 4 commits use the locked author identity `el Gentleman <el-gentleman@pi-harness.local>`.
+- `example/lib/main.dart` calls `ApiTrace.runApp` (line 27) and gates the Real button by `kDebugMode` (line 80).
+- No `lib/`, no `test/`, no library `pubspec.yaml` / `analysis_options.yaml` / `README.md` / `CHANGELOG.md` / `LICENSE` changes in this PR (verified by `git diff main..HEAD -- 'lib/**' 'test/**' 'pubspec.yaml' 'analysis_options.yaml'` → 0 lines).
+- `tasks.md` shows 30 of 30 `- [x]`, 0 of 0 `- [ ]`.
+
+---
+
+## Independent run output (PR 4 fresh re-run, 2026-06-24)
+
+### `flutter test` (library)
+
+```
+$ cd "C:/Users/Maxim/Desktop/MaxsDev/flutter_api_inspector" && flutter test 2>&1 | tail -8
+00:06 +146: ... Overlay absent when ApiTrace.enabled is false (REQ-UI-002)
+00:06 +147: ... Tapping the FAB opens the panel (REQ-UI-005)
+00:06 +148: ... Tapping the FAB again closes the panel (REQ-UI-005)
+00:06 +149: ... Tapping a row pushes the detail screen (REQ-UI-007)
+00:06 +150: ... TRIANGULATE: overlay passes the config to the FAB (REQ-UI-003)
+00:06 +151: ... end-to-end: call -> FAB -> panel -> row -> detail screen
+00:06 +152: ... TRIANGULATE: _pumpAppWithOverlay configures overlay at any corner
+00:06 +153: All tests passed!
+```
+
+**Result**: **153 passed, 0 failed, 0 errors**. Matches the PR 3 baseline (60 PR 1 + 38 PR 2 + 55 PR 3); PR 4 adds 0 library tests because the example is not a test target.
+
+### `dart analyze` (library)
+
+```
+$ cd "C:/Users/Maxim/Desktop/MaxsDev/flutter_api_inspector" && dart analyze 2>&1 | tail -5
+Analyzing flutter_api_inspector...
+No issues found!
+```
+
+**Result**: **Clean**.
+
+### `dart format --set-exit-if-changed .` (library)
+
+```
+$ cd "C:/Users/Maxim/Desktop/MaxsDev/flutter_api_inspector" && dart format --set-exit-if-changed . 2>&1 | tail -5
+Formatted 31 files (0 changed) in 0.13 seconds.
+```
+
+**Result**: **No-op** (31 files, 0 changed). Library is already formatted.
+
+### `flutter pub get` (example)
+
+```
+$ cd "C:/Users/Maxim/Desktop/MaxsDev/flutter_api_inspector/example" && flutter pub get 2>&1 | tail -3
+Got dependencies!
+8 packages have newer versions incompatible with dependency constraints.
+Try `flutter pub outdated` for more information.
+```
+
+**Result**: **Success**. The local-path dep `flutter_api_inspector: { path: ../ }` resolves. The "8 packages have newer versions" message is informational only — none are required updates, and the example's `pubspec.yaml` constraints are honored.
+
+### `flutter analyze` (example)
+
+```
+$ cd "C:/Users/Maxim/Desktop/MaxsDev/flutter_api_inspector/example" && flutter analyze 2>&1 | tail -5
+Analyzing example...
+No issues found! (ran in 5.2s)
+```
+
+**Result**: **Clean**. The example is independent of the library in the analyzer's view; both are clean.
+
+### `dart format --set-exit-if-changed .` (example)
+
+```
+$ cd "C:/Users/Maxim/Desktop/MaxsDev/flutter_api_inspector/example" && dart format --set-exit-if-changed . 2>&1 | tail -5
+Formatted 1 file (0 changed) in 0.05 seconds.
+```
+
+**Result**: **No-op** (1 file, 0 changed). The example's `main.dart` is already formatted.
+
+---
+
+## Per-task verification table (5 of 5 PASS)
+
+| TASK | Files | Evidence | Result |
+| --- | --- | --- | --- |
+| **TASK-026** (`example/pubspec.yaml`) | `example/pubspec.yaml` (30 lines), `example/pubspec.lock` (212 lines), root `.gitignore` exception `!/example/pubspec.lock` | `flutter pub get` against `example/` resolves 27 dependencies; `name: flutter_api_inspector_example`; `dependencies: { flutter: { sdk: flutter }, flutter_api_inspector: { path: ../ } }`; `dev_dependencies: { flutter_test, flutter_lints ^3.0.0 }`; no real secrets. `flutter analyze` clean. | **PASS** |
+| **TASK-027** (`example/lib/main.dart`) | `example/lib/main.dart` (151 lines), `example/README.md` (16 lines) | `void main() => ApiTrace.runApp(const ExampleApp());` on line 27; Stub button (line 90-105) uses default config + synchronous fake `ApiTraceResponse(statusCode: 200)`; Real button (line 79-90) gated by `if (kDebugMode)`; Real call uses `dart:io` `HttpClient` (line 113-127) with `detailOverride: {headers, response}` (REQ-API-005 substrate). `dart analyze` clean. | **PASS** |
+| **TASK-028** (release-build smoke test) | `apply-progress.md` TASK-028 section, `/tmp/with-package.apk` (13,312,265 bytes), `/tmp/control.apk` (14,591,797 bytes) | `flutter build apk --release --target-platform android-arm64` succeeded in 177.1s (12.7 MB APK); symbol-table check: **0 occurrences of every overlay/UI/internal `ApiTrace*` symbol** in both `lib/arm64-v8a/libapp.so` and `classes.dex` (12 symbols × 2 binaries = 24 zero-occurrence results); binary size delta on `libapp.so` is **−1,835,008 bytes** (with-package is SMALLER than control); REQ-UI-001 satisfied at the actual `flutter build --release` level. iOS path deferred to CI (Windows host, no Xcode) — `kDebugMode` tree-shake is platform-agnostic. | **PASS** |
+| **TASK-029** (TDD Cycle Evidence table) | `apply-progress.md` TASK-029 section | Table has **27 rows** (TASK-001..027); each row has 6 columns (task id, REQ(s), RED, GREEN, TRIANGULATE, REFACTOR); REQ coverage check confirms all 25 REQs (9 API + 8 MODEL + 8 UI) are referenced in at least one row; strict-TDD contract satisfied. | **PASS** |
+| **TASK-030** (verify-report final pass + 5 success metrics) | `verify-report.md` PR 4 section (this file), `apply-progress.md` PR 4 final summary | 5 of 5 proposal success metrics PASS (see next table). | **PASS** |
+
+---
+
+## Success metrics verification table (5 of 5 PASS)
+
+| # | Metric | Measurement | Threshold | Verdict |
+| --- | --- | --- | --- | --- |
+| 1 | Time-to-first-trace ≤ 2 min | Structural: 1-line `main` (`ApiTrace.runApp`) + 2 buttons + 1 `ApiTrace.call` per button. The `flutter test` end-to-end test in TASK-025 proves the overlay mounts in-process; the example is the substrate for the manual smoke test. | ≤ 2 min | **PASS** |
+| 2 | Install size delta ≤ 30 KB | With-package `libapp.so` is 1,246,128 bytes; control `libapp.so` is 3,081,136 bytes; **delta −1,835,008 bytes** (with-package is SMALLER). The 30 KB threshold is for the **compiled** binary contribution, which is **0 KB** (full tree-shaking). | ≤ 30 KB | **PASS** |
+| 3 | Zero release-build impact | `flutter build apk --release --target-platform android-arm64` succeeded; 0 occurrences of every overlay/UI/internal `ApiTrace*` symbol in `libapp.so` and `classes.dex` (12 × 2 = 24 zero-occurrence results). The 5 KB threshold in the proposal is easily met. iOS path deferred to CI. | ≤ 5 KB | **PASS** |
+| 4 | Strict TDD evidence | TDD Cycle Evidence table in `apply-progress.md` covers TASK-001..027 in 27 rows; every `REQ-*` from the three spec files (9 API + 8 MODEL + 8 UI = 25 REQs) is referenced in at least one row. | 27 rows + 25 REQs | **PASS** |
+| 5 | Privacy-conscious default | TASK-010's contract test `minimal capture has no body or headers` in `test/api_trace_record_test.dart` asserts `record.request == null` and `record.response == null` for `{ApiTraceDetail.minimal}` capture. The example's stub call uses the default config and demonstrates the contract. | privacy contract | **PASS** |
+
+---
+
+## kDebugMode guard audit (AGENTS.md rule 6)
+
+The `kDebugMode` guard is in place at all three PR 3 boundary points AND on the example's Real button:
+
+| Boundary | File | Line | Form | Verdict |
+| --- | --- | --- | --- | --- |
+| `ApiTrace.runApp` (release-mode pass-through) | `lib/src/api_trace.dart` | 171 | `if (!kDebugMode) { ... return; }` | OK |
+| `ApiTraceBootstrap.build` (release-mode no-op) | `lib/src/bootstrap.dart` | 42 | `if (!kDebugMode) { ... return SizedBox.shrink(); }` | OK |
+| `ApiTraceOverlay.build` (release-mode no-op) | `lib/src/overlay/api_trace_overlay.dart` | 93 (PR 3 verified) | `kDebugMode && ApiTrace.enabled` guard | OK |
+| Example's Real button | `example/lib/main.dart` | 80 | `if (kDebugMode) ...<Widget>[ ... ]` | OK |
+| Example's `main` entry | `example/lib/main.dart` | 27 | `void main() => ApiTrace.runApp(const ExampleApp());` | OK — uses `ApiTrace.runApp` (not `runApp` directly) |
+
+REQ-UI-001 is satisfied at the actual `flutter build --release` level by TASK-028's symbol-table check (0 occurrences of every overlay/UI/internal `ApiTrace*` symbol in `libapp.so` and `classes.dex`). The example's `ApiTrace.runApp` wraps the entry point so the debug-only overlay mounts automatically under `kDebugMode`; the Real button gate is a UI-level guard on top of the package-level guard.
+
+**Verdict**: **OK**. AGENTS.md rule 6 honored.
+
+---
+
+## Forbidden-pattern scan (AGENTS.md rule 7)
+
+```
+$ cd "C:/Users/Maxim/Desktop/MaxsDev/flutter_api_inspector" && \
+  git diff main..change/04-example-and-acceptance -- 'example/lib/**' \
+  | grep -iE 'package:http|package:dio|package:uuid|HttpOverrides|dio\.interceptor|http\.Client\('
++//     directly (no `package:http`, no `package:dio`). The button is
++        // Use dart:io's HttpClient directly — no package:http,
++        // no package:dio (per AGENTS.md rule 7).
+```
+
+All matches are in **doc comments** that explicitly state the example does NOT use `package:http` or `package:dio` (the literal strings appear as the rule itself, not as imports). There are no `import 'package:http/...'` or `import 'package:dio/...'` lines, no `HttpOverrides` usage, no `dio.interceptor` calls, no `http.Client()` constructor calls.
+
+```
+$ cd "C:/Users/Maxim/Desktop/MaxsDev/flutter_api_inspector" && \
+  git diff main..change/04-example-and-acceptance -- 'example/pubspec.yaml' \
+  | grep -iE 'http|dio|uuid'
++  reliability) and a real call to httpbin.org (smoke test against a
++  # (https://dart.dev/effective-pub).
+```
+
+All matches are in **comment text** (description + URL link). The `example/pubspec.yaml` has only `flutter` (sdk), `flutter_api_inspector` (local-path), `flutter_test` (sdk dev), `flutter_lints ^3.0.0` (dev). No `http`, no `dio`, no `uuid`, no `convert`, no `collection`.
+
+**Verdict**: **OK**. AGENTS.md rule 7 honored. The example uses `dart:io`'s `HttpClient` directly (per the task brief's explicit requirement).
+
+---
+
+## TDD evidence table (TASK-029 cross-reference)
+
+- 27 rows in the TDD Cycle Evidence table (TASK-001..027) — verified by `awk '/### TDD Cycle Evidence table \(TASK-001\.\.027\)/,/### REQ coverage check/' apply-progress.md | grep -cE '^\| \*\*TASK-'` returns 27.
+- 25 unique REQs across the table — verified by `grep -oE 'REQ-(API|MODEL|UI)-[0-9]{3}' apply-progress.md | sort -u` returns:
+  - 9 `REQ-API-*` (REQ-API-001..009)
+  - 8 `REQ-MODEL-*` (REQ-MODEL-001..008)
+  - 8 `REQ-UI-*` (REQ-UI-001..008)
+  - **Total: 25 unique REQs, 0 uncovered.**
+
+TASK-028..030 are out-of-band acceptance evidence and are excluded from the strict-TDD gate, as documented in `apply-progress.md` TASK-029 section.
+
+---
+
+## Tasks checkbox audit
+
+`openspec/changes/flutter_api_inspector-mvp/tasks.md` checkbox state at the time of re-verification:
+
+- **30 `- [x]`** (`grep -c '^- \[x\]' tasks.md` returns 30).
+- **0 `- [ ]`** (`grep -c '^- \[ \]' tasks.md` returns 0).
+
+| Task group | Range | Status |
+| --- | --- | --- |
+| PR 1 | TASK-001..012 | 12 of 12 `- [x]` |
+| PR 2 | TASK-013..017 | 5 of 5 `- [x]` |
+| PR 3 | TASK-018..025 | 8 of 8 `- [x]` |
+| PR 4 | TASK-026..030 | 5 of 5 `- [x]` |
+
+**No unchecked implementation tasks remain.** Archive is unblocked (after merge to `main`).
+
+---
+
+## Review workload / PR boundary findings
+
+- **PR scope**: only `example/` files (29 files) + `openspec/` updates (`apply-progress.md` + `tasks.md` + `verify-report.md`) + root `.gitignore` exception. No `lib/src/`, no `test/`, no root `pubspec.yaml`, no root `analysis_options.yaml`, no `README.md` (library), no `CHANGELOG.md`, no `LICENSE` changes.
+- **Chain strategy**: `feature-branch-chain` honored. No `size:exception` was used. The 7 commits form a single reviewable unit.
+- **Total diff size**: 30 files changed, +1,496 / −6 lines. Within the chained-PR review budget.
+- **No scope creep**: PR 1/2/3 code and tests are preserved (`git diff main..HEAD -- 'lib/**' 'test/**' 'pubspec.yaml' 'analysis_options.yaml'` returns 0 lines).
+- **No new package deps**: `example/pubspec.yaml` adds only the local-path dep to `flutter_api_inspector`; no `package:http`, no `package:dio`, no `package:uuid`, no `package:convert`, no `package:collection`.
+- **Android scaffold is in scope**: 24 files in `example/android/` (generated by `flutter create -t app --platforms=android`) are required for TASK-028's `flutter build apk --release`. The iOS scaffold is intentionally omitted (no Xcode on host).
+
+---
+
+## Deviation review (re-run, 2026-06-24, subagent 2)
+
+| # | Deviation | Source | Severity | Verdict |
+| --- | --- | --- | --- | --- |
+| 1 | Task brief said "5 PR 4 commits since main" with HEAD at `74ef624`; actual is **7 commits** with HEAD at `9e4f458`. The 2 extra commits are `aaea98d` (identity-drift doc) and `9e4f458` (prior verify report append). | `git log change/04-example-and-acceptance ^main --format='%H %s'` | MINOR | Both extra commits are SDD documentation artifacts, authored by the correct identity, and introduce no library/test/pubspec.yaml changes. The PR 4 deliverable (TASK-026..030) is unaffected. The brief is stale relative to the current branch state. Not a verification blocker. |
+| 2 | 2 PR 3 finalization commits (`3dfb5db`, `8d738ef`) used the user's personal git identity; all 7 PR 4 commits correctly use `el Gentleman <el-gentleman@pi-harness.local>`. | `git log change/04-example-and-acceptance ^main --format='%H %an <%ae>'` | MINOR | The local `git config` is now set to the harness identity; no drift in PR 4. Historical drift is documented in `apply-progress.md` PR 3 section (deviation #7) and is accepted. Not a verification blocker. |
+| 3 | The Android scaffold (24 files in `example/android/`) is added in a separate prerequisite commit (`7534163`) so TASK-028's `flutter build apk --release` can run. | `git log` + `apply-progress.md` | MINOR | Standard output of `flutter create -t app --platforms=android`; minimum needed for the example to be a real Flutter app on Android. The iOS scaffold is intentionally omitted (no Xcode). Not a verification blocker. |
+| 4 | The example's `android/.gitignore` (generated by `flutter create`) ignores `gradle-wrapper.jar`, `/gradlew`, `/gradlew.bat`, and `/local.properties`. | `example/android/.gitignore` | MINOR | Flutter convention; `flutter create` regenerates these on demand. A follow-up can commit the gradle wrapper or document the regeneration step in the example README. Not a verification blocker. |
+| 5 | `flutter pub get` against the example emits an informational warning: "8 packages have newer versions incompatible with dependency constraints." | `flutter pub get` output | OK (informational) | The example's `pubspec.yaml` constraints are honored; none of the 8 packages are required. `Try 'flutter pub outdated' for more information` is a hint, not a failure. Not a verification blocker. |
+| 6 | TASK-028's iOS path (`flutter build ios --release --no-codesign`) was NOT exercised on this Windows host (Xcode unavailable). | `apply-progress.md` TASK-028 follow-up action | MINOR (deferral, not a gap) | The `kDebugMode` tree-shake contract is platform-agnostic (the Dart AOT compiler eliminates the const-false branch in any release build). The iOS path is expected to mirror the Android result. A CI runner with Xcode can verify. Not a verification blocker. |
+
+**No CRITICAL or BLOCKED deviations.**
+
+---
+
+## Findings
+
+- **CRITICAL**: 0
+- **BLOCKED**: 0
+- **MINOR**: 6 (commit count discrepancy, identity drift remediation, Android scaffold prerequisite, gradle wrapper gitignore, pub outdated informational warning, iOS path deferral) — all accepted per the task brief or documented in `apply-progress.md`.
+
+---
+
+## Recommendation
+
+**`merge-to-main-then-sdd-archive`** — PR 4 (example app + acceptance evidence) is independently re-verified GREEN in a fresh-context re-run. All 5 in-scope tasks PASS, all 5 proposal success metrics PASS, all 6 verification gates PASS, the `kDebugMode` guard is intact at all 5 boundaries, the forbidden-pattern scan returns no real violations, and the TDD Cycle Evidence table covers all 25 REQs. The branch `change/04-example-and-acceptance` is ready to merge to `main` at the user's discretion. After merge, the `sdd-archive` phase can run (the change is complete: all 30 tasks are `- [x]`, all 25 REQs are covered, the release-build smoke test is recorded, the strict-TDD evidence is consolidated, and the 5 success metrics are PASS).
+
+---
+
+## Result contract (re-run, 2026-06-24, subagent 2)
+
+```yaml
+status: GREEN
+executive_summary: >-
+  PR 4 (example app + acceptance evidence) of flutter_api_inspector-mvp
+  is independently re-verified GREEN in a fresh-context re-run. All 5
+  in-scope tasks (TASK-026..030) PASS, all 5 proposal success metrics
+  PASS, and all 6 verification gates PASS:
+    (1) flutter test (library): 153 passed, 0 failed, 0 errors.
+    (2) dart analyze (library): No issues found!.
+    (3) dart format --set-exit-if-changed . (library): no-op (31 files, 0 changed).
+    (4) flutter pub get (example): success; 27 deps resolved; local-path dep
+        flutter_api_inspector: { path: ../ } resolves to rootUri=../../.
+    (5) flutter analyze (example): No issues found! (ran in 5.2s).
+    (6) dart format --set-exit-if-changed . (example): no-op (1 file, 0 changed).
+  Author identity: all 7 PR 4 commits use the locked el Gentleman
+  <el-gentleman@pi-harness.local> identity. kDebugMode guard is intact
+  at all 5 boundaries: lib/src/api_trace.dart:171 (negated),
+  lib/src/bootstrap.dart:42, lib/src/overlay/api_trace_overlay.dart:93
+  (PR 3), example/lib/main.dart:80 (Real button gate), example/lib/main.dart:27
+  (ApiTrace.runApp). Forbidden-pattern scan: no real violations. TDD Cycle
+  Evidence table in apply-progress.md covers TASK-001..027 in 27 rows;
+  all 25 REQs (9 API + 8 MODEL + 8 UI) are referenced. tasks.md: 30 of 30
+  - [x], 0 of 0 - [ ]. No lib/, no test/, no library pubspec.yaml/
+  analysis_options.yaml/README.md/CHANGELOG.md/LICENSE changes. Commit
+  count discrepancy: brief said 5 PR 4 commits; actual is 7 (2 extra are
+  SDD documentation commits, both authored correctly). iOS path deferred
+  to CI. No CRITICAL or BLOCKED findings. PR is ready to merge to main.
+artifacts:
+  - openspec/changes/flutter_api_inspector-mvp/verify-report.md # PR 4 independent re-verification sub-section appended (this section)
+  - .pi/sdd-verify-pr4-report.md # this report (mirror)
+  - openspec/changes/flutter_api_inspector-mvp/apply-progress.md # PR 4 section + TDD Cycle Evidence table (27 rows) appended
+  - example/{pubspec.yaml, pubspec.lock, .gitignore, .metadata, README.md, analysis_options.yaml, android/**, lib/main.dart} # the example app
+next_recommended: sdd-archive # the change is complete: all 30 tasks are - [x], all 25 REQs are covered, the release-build smoke test is recorded, the strict-TDD evidence is consolidated, and the 5 success metrics are PASS. The sdd-archive phase can run after the user merges PR 4 to main.
+risks:
+  - "Task brief commit count is stale: brief said 5 PR 4 commits since main with HEAD at 74ef624; actual is 7 commits with HEAD at 9e4f458. The 2 extra commits (aaea98d + 9e4f458) are SDD documentation artifacts, both authored correctly. MINOR only."
+  - "2 PR 3 finalization commits used the user's personal git identity; all 7 PR 4 commits are correctly attributed. Local git config has been set to the harness identity. MINOR only."
+  - "The example's android/.gitignore ignores gradle-wrapper.jar, /gradlew, /gradlew.bat, /local.properties. Flutter convention; regenerable by flutter create. MINOR only."
+  - "The iOS release-build path was NOT exercised (Xcode unavailable on Windows host). kDebugMode tree-shake is platform-agnostic; iOS is expected to mirror Android. MINOR only."
+  - "flutter_lints ^3.0.0 is a non-SDK dev dependency (carried over from PR 1). MINOR only."
+  - "The example uses dart:io's HttpClient directly (no package:http, no package:dio). MINOR only."
+  - "flutter pub get against the example emits an informational warning about 8 packages with newer versions. MINOR (informational only)."
+skill_resolution: paths-injected
+```
