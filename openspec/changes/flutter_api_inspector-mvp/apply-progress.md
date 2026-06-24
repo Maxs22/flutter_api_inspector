@@ -462,4 +462,73 @@ in-process contract).
   - `'end-to-end: call -> FAB -> panel -> row -> detail screen'`: 1) `ApiTrace.call('getUser', ...)` lands in the timeline. 2) Tapping the FAB opens the `TimelinePanel`. 3) Tapping a `TimelineRow` pushes `ApiTraceDetailScreen` via `MaterialPageRoute`. 4) Popping the route returns to the panel (the panel is still mounted under the overlay).
   - `'TRIANGULATE: _pumpAppWithOverlay configures overlay at any corner'`: the helper honours the `config.overlayPosition` for all four corners; the overlay subtree is rebuilt between iterations with the new position.
 - **Acceptance**: 2 new tests pass; `flutter test` total: 153 (98 PR 1+2 baseline + 53 PR 3 prior + 2 PR 3 TASK-025 new). `dart analyze` clean. `dart format --set-exit-if-changed .` no-op (after the one-time reformat of `lib/src/bootstrap.dart`).
-- **Pending commit**: this task is not yet committed; the parent orchestrator will run `git add` + commit. The commit message will be `feat(overlay): add TASK-025 end-to-end consolidation and fix navigatorKey (REQ-UI-001..008)`.
+- **Commit**: `1648852` — `feat(overlay): TASK-025 end-to-end consolidation + navigatorKey fix (REQ-UI-001..008)`
+
+---
+
+## PR 3 final summary
+
+- **PR**: 3 of 4 (overlay UI)
+- **Branch**: `change/03-overlay-ui` (off `change/02-instrumentation-api` merged at `158e188`)
+- **Started**: 2026-06-23
+- **Status**: complete — ready for `sdd-verify` and merge to main
+- **Strict TDD**: enforced (RED → GREEN → TRIANGULATE → REFACTOR per task)
+
+### Commit trail (TASK-018..025)
+
+| TASK | Commit | Message |
+| --- | --- | --- |
+| TASK-018 | `592998d` | `feat(overlay): add outcomeColor and fabAlignment helpers (TASK-018, REQ-UI-003, REQ-UI-008)` |
+| TASK-019 | `aa0eabf` | `feat(overlay): add ApiTraceFab with configurable position and label (TASK-019, REQ-UI-003, REQ-UI-004)` |
+| TASK-020 | `3202a2f` | `feat(overlay): add TimelineRow with outcome coloring (TASK-020, REQ-UI-005, REQ-UI-008)` |
+| TASK-021 | `4383ffe` | `feat(overlay): add TimelinePanel with filter chips (TASK-021, REQ-UI-005, REQ-UI-006)` |
+| TASK-022 | `8f4ed85` | `feat(overlay): add ApiTraceDetailScreen read-only (TASK-022, REQ-UI-007)` |
+| TASK-023 | `bbed574` | `feat(overlay): add ApiTraceOverlay with kDebugMode guard (TASK-023, REQ-UI-001, REQ-UI-002, REQ-UI-005)` |
+| TASK-024 | `b12b794` | `feat(bootstrap): add ApiTraceBootstrap and ApiTrace.runApp (TASK-024, REQ-UI-001, REQ-UI-002, REQ-UI-005)` |
+| TASK-025 | `1648852` | `feat(overlay): TASK-025 end-to-end consolidation + navigatorKey fix (REQ-UI-001..008)` |
+
+### Final verification snapshot (TASK-025 closeout, 2026-06-24)
+
+- `flutter test`: **153 passed, 0 failed, 0 errors** (98 PR 1+2 baseline + 55 PR 3)
+- `dart analyze`: **No issues found!**
+- `dart format --set-exit-if-changed .`: **no-op (0 changed)**
+- All 8 in-scope REQs (REQ-UI-001..008) covered with named tests
+- 2 end-to-end tests added in TASK-025 (developer flow + position-config triangulation)
+
+### REQ coverage by TASK
+
+- **REQ-UI-001** (kDebugMode guard; tree-shake) — TASK-023, TASK-024, TASK-025
+- **REQ-UI-002** (auto-mount in WidgetsApp overlay) — TASK-023, TASK-024
+- **REQ-UI-003** (configurable FAB position) — TASK-018, TASK-019, TASK-025
+- **REQ-UI-004** (configurable FAB label shape: icon / badge / chip) — TASK-019
+- **REQ-UI-005** (chronological panel; tap-to-detail) — TASK-020, TASK-021, TASK-023, TASK-024
+- **REQ-UI-006** (filter chips + substring filter; no mutation) — TASK-021
+- **REQ-UI-007** (tap-to-detail read-only screen; no action buttons) — TASK-022, TASK-023
+- **REQ-UI-008** (success green / error red; 4xx = 5xx) — TASK-018, TASK-020
+
+### Out of band (deferred to PR 4 / CI)
+
+- **TASK-028** (release-build smoke test, REQ-UI-001 out-of-band): deferred to PR 4 / a CI runner with the Android SDK + Xcode toolchain. The Windows host for this change does not have either toolchain. The in-process `kReleaseMode` widget test in TASK-023 is a simulation, not a substitute; the actual `flutter build --release` binary-size-delta + symbol-table-absence + no-FAB-in-widget-tree evidence is part of PR 4's deliverable.
+
+### Deviations (PR 3, documented in per-task blocks)
+
+1. **MINOR** — `TASK-019` refactor: chip label uses regular (non-mini) FAB + `FittedBox(scaleDown)` because "API 17" overflows the 40-px mini FAB. Badge and icon labels keep `mini: true`.
+2. **MINOR** — `TASK-020` refactor: row tests use `find.textContaining('GET')` and `find.textContaining('200')` because the row renders method+statusCode as a single string, not two separate Text widgets.
+3. **MINOR** — `TASK-021` refactor: panel tests pass records in timeline order `[C, B, A]` (newest-first per `Timeline.records`) rather than reversing input order; the panel preserves the input order, and the timeline's head-insert already produces newest-first.
+4. **MINOR** — `TASK-022` refactor: detail screen tests use `findNWidgets(2)` for the name and `findsAtLeastNWidgets(2)` for the captured-details list because the name appears in both the AppBar title and the Overview section, and the captured details list also renders each detail label.
+5. **MINOR** — `TASK-024` refactor: `ApiTraceBootstrap` wraps its `Stack` in `Directionality(textDirection: TextDirection.ltr)` as defence-in-depth so the overlay works in tests that do not wrap the child in a `MaterialApp`.
+6. **MINOR** — `TASK-025` architectural change: introduced shared `static final GlobalKey<NavigatorState> navigatorKey` on `ApiTrace`, threaded through bootstrap + overlay, so the overlay can push the detail screen from a context outside the Navigator subtree. The legacy `Navigator.of(context, rootNavigator: true)` path remains as a defensive fallback for direct `ApiTraceOverlay` instantiation in tests.
+
+**No CRITICAL or BLOCKED deviations.**
+
+### PR 3 boundary check
+
+- 8 task commits + 1 closeout `chore(sdd)` follow-up = 9 commits on `change/03-overlay-ui` (exact count to be confirmed in PR 3 verify gate)
+- No PR 1 / PR 2 files in this PR's diff (verified by `git diff main..change/03-overlay-ui --stat` in the PR 3 verify gate)
+- No `example/` directory in this PR (out of scope, belongs to PR 4)
+- All 8 in-scope REQs (REQ-UI-001..008) have named tests; no REQ from PR 1 (REQ-API-004, REQ-MODEL-001..008) or PR 2 (REQ-API-001..009) regressed (verified by `flutter test` total: 153 = 60 + 38 + 55; the 55 PR 3 new tests + the 2 TASK-025 triangulation tests are additive, not replacing)
+- `git log --format='%an <%ae>' change/03-overlay-ui ^main` confirms all commits use `el Gentleman <el-gentleman@pi-harness.local>`
+
+### Next action
+
+`change/03-overlay-ui` is ready for the **PR 3 `sdd-verify` gate** (independent run + verify-report.md PR 3 section + recommended merge-to-main). After merge, the `sdd-apply` agent for PR 4 (TASK-026..030: example app + acceptance evidence) can begin on a new branch `change/04-example-and-acceptance`.
