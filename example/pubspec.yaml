@@ -5,7 +5,7 @@ description: >-
   reliability) and a real call to httpbin.org (smoke test against a
   public test API). The Real button is gated by kDebugMode so the
   example is deterministic in release builds.
-publish_to: 'none'
+publish_to: "none"
 version: 0.1.0
 
 environment:
