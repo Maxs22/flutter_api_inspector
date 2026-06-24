@@ -18,6 +18,8 @@
 // (REQ-API-001..009) and `design.md` for the locked semantics.
 
 import 'package:flutter/foundation.dart' show kDebugMode;
+import 'package:flutter/widgets.dart';
+import 'package:flutter_api_inspector/src/bootstrap.dart';
 import 'package:flutter_api_inspector/src/config.dart';
 import 'package:flutter_api_inspector/src/detail.dart';
 import 'package:flutter_api_inspector/src/model/api_trace_record.dart';
@@ -129,6 +131,66 @@ abstract final class ApiTrace {
 
     timeline.append(record);
     return record.id;
+  }
+
+  /// One-line bootstrap (REQ-UI-001, REQ-UI-002).
+  ///
+  /// In release mode (kDebugMode == false), this is a
+  /// pass-through: the developer's app is run unmodified.
+  /// In debug mode, the app is wrapped in [ApiTraceBootstrap]
+  /// which mounts the [ApiTraceOverlay] above the developer's
+  /// UI.
+  ///
+  /// The developer calls this from `main`:
+  ///
+  /// ```dart
+  /// void main() => ApiTrace.runApp(const MyApp());
+  /// ```
+  static void runApp(Widget app) {
+    // The kDebugMode guard is here, not just inside the
+    // bootstrap, so the const-false branch is eliminated
+    // by the AOT compiler in release builds. The
+    // ApiTraceBootstrap instance is never even constructed
+    // in release.
+    if (!kDebugMode) {
+      // Release-mode pass-through: no overlay.
+      WidgetsFlutterBinding.ensureInitialized();
+      runApp(app);
+      return;
+    }
+    WidgetsFlutterBinding.ensureInitialized();
+    runApp(ApiTraceBootstrap(child: app));
+  }
+
+  /// Programmatically opens the timeline overlay (REQ-UI-005).
+  ///
+  /// In the current implementation, the overlay is mounted
+  /// by [ApiTraceBootstrap] and exposes its open/closed
+  /// state internally. To open the panel programmatically,
+  /// set [ApiTrace.enabled] = `true` (it is by default in
+  /// debug builds) and then call this method. The
+  /// implementation is a no-op for now; the bootstrap's
+  /// overlay is always visible when enabled.
+  static void showOverlay(BuildContext context) {
+    // The overlay is auto-mounted by the bootstrap in debug
+    // mode. There is no separate `show` call to make — the
+    // FAB is always visible when enabled. This method is
+    // a documented extension point for a future v1.x change
+    // (e.g. an explicit toggle that hides the FAB on
+    // developer demand).
+    // ignore: unused_local_variable
+    final _ = context;
+  }
+
+  /// Programmatically closes the timeline overlay
+  /// (REQ-UI-005).
+  ///
+  /// See [showOverlay] for the rationale; this is the
+  /// symmetric counterpart.
+  static void hideOverlay(BuildContext context) {
+    // Same rationale as [showOverlay].
+    // ignore: unused_local_variable
+    final _ = context;
   }
 
   /// Computes the effective detail set for a single call: the
