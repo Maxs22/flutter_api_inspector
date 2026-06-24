@@ -285,8 +285,7 @@ task follows RED → GREEN → TRIANGULATE → REFACTOR.
 These tasks build the `ApiTrace` static class on top of the model
 layer. Every task follows RED → GREEN → TRIANGULATE → REFACTOR.
 
-- [ ] **TASK-013: Implement `ApiTraceConfig` + `ApiTraceOverlayPosition` + `ApiTraceOverlayLabel` (REQ-API-003, REQ-API-004)**
-  - **What**: Create `lib/src/config.dart` with three symbols: the two enums (4 + 3 values) and the immutable `ApiTraceConfig` class with `const` constructor and the five defaults from the design. Add `test/config_test.dart` asserting the defaults and the enum shapes.
+- [x] **TASK-013: Implement `ApiTraceConfig` + `ApiTraceOverlayPosition` + `ApiTraceOverlayLabel` (REQ-API-003, REQ-API-004)**
   - **Why**: REQ-API-003 requires the position/label enums; REQ-API-004 requires the default `details == {minimal}`, `timelineCapacity == 200`, `maxResponseBodyBytes == 4096`, `overlayPosition == bottomRight`, `overlayLabel == icon`. These are the locked answers to proposal Q2, Q3, Q5.
   - **Files**: `lib/src/config.dart`, `test/config_test.dart`
   - **TDD evidence contract**:
@@ -300,8 +299,7 @@ layer. Every task follows RED → GREEN → TRIANGULATE → REFACTOR.
     - `dart analyze` clean.
   - **Workload estimate**: ~120 lines.
 
-- [ ] **TASK-014: Implement `ApiTrace.call` async signature + returned id (REQ-API-001, REQ-API-008)**
-  - **What**: Add `lib/src/api_trace.dart` with the `ApiTrace` class (initially `abstract final class ApiTrace { ApiTrace._(); … }`) and the `static Future<String?> call(name, {required method, required url, required execute, detailOverride, extra})` method. This first pass implements the async signature, the `execute` await, the `ApiTraceRecord.fromCapture` call, the `timeline.append`, and the `return record.id`. The `enabled` short-circuit, the error-capture branches, and the reentrancy tests are layered in TASK-015 and TASK-017.
+- [x] **TASK-014: Implement `ApiTrace.call` async signature + returned id (REQ-API-001, REQ-API-008)**
   - **Why**: REQ-API-001 requires the async-with-execute signature; REQ-API-008 requires the returned id to be the record's id. The "happy path" is the foundation for the other API tests.
   - **Files**: `lib/src/api_trace.dart`, `test/api_trace_test.dart` (RED cycle for the happy-path scenarios only)
   - **TDD evidence contract**:
@@ -315,8 +313,7 @@ layer. Every task follows RED → GREEN → TRIANGULATE → REFACTOR.
     - `dart analyze` clean.
   - **Workload estimate**: ~140 lines (file + test additions for this task only).
 
-- [ ] **TASK-015: Implement `ApiTrace.enabled` short-circuit + `kDebugMode` default (REQ-API-002, REQ-API-006)**
-  - **What**: Add the `static late bool enabled = kDebugMode;` field to `ApiTrace`, and add the short-circuit at the top of `call` (`if (!enabled) return Future.value(null);`). Add the `test/api_trace_test.dart` scenarios for the two REQs.
+- [x] **TASK-015: Implement `ApiTrace.enabled` short-circuit + `kDebugMode` default (REQ-API-002, REQ-API-006)**
   - **Why**: REQ-API-002 requires the short-circuit; REQ-API-006 requires the `kDebugMode`-at-first-read default. Both are required for the release-mode tree-shake to be safe (a `flutter build --release` sets `kDebugMode == false`, which short-circuits `call`).
   - **Files**: `lib/src/api_trace.dart`, `test/api_trace_test.dart` (extend with two new `group`s)
   - **TDD evidence contract**:
@@ -330,8 +327,7 @@ layer. Every task follows RED → GREEN → TRIANGULATE → REFACTOR.
     - `dart analyze` clean.
   - **Workload estimate**: ~70 lines (additions to file + test).
 
-- [ ] **TASK-016: Implement per-call `detailOverride` (REQ-API-005)**
-  - **What**: Extend `ApiTrace.call` to compute the `effectiveDetails` as `config.details ∪ (detailOverride ?? {})` and pass it to `fromCapture`. Add the three `test/api_trace_test.dart` scenarios.
+- [x] **TASK-016: Implement per-call `detailOverride` (REQ-API-005)**
   - **Why**: REQ-API-005 requires the per-call override to widen the captured detail set for that call only, and to leave the global config unchanged.
   - **Files**: `lib/src/api_trace.dart`, `test/api_trace_test.dart` (extend with one new `group`)
   - **TDD evidence contract**:
@@ -345,8 +341,7 @@ layer. Every task follows RED → GREEN → TRIANGULATE → REFACTOR.
     - `dart analyze` clean.
   - **Workload estimate**: ~80 lines.
 
-- [ ] **TASK-017: Implement error capture + reentrancy contract (REQ-API-007, REQ-API-009, REQ-MODEL-007)**
-  - **What**: Add the `try { … } catch (e) { error = e; }` block in `ApiTrace.call`; add the private `deriveOutcome({response, error})` helper that returns `error` for thrown exceptions or 4xx/5xx, `success` otherwise. Add the reentrancy test that nests a `ApiTrace.call` inside the `execute` callback of another.
+- [x] **TASK-017: Implement error capture + reentrancy contract (REQ-API-007, REQ-API-009, REQ-MODEL-007)**
   - **Why**: REQ-API-007 requires error capture (thrown + 4xx + 5xx); REQ-API-009 and REQ-MODEL-007 require that two concurrent (or nested) `ApiTrace.call` invocations each produce exactly one record. Both are required for the API to be safe in real apps.
   - **Files**: `lib/src/api_trace.dart`, `test/api_trace_test.dart` (extend with two new `group`s)
   - **TDD evidence contract**:
