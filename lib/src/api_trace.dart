@@ -17,6 +17,7 @@
 // See `openspec/changes/flutter_api_inspector-mvp/specs/instrumentation-api.md`
 // (REQ-API-001..009) and `design.md` for the locked semantics.
 
+import 'package:flutter/foundation.dart' show kDebugMode;
 import 'package:flutter_api_inspector/src/config.dart';
 import 'package:flutter_api_inspector/src/detail.dart';
 import 'package:flutter_api_inspector/src/model/api_trace_record.dart';
@@ -41,6 +42,15 @@ abstract final class ApiTrace {
   /// Reassignment is the only way to change capture behavior
   /// app-wide; the config object itself is immutable.
   static ApiTraceConfig config = const ApiTraceConfig();
+
+  /// Master switch. When `false`, `call` is a no-op that
+  /// returns `null` without invoking the `execute` callback
+  /// or appending to the timeline (REQ-API-002). Initialised
+  /// to `kDebugMode` on first read (REQ-API-006): in debug
+  /// builds the overlay is on by default; in release builds
+  /// it is off. The field is mutable; assigning `false`
+  /// explicitly is the documented opt-out.
+  static bool enabled = kDebugMode;
 
   /// The in-memory ring buffer of `ApiTraceRecord`s. Initialised
   /// with the default `ApiTraceConfig.timelineCapacity` (200,
@@ -73,9 +83,12 @@ abstract final class ApiTrace {
     Set<ApiTraceDetail>? detailOverride,
     Map<String, Object?>? extra,
   }) async {
-    // Master switch short-circuit. TASK-015 layers this in.
-    // For TASK-014 we always run the capture path; the
-    // short-circuit is the next PR-cycle iteration.
+    // Master switch short-circuit (REQ-API-002). When the
+    // overlay is disabled, call is a no-op: it returns null
+    // without invoking execute() or appending to the timeline.
+    if (!enabled) {
+      return null;
+    }
 
     final startedAt = DateTime.now();
     ApiTraceResponse? response;

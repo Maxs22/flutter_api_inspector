@@ -20,6 +20,7 @@
 //   'Two distinct calls produce two distinct ids',
 //   'Calling call() grows the timeline by exactly one'.
 
+import 'package:flutter/foundation.dart' show kDebugMode;
 import 'package:flutter_api_inspector/flutter_api_inspector.dart';
 import 'package:flutter_test/flutter_test.dart';
 
@@ -27,8 +28,7 @@ void main() {
   // Reset `ApiTrace` to its pristine state before each test so
   // tests do not leak state (config, enabled, timeline).
   setUp(() {
-    // TASK-015 adds `ApiTrace.enabled`; for TASK-014 the master
-    // switch is implicitly "on" because no short-circuit exists.
+    ApiTrace.enabled = kDebugMode;
     ApiTrace.config = const ApiTraceConfig();
     ApiTrace.timeline.clear();
   });
@@ -136,6 +136,72 @@ void main() {
         execute: happyExecute(),
       );
       expect(ApiTrace.timeline.size, initialSize + 1);
+    });
+  });
+
+  group('ApiTrace.enabled — master switch (REQ-API-002, REQ-API-006)', () {
+    test('Disabled call returns null', () async {
+      // REQ-API-002: when enabled is false, call() resolves to
+      // null without invoking execute or appending to the timeline.
+      ApiTrace.enabled = false;
+      final id = await ApiTrace.call(
+        'x',
+        method: 'GET',
+        url: Uri.parse('https://x/'),
+        execute: happyExecute(),
+      );
+      expect(id, isNull);
+    });
+
+    test('Disabled call never invokes execute', () async {
+      // The execute callback is never invoked when enabled is false.
+      ApiTrace.enabled = false;
+      var calls = 0;
+      final id = await ApiTrace.call(
+        'x',
+        method: 'GET',
+        url: Uri.parse('https://x/'),
+        execute: () async {
+          calls++;
+          return const ApiTraceResponse(statusCode: 200);
+        },
+      );
+      expect(calls, 0);
+      expect(id, isNull);
+    });
+
+    test('enabled is true at first read in debug', () async {
+      // REQ-API-006: enabled defaults to kDebugMode at first read.
+      // In flutter test, kDebugMode is true, so enabled should
+      // be true on a fresh instance.
+      // Reset to a known state by reading the field once (this
+      // evaluates the late initializer) and then asserting.
+      // The setUp already resets enabled to kDebugMode, so a
+      // direct read is sufficient.
+      expect(ApiTrace.enabled, isTrue);
+      expect(ApiTrace.enabled, equals(kDebugMode));
+    });
+
+    test('TRIANGULATE: enabled is mutable', () {
+      // Assigning false is observed by a subsequent read.
+      ApiTrace.enabled = false;
+      expect(ApiTrace.enabled, isFalse);
+      ApiTrace.enabled = true;
+      expect(ApiTrace.enabled, isTrue);
+    });
+
+    test('TRIANGULATE: disabled call does not append to timeline', () async {
+      // REQ-API-002: the timeline size is unchanged after a
+      // disabled call.
+      ApiTrace.enabled = false;
+      final initialSize = ApiTrace.timeline.size;
+      await ApiTrace.call(
+        'x',
+        method: 'GET',
+        url: Uri.parse('https://x/'),
+        execute: happyExecute(),
+      );
+      expect(ApiTrace.timeline.size, initialSize);
     });
   });
 }
