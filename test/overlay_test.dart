@@ -19,6 +19,7 @@ import 'package:flutter_api_inspector/src/overlay/colors.dart';
 import 'package:flutter_api_inspector/src/overlay/fab_position.dart';
 import 'package:flutter_api_inspector/src/overlay/fab.dart';
 import 'package:flutter_api_inspector/src/overlay/timeline_row.dart';
+import 'package:flutter_api_inspector/src/overlay/timeline_panel.dart';
 
 void main() {
   group('outcomeColor helper (REQ-UI-008)', () {
@@ -500,6 +501,242 @@ void main() {
       ));
       final errorText = tester.widget<Text>(find.text('errored'));
       expect(errorText.style?.color, equals(Colors.red.shade600));
+    });
+  });
+
+  group('TimelinePanel widget (REQ-UI-005, REQ-UI-006)', () {
+    // Helper: build a record with the given outcome and name.
+    ApiTraceRecord record({
+      required String name,
+      required String method,
+      required int? statusCode,
+      required ApiTraceOutcome outcome,
+    }) {
+      final start = DateTime(2026, 1, 1, 0, 0, 0);
+      return ApiTraceRecord(
+        id: 'id-$name',
+        name: name,
+        startedAt: start,
+        completedAt: start.add(const Duration(milliseconds: 10)),
+        method: method,
+        url: Uri.parse('https://api.example.com/$name'),
+        statusCode: statusCode,
+        duration: const Duration(milliseconds: 10),
+        outcome: outcome,
+        capturedDetails: const <ApiTraceDetail>{ApiTraceDetail.minimal},
+        request: null,
+        response: null,
+        error: null,
+        extra: const <String, Object?>{},
+      );
+    }
+
+    Widget panelHost(List<ApiTraceRecord> records) {
+      return MaterialApp(
+        home: Scaffold(
+          body: SizedBox(
+            width: 400,
+            height: 800,
+            child: TimelinePanel(
+              records: List<ApiTraceRecord>.unmodifiable(records),
+              onTap: (ApiTraceRecord _) {},
+            ),
+          ),
+        ),
+      );
+    }
+
+    testWidgets('renders rows in newest-first order (REQ-UI-005)',
+        (tester) async {
+      // RED: import target missing for `timeline_panel.dart`.
+      // The Timeline exposes records head=newest. The panel
+      // renders them in the order received. We pass in
+      // [C, B, A] (newest first) and assert the rendered
+      // order is C, B, A (top to bottom).
+      final records = <ApiTraceRecord>[
+        record(
+            name: 'C',
+            method: 'GET',
+            statusCode: 200,
+            outcome: ApiTraceOutcome.success),
+        record(
+            name: 'B',
+            method: 'GET',
+            statusCode: 200,
+            outcome: ApiTraceOutcome.success),
+        record(
+            name: 'A',
+            method: 'GET',
+            statusCode: 200,
+            outcome: ApiTraceOutcome.success),
+      ];
+      await tester.pumpWidget(panelHost(records));
+      // Each name must be found exactly once.
+      expect(find.text('A'), findsOneWidget);
+      expect(find.text('B'), findsOneWidget);
+      expect(find.text('C'), findsOneWidget);
+      // Find the y-coordinates of each name and assert
+      // C is above B is above A.
+      final yC = tester.getTopLeft(find.text('C')).dy;
+      final yB = tester.getTopLeft(find.text('B')).dy;
+      final yA = tester.getTopLeft(find.text('A')).dy;
+      expect(yC, lessThan(yB));
+      expect(yB, lessThan(yA));
+    });
+
+    testWidgets('empty timeline shows an empty-state message (REQ-UI-005)',
+        (tester) async {
+      // With no records, the panel renders a friendly
+      // empty-state message and no list rows.
+      await tester.pumpWidget(panelHost(const <ApiTraceRecord>[]));
+      // The empty-state message contains 'No API calls' or
+      // similar developer-friendly hint.
+      expect(find.textContaining('No'), findsOneWidget);
+      // No TimelineRow widgets are rendered.
+      expect(find.byType(TimelineRow), findsNothing);
+    });
+
+    testWidgets('Error-only filter shows only the error record (REQ-UI-006)',
+        (tester) async {
+      // The Error-only filter chip narrows the rendered list
+      // to records with outcome == error. With one success +
+      // one error record, the error-only filter renders
+      // exactly one row.
+      final records = <ApiTraceRecord>[
+        record(
+            name: 'ok',
+            method: 'GET',
+            statusCode: 200,
+            outcome: ApiTraceOutcome.success),
+        record(
+            name: 'broken',
+            method: 'GET',
+            statusCode: 500,
+            outcome: ApiTraceOutcome.error),
+      ];
+      await tester.pumpWidget(panelHost(records));
+      // Tap the 'Error only' filter chip.
+      await tester.tap(find.widgetWithText(FilterChip, 'Error only'));
+      await tester.pumpAndSettle();
+      // The ok row is gone; the broken row remains.
+      expect(find.text('ok'), findsNothing);
+      expect(find.text('broken'), findsOneWidget);
+    });
+
+    testWidgets(
+        'Name substring filter shows only matching records (REQ-UI-006)',
+        (tester) async {
+      // Typing 'get' into the name filter narrows the
+      // rendered list to records whose name contains 'get'
+      // (case-insensitive). With getUser and listOrders,
+      // only getUser remains.
+      final records = <ApiTraceRecord>[
+        record(
+            name: 'getUser',
+            method: 'GET',
+            statusCode: 200,
+            outcome: ApiTraceOutcome.success),
+        record(
+            name: 'listOrders',
+            method: 'GET',
+            statusCode: 200,
+            outcome: ApiTraceOutcome.success),
+      ];
+      await tester.pumpWidget(panelHost(records));
+      // Type 'get' into the filter field.
+      await tester.enterText(find.byType(TextField), 'get');
+      await tester.pumpAndSettle();
+      // Only the getUser record is rendered.
+      expect(find.text('getUser'), findsOneWidget);
+      expect(find.text('listOrders'), findsNothing);
+    });
+
+    testWidgets('Toggling the All filter restores the full list (REQ-UI-006)',
+        (tester) async {
+      // After filtering down to errors, tapping 'All'
+      // restores the full list.
+      final records = <ApiTraceRecord>[
+        record(
+            name: 'ok1',
+            method: 'GET',
+            statusCode: 200,
+            outcome: ApiTraceOutcome.success),
+        record(
+            name: 'broken1',
+            method: 'GET',
+            statusCode: 500,
+            outcome: ApiTraceOutcome.error),
+        record(
+            name: 'ok2',
+            method: 'GET',
+            statusCode: 200,
+            outcome: ApiTraceOutcome.success),
+      ];
+      await tester.pumpWidget(panelHost(records));
+      // Filter to errors only.
+      await tester.tap(find.widgetWithText(FilterChip, 'Error only'));
+      await tester.pumpAndSettle();
+      expect(find.text('ok1'), findsNothing);
+      expect(find.text('broken1'), findsOneWidget);
+      // Toggle back to All.
+      await tester.tap(find.widgetWithText(FilterChip, 'All'));
+      await tester.pumpAndSettle();
+      expect(find.text('ok1'), findsOneWidget);
+      expect(find.text('broken1'), findsOneWidget);
+      expect(find.text('ok2'), findsOneWidget);
+    });
+
+    testWidgets(
+        'Filters do not mutate the underlying records list (REQ-UI-006)',
+        (tester) async {
+      // The panel must filter a copy of the records; the
+      // list passed in must remain unchanged.
+      final records = <ApiTraceRecord>[
+        record(
+            name: 'a',
+            method: 'GET',
+            statusCode: 200,
+            outcome: ApiTraceOutcome.success),
+        record(
+            name: 'b',
+            method: 'GET',
+            statusCode: 500,
+            outcome: ApiTraceOutcome.error),
+      ];
+      final input = List<ApiTraceRecord>.unmodifiable(records);
+      final before = input.length;
+      await tester.pumpWidget(panelHost(input));
+      await tester.tap(find.widgetWithText(FilterChip, 'Error only'));
+      await tester.pumpAndSettle();
+      // The input list is still 2.
+      expect(input.length, before);
+      // And it still contains both names.
+      expect(input.any((ApiTraceRecord r) => r.name == 'a'), isTrue);
+      expect(input.any((ApiTraceRecord r) => r.name == 'b'), isTrue);
+    });
+
+    testWidgets(
+        'TRIANGULATE: substring filter is case-insensitive (REQ-UI-006)',
+        (tester) async {
+      // 'GET' substring (uppercase) should match a record
+      // named 'getUser' (lowercase 'get' prefix).
+      final records = <ApiTraceRecord>[
+        record(
+            name: 'getUser',
+            method: 'GET',
+            statusCode: 200,
+            outcome: ApiTraceOutcome.success),
+        record(
+            name: 'listOrders',
+            method: 'GET',
+            statusCode: 200,
+            outcome: ApiTraceOutcome.success),
+      ];
+      await tester.pumpWidget(panelHost(records));
+      await tester.enterText(find.byType(TextField), 'GET');
+      await tester.pumpAndSettle();
+      expect(find.text('getUser'), findsOneWidget);
+      expect(find.text('listOrders'), findsNothing);
     });
   });
 }
