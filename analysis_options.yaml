@@ -1,0 +1,49 @@
+# Analysis options for flutter_api_inspector.
+#
+# Extends the official Flutter team lint ruleset
+# (package:flutter_lints/flutter.yaml) and tightens a few rules for the
+# MVP. Public-member doc comments are intentionally not enforced at
+# v0.1.0; the package follows the typical Flutter package convention of
+# shipping doc comments incrementally. The `public_member_api_docs`
+# rule is therefore kept off (the Flutter baseline does not enable it
+# either) and a `library_names` exception is documented here for the
+# next phase that flips the rule on.
+
+include: package:flutter_lints/flutter.yaml
+
+analyzer:
+  language:
+    strict-casts: true
+    strict-inference: true
+    strict-raw-types: true
+  errors:
+    # Per MVP agreement: public-member doc comments are not required.
+    # When the rule is enabled in a future phase, library_names
+    # should be configured here to allow specific public APIs to
+    # ship without doc comments during the initial release.
+    public_member_api_docs: ignore
+  exclude:
+    - "**/*.g.dart"
+    - "**/*.freezed.dart"
+    - "build/**"
+
+linter:
+  rules:
+    # Baseline tightening (most of these already come from
+    # package:flutter_lints/flutter.yaml; we restate the ones that
+    # matter for the model layer).
+    prefer_final_locals: true
+    avoid_print: true
+    prefer_const_constructors: true
+    prefer_const_declarations: true
+    prefer_const_literals_to_create_immutables: true
+    unnecessary_late: true
+    unnecessary_this: true
+    sort_child_properties_last: true
+    use_super_parameters: true
+    unawaited_futures: true
+    # We never need null-aware promotion on final fields; keep the
+    # model layer honest.
+    unnecessary_null_aware_assignments: true
+    # We do not use cascades in the API layer (clarity over brevity).
+    cascade_invocations: false
