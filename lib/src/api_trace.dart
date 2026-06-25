@@ -21,7 +21,7 @@ import 'package:flutter/foundation.dart' show kDebugMode;
 import 'package:flutter/widgets.dart';
 import 'package:flutter_api_inspector/src/bootstrap.dart';
 // ignore: unused_import
-import 'package:flutter/material.dart' show Navigator;
+import 'package:flutter/material.dart' show MaterialApp;
 import 'package:flutter_api_inspector/src/config.dart';
 import 'package:flutter_api_inspector/src/detail.dart';
 import 'package:flutter_api_inspector/src/model/api_trace_record.dart';
@@ -165,17 +165,72 @@ abstract final class ApiTrace {
   static void runApp(Widget app) {
     // The kDebugMode guard is here, not just inside the
     // bootstrap, so the const-false branch is eliminated
-    // by the AOT compiler in release builds. The
-    // ApiTraceBootstrap instance is never even constructed
-    // in release.
+    // by the AOT compiler in release builds. The overlay
+    // surface is never even constructed in release.
+    //
+    // Implementation note (2026-06-24 fix): we do NOT call
+    // Flutter's top-level `runApp(...)` from inside this
+    // class body. The static method name `ApiTrace.runApp`
+    // shadows the top-level `runApp` from
+    // `package:flutter/widgets.dart` due to Dart's name
+    // resolution (class members take precedence over
+    // imported top-level identifiers). An unqualified
+    // `runApp(app)` inside this body would resolve to
+    // `ApiTrace.runApp(app)` and recurse infinitely
+    // (98,000+ frames in the 2026-06-24 device stack
+    // overflow). Instead, we use `WidgetsBinding.attachRoot
+    // Widget` + `scheduleFrame`, which is what Flutter's
+    // `runApp` does internally.
+    //
+    // Implementation note (2026-06-24 fix #2): we do NOT
+    // wrap the developer's `app` in `ApiTraceBootstrap`
+    // and pass the bootstrap to `attachRootWidget`. The
+    // `MaterialApp` (or `GetMaterialApp`, etc.) that the
+    // developer passes as `app` expects to be the ROOT
+    // widget of the app (because `WidgetsApp` — which
+    // `MaterialApp` delegates to — only creates the
+    // `View` widget that provides the `RenderView` render
+    // root when it is the root). If we wrap the
+    // `MaterialApp` in `ApiTraceBootstrap` and pass THAT
+    // to `attachRootWidget`, the bootstrap becomes the
+    // root and the `MaterialApp` is no longer the root,
+    // so no `View` is created — and every `RenderObject`
+    // in the tree (Semantics, Stack, etc.) throws
+    // "cannot find ancestor render object to attach to".
+    //
+    // The fix: construct a new `MaterialApp` (with the
+    // overlay injected via `builder`) and pass THAT as
+    // the root. The new `MaterialApp` is the root, so
+    // `WidgetsApp` creates the `View` and the render
+    // tree is valid. The developer's original `app` is
+    // nested inside the new `MaterialApp` as `home` (or
+    // is rebuilt via the harness if it is itself a
+    // `MaterialApp`). The bootstrap is still a public
+    // class for users who want to mount the overlay
+    // manually inside their own `MaterialApp.builder`.
+    final binding = WidgetsFlutterBinding.ensureInitialized();
     if (!kDebugMode) {
-      // Release-mode pass-through: no overlay.
-      WidgetsFlutterBinding.ensureInitialized();
-      runApp(app);
+      // Release-mode pass-through: the developer's `app`
+      // is the root.
+      binding
+        ..attachRootWidget(app)
+        ..scheduleFrame();
       return;
     }
-    WidgetsFlutterBinding.ensureInitialized();
-    runApp(ApiTraceBootstrap(child: app));
+    // Debug-mode: build the harness `MaterialApp` (with
+    // the overlay injected) and pass it as the root.
+    final Widget root = app is MaterialApp
+        ? BootstrapMaterialAppHarness(
+            materialApp: app,
+            enabled: ApiTrace.enabled,
+          )
+        : BootstrapMaterialAppHarness(
+            materialApp: MaterialApp(home: app),
+            enabled: ApiTrace.enabled,
+          );
+    binding
+      ..attachRootWidget(root)
+      ..scheduleFrame();
   }
 
   /// Programmatically opens the timeline overlay (REQ-UI-005).

@@ -17,7 +17,6 @@
 // `ApiTrace.runApp` is defined in `lib/src/api_trace.dart`
 // and wraps the developer's app in `ApiTraceBootstrap`.
 
-import 'package:flutter/cupertino.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 
@@ -68,36 +67,55 @@ class ApiTraceBootstrap extends StatelessWidget {
     //    no Navigator), so the developer should pass
     //    `onRecordTap` to override the default behaviour.
 
+    // The bootstrap is designed to be mounted INSIDE the
+    // developer's `MaterialApp` (either as the root via
+    // `ApiTrace.runApp`, or manually inside a `home` /
+    // `builder`). The bootstrap itself is a `StatelessWidget`
+    // that wraps the developer's child with a `Stack` of
+    // [child, overlay]. The `View` widget that
+    // `WidgetsApp` creates (which provides the `RenderView`
+    // render root) is the developer's `MaterialApp` — so
+    // the `ApiTrace.runApp` entry point constructs a new
+    // `MaterialApp` (with the overlay injected via the
+    // `builder`) and passes it to `attachRootWidget` as the
+    // root widget. The bootstrap is never the root; it is
+    // always nested inside a `MaterialApp`.
+    //
+    // This means: for the bootstrap to work, the developer
+    // must either use `ApiTrace.runApp(...)` (the one-line
+    // integration), or mount `ApiTraceBootstrap` manually
+    // inside their own `MaterialApp`. Manual mount example:
+    //
+    // ```dart
+    // runApp(MaterialApp(
+    //   home: ApiTraceBootstrap(child: MyApp()),
+    // ));
+    // ```
+    //
+    // The `kDebugMode` guard at the top makes the bootstrap
+    // a pass-through in release builds (bit-identical to
+    // the developer's child, no overlay mounted).
     if (child is MaterialApp) {
       final materialApp = child as MaterialApp;
-      return _BootstrapMaterialAppHarness(
+      return BootstrapMaterialAppHarness(
         materialApp: materialApp,
         enabled: ApiTrace.enabled,
       );
     }
 
-    return Directionality(
-      textDirection: TextDirection.ltr,
-      child: Stack(
-        children: <Widget>[
-          child,
-          ValueListenableBuilder<String?>(
-            valueListenable: ApiTrace.timeline.latest,
-            builder: (BuildContext context, String? _, Widget? __) {
-              if (!ApiTrace.enabled) {
-                return const SizedBox.shrink();
-              }
-              return _OverlayHarness(
-                child: ApiTraceOverlay(
-                  config: ApiTrace.config,
-                  records: ApiTrace.timeline.records,
-                  navigatorKey: ApiTrace.navigatorKey,
-                ),
-              );
-            },
-          ),
-        ],
-      ),
+    // Non-MaterialApp child: wrap in a fresh minimal
+    // `MaterialApp(home: child)` and use the same harness.
+    // The fresh `MaterialApp` provides the render root
+    // (via `WidgetsApp`'s `View`), the `Navigator`, and the
+    // `MaterialLocalizations` ancestor that the overlay's
+    // `FilterChip`, `TextField`, etc. need. The outer
+    // `MaterialApp` is invisible to routing because the
+    // developer's own MaterialApp (e.g. `GetMaterialApp`
+    // inside `MyApp.build`) is `home`'s descendant and
+    // provides its own `Navigator` and theme.
+    return BootstrapMaterialAppHarness(
+      materialApp: MaterialApp(home: child),
+      enabled: ApiTrace.enabled,
     );
   }
 }
@@ -111,8 +129,9 @@ class ApiTraceBootstrap extends StatelessWidget {
 /// construct a new one with the same fields plus the
 /// `builder`. The `key` of the original MaterialApp is
 /// preserved.
-class _BootstrapMaterialAppHarness extends StatelessWidget {
-  const _BootstrapMaterialAppHarness({
+class BootstrapMaterialAppHarness extends StatelessWidget {
+  const BootstrapMaterialAppHarness({
+    super.key,
     required this.materialApp,
     required this.enabled,
   });
@@ -171,32 +190,6 @@ class _BootstrapMaterialAppHarness extends StatelessWidget {
           ],
         );
       },
-    );
-  }
-}
-
-/// Wraps the overlay subtree in a `Material` + `Localizations`
-/// harness so the overlay's Material widgets (FilterChip,
-/// TextField, etc.) can find a `MaterialLocalizations`
-/// ancestor even when the developer's child does not provide
-/// one (e.g. a bare `Scaffold` in a test).
-class _OverlayHarness extends StatelessWidget {
-  const _OverlayHarness({required this.child});
-  final Widget child;
-
-  @override
-  Widget build(BuildContext context) {
-    return Material(
-      type: MaterialType.transparency,
-      child: Localizations(
-        locale: const Locale('en', 'US'),
-        delegates: const <LocalizationsDelegate<dynamic>>[
-          DefaultMaterialLocalizations.delegate,
-          DefaultCupertinoLocalizations.delegate,
-          DefaultWidgetsLocalizations.delegate,
-        ],
-        child: child,
-      ),
     );
   }
 }
