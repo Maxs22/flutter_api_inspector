@@ -99,5 +99,29 @@ final class ApiTraceConfig {
     this.timelineCapacity = 200,
     this.overlayPosition = ApiTraceOverlayPosition.bottomRight,
     this.overlayLabel = ApiTraceOverlayLabel.icon,
+    this.flowGroupGap = const Duration(seconds: 2),
+    this.draggableFab = true,
+    this.panelMaxHeight = 320.0,
   });
+
+  /// Maximum gap between two consecutive records before the
+  /// timeline panel starts a new "flow" group. Records within
+  /// [flowGroupGap] of each other (end-of-previous to
+  /// start-of-next) belong to the same group. Default 2
+  /// seconds. Set to `Duration.zero` to disable grouping.
+  final Duration flowGroupGap;
+
+  /// Whether the FAB can be dragged around the screen with a
+  /// long-press + drag gesture. When `false`, the FAB stays
+  /// pinned at the corner selected by [overlayPosition]. When
+  /// `true` (the default), the developer can long-press the
+  /// FAB and drag it to a less intrusive spot.
+  final bool draggableFab;
+
+  /// Maximum height of the timeline panel in logical pixels.
+  /// The panel auto-shrinks if the content is shorter than
+  /// this. Default 320 (about a third of a typical phone
+  /// screen). Lower this if the FAB is in a spot where a
+  /// taller panel would cover the action.
+  final double panelMaxHeight;
 }

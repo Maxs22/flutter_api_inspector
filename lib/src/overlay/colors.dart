@@ -17,20 +17,22 @@ import 'package:flutter/material.dart';
 
 import 'package:flutter_api_inspector/src/outcome.dart';
 
-/// Resolves the row-tint color for a given [outcome].
+/// Resolves the row-tint color for a given [outcome]. Kept
+/// for backwards compatibility; new code should use the
+/// theme-aware helpers in `theme.dart` instead.
 ///
-/// - `success` -> `Colors.green.shade600` (REQ-UI-008).
-/// - `error` -> `Colors.red.shade600` (REQ-UI-008; 4xx and 5xx
-///   share the same red).
-/// - `cancelled` -> `Colors.grey` (reserved; never produced in
-///   v1, but the helper must still return a valid `Color`).
+/// - `success` -> `Color(0xFF16A34A)` (Tailwind green-600).
+/// - `error` -> `Color(0xFFDC2626)` (Tailwind red-600; 4xx and
+///   5xx share the same red).
+/// - `cancelled` -> `Color(0xFF6B7280)` (Tailwind gray-500;
+///   reserved; never produced in v1).
 Color outcomeColor(ApiTraceOutcome outcome) {
   switch (outcome) {
     case ApiTraceOutcome.success:
-      return Colors.green.shade600;
+      return const Color(0xFF16A34A);
     case ApiTraceOutcome.error:
-      return Colors.red.shade600;
+      return const Color(0xFFDC2626);
     case ApiTraceOutcome.cancelled:
-      return Colors.grey;
+      return const Color(0xFF6B7280);
   }
 }

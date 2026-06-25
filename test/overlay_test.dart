@@ -57,13 +57,13 @@ void main() {
     test('success outcome returns a green color', () {
       // RED: import target missing for `colors.dart`.
       final color = outcomeColor(ApiTraceOutcome.success);
-      expect(color, equals(Colors.green.shade600));
+      expect(color, equals(const Color(0xFF16A34A)));
     });
 
     test('error outcome returns a red color', () {
       // RED: import target missing for `colors.dart`.
       final color = outcomeColor(ApiTraceOutcome.error);
-      expect(color, equals(Colors.red.shade600));
+      expect(color, equals(const Color(0xFFDC2626)));
     });
 
     test('cancelled outcome returns a neutral color (grey)', () {
@@ -420,10 +420,10 @@ void main() {
       ));
       // Find the row's status Icon (Icons.check_circle for
       // success) and assert its color matches the helper.
-      final iconFinder = find.byIcon(Icons.check_circle);
+      final iconFinder = find.byIcon(Icons.check_circle_rounded);
       expect(iconFinder, findsOneWidget);
       final iconWidget = tester.widget<Icon>(iconFinder);
-      expect(iconWidget.color, equals(Colors.green.shade600));
+      expect(iconWidget.color, equals(const Color(0xFF16A34A)));
     });
 
     testWidgets('error row tints its Icon with the red color (REQ-UI-008)',
@@ -442,10 +442,10 @@ void main() {
       // For outcome == error, the row's leading icon is
       // Icons.error (per design.md). The icon is tinted with
       // the red color from outcomeColor.
-      final iconFinder = find.byIcon(Icons.error);
+      final iconFinder = find.byIcon(Icons.error_rounded);
       expect(iconFinder, findsOneWidget);
       final iconWidget = tester.widget<Icon>(iconFinder);
-      expect(iconWidget.color, equals(Colors.red.shade600));
+      expect(iconWidget.color, equals(const Color(0xFFDC2626)));
     });
 
     testWidgets('4xx and 5xx rows have the same red color (REQ-UI-008)',
@@ -464,7 +464,7 @@ void main() {
         ),
       ));
       Color? color4xx;
-      final icon4xx = tester.widget<Icon>(find.byIcon(Icons.error));
+      final icon4xx = tester.widget<Icon>(find.byIcon(Icons.error_rounded));
       color4xx = icon4xx.color;
       await tester.pumpWidget(rowHost(
         TimelineRow(
@@ -477,7 +477,7 @@ void main() {
           onTap: () {},
         ),
       ));
-      final icon5xx = tester.widget<Icon>(find.byIcon(Icons.error));
+      final icon5xx = tester.widget<Icon>(find.byIcon(Icons.error_rounded));
       expect(icon5xx.color, equals(color4xx));
     });
 
@@ -500,11 +500,11 @@ void main() {
       expect(taps, 1);
     });
 
-    testWidgets('TRIANGULATE: row text color matches the outcome color',
+    testWidgets('TRIANGULATE: row status badge color matches the outcome class',
         (tester) async {
-      // The row's text color is the outcome color too, so
-      // both the icon and the text are tinted. We assert the
-      // name's text style color matches the helper.
+      // The row's status badge is tinted with a class color
+      // (2xx green, 3xx blue, 4xx orange, 5xx red). We assert
+      // the badge text style color matches the helper.
       await tester.pumpWidget(rowHost(
         TimelineRow(
           record: record(
@@ -516,8 +516,9 @@ void main() {
           onTap: () {},
         ),
       ));
-      final nameText = tester.widget<Text>(find.text('styled'));
-      expect(nameText.style?.color, equals(Colors.green.shade600));
+      // 2xx -> green-600.
+      final badge200 = tester.widget<Text>(find.text('200'));
+      expect(badge200.style?.color, equals(const Color(0xFF16A34A)));
 
       await tester.pumpWidget(rowHost(
         TimelineRow(
@@ -530,8 +531,9 @@ void main() {
           onTap: () {},
         ),
       ));
-      final errorText = tester.widget<Text>(find.text('errored'));
-      expect(errorText.style?.color, equals(Colors.red.shade600));
+      // 5xx -> red-600.
+      final badge500 = tester.widget<Text>(find.text('500'));
+      expect(badge500.style?.color, equals(const Color(0xFFDC2626)));
     });
   });
 
@@ -647,7 +649,7 @@ void main() {
       ];
       await tester.pumpWidget(panelHost(records));
       // Tap the 'Error only' filter chip.
-      await tester.tap(find.widgetWithText(FilterChip, 'Error only'));
+      await tester.tap(find.widgetWithText(FilterChip, 'Errors'));
       await tester.pumpAndSettle();
       // The ok row is gone; the broken row remains.
       expect(find.text('ok'), findsNothing);
@@ -705,7 +707,7 @@ void main() {
       ];
       await tester.pumpWidget(panelHost(records));
       // Filter to errors only.
-      await tester.tap(find.widgetWithText(FilterChip, 'Error only'));
+      await tester.tap(find.widgetWithText(FilterChip, 'Errors'));
       await tester.pumpAndSettle();
       expect(find.text('ok1'), findsNothing);
       expect(find.text('broken1'), findsOneWidget);
@@ -737,7 +739,7 @@ void main() {
       final input = List<ApiTraceRecord>.unmodifiable(records);
       final before = input.length;
       await tester.pumpWidget(panelHost(input));
-      await tester.tap(find.widgetWithText(FilterChip, 'Error only'));
+      await tester.tap(find.widgetWithText(FilterChip, 'Errors'));
       await tester.pumpAndSettle();
       // The input list is still 2.
       expect(input.length, before);
@@ -1170,10 +1172,20 @@ void main() {
       expect(find.byType(ApiTraceDetailScreen), findsOneWidget);
 
       // 5. Pop the detail screen and confirm the panel is
-      //    still there.
-      final NavigatorState navigator =
-          tester.state(find.byType(Navigator).first);
-      navigator.pop();
+      //    still there. The Navigator we care about is the
+      //    one mounted by the package's `_PackageNavigator`
+      //    (inside the `ApiTraceOverlay`); the host app's
+      //    `MaterialApp` Navigator is a sibling and not the
+      //    one hosting the `ApiTraceDetailScreen`. We find
+      //    the overlay's Navigator by descending from
+      //    `ApiTraceOverlay`.
+      final NavigatorState packageNavigator = tester.state<NavigatorState>(
+        find.descendant(
+          of: find.byType(ApiTraceOverlay),
+          matching: find.byType(Navigator),
+        ),
+      );
+      packageNavigator.pop();
       await tester.pumpAndSettle();
       expect(find.byType(ApiTraceDetailScreen), findsNothing);
       expect(find.byType(TimelinePanel), findsOneWidget);

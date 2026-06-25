@@ -84,6 +84,17 @@ class _ApiTraceOverlayState extends State<ApiTraceOverlay> {
   /// Open/closed state of the timeline panel.
   bool _open = false;
 
+  /// Manual drag offset applied to the FAB. Zero (the default)
+  /// means the FAB sits at the corner chosen by
+  /// [ApiTraceConfig.overlayPosition]. When the developer
+  /// long-presses the FAB and drags, this offset grows. The
+  /// offset is session-scoped (resets when the overlay is
+  /// rebuilt; we do not persist it to disk).
+  ///
+  /// The drag is a no-op when [ApiTraceConfig.draggableFab] is
+  /// `false`.
+  Offset _fabDragOffset = Offset.zero;
+
   @override
   Widget build(BuildContext context) {
     // REQ-UI-001: kDebugMode guard. In release builds
@@ -103,36 +114,56 @@ class _ApiTraceOverlayState extends State<ApiTraceOverlay> {
 
     return Stack(
       children: <Widget>[
-        // The panel, when open, takes the top half of the
-        // screen. The SizedBox.fill + Align centers the
-        // panel at the top.
+        // The panel, when open, lives inside a package-owned
+        // `Navigator` so the detail screen can be pushed onto
+        // a separate stack from the host app.
         if (_open)
-          Positioned.fill(
-            child: Align(
-              alignment: Alignment.topCenter,
-              child: ConstrainedBox(
-                constraints: const BoxConstraints(maxHeight: 500),
-                child: TimelinePanel(
-                  records: widget.records,
-                  onTap: _handleRecordTap,
-                ),
-              ),
+          Positioned(
+            top: 0,
+            left: 0,
+            right: 0,
+            height: widget.config.panelMaxHeight,
+            child: _PackageNavigator(
+              records: widget.records,
+              onRecordTap: widget.onRecordTap,
             ),
           ),
-        // The FAB, positioned per the config.
+        // The FAB, positioned per the config. The drag
+        // offset is applied as a `Transform.translate` on top
+        // of the aligned position. `onPanStart` + `onPanUpdate`
+        // give immediate drag (no long-press needed) so a
+        // developer can grab and move the FAB in one motion.
         Positioned.fill(
           child: Align(
             alignment: fabAlignment(widget.config.overlayPosition),
             child: Padding(
               padding: const EdgeInsets.all(16),
-              child: ApiTraceFab(
-                onPressed: () {
-                  setState(() {
-                    _open = !_open;
-                  });
-                },
-                config: widget.config,
-                recordCount: widget.records.length,
+              child: Transform.translate(
+                offset: _fabDragOffset,
+                child: GestureDetector(
+                  // `deferToChild` lets the FAB's own `onPressed`
+                  // win for quick taps (no movement). The
+                  // `onPanUpdate` is registered on this outer
+                  // detector so any movement drags the FAB. A
+                  // quick tap (no movement) never enters the
+                  // pan recognizer and falls through to the
+                  // FAB's `onPressed`.
+                  behavior: HitTestBehavior.deferToChild,
+                  onPanUpdate: (DragUpdateDetails d) {
+                    setState(() {
+                      _fabDragOffset = _fabDragOffset + d.delta;
+                    });
+                  },
+                  child: ApiTraceFab(
+                    onPressed: () {
+                      setState(() {
+                        _open = !_open;
+                      });
+                    },
+                    config: widget.config,
+                    recordCount: widget.records.length,
+                  ),
+                ),
               ),
             ),
           ),
@@ -140,35 +171,133 @@ class _ApiTraceOverlayState extends State<ApiTraceOverlay> {
       ],
     );
   }
+}
 
-  /// Handles a tap on a row in the panel. Either invokes the
-  /// user-supplied `onRecordTap` callback, or pushes the
-  /// detail screen via Navigator.
-  void _handleRecordTap(ApiTraceRecord record) {
+/// Package-owned `Navigator` that hosts the [TimelinePanel]
+/// and the [ApiTraceDetailScreen]. Pushing the detail onto
+/// this Navigator (instead of the host app's) keeps the
+/// back stack local to the inspector: the detail page's
+/// back button returns to the panel without disturbing the
+/// app's own navigation history.
+class _PackageNavigator extends StatefulWidget {
+  const _PackageNavigator({
+    required this.records,
+    required this.onRecordTap,
+  });
+
+  final List<ApiTraceRecord> records;
+  final void Function(ApiTraceRecord)? onRecordTap;
+
+  @override
+  State<_PackageNavigator> createState() => _PackageNavigatorState();
+}
+
+class _PackageNavigatorState extends State<_PackageNavigator> {
+  /// The current stack of pages. The bottom page is the
+  /// `TimelinePanel`; pushing a detail adds an `_DetailPage`
+  /// on top.
+  ///
+  /// IMPORTANT: the list is treated as IMMUTABLE. Each push
+  /// / pop creates a NEW list and assigns it through
+  /// `setState`. Mutating the existing list in place (e.g.
+  /// `_pages.add`) is invisible to the `Navigator` widget,
+  /// which compares `oldWidget.pages == newWidget.pages` by
+  /// reference and would not rebuild on a mutating call. See
+  /// the Flutter docs for `Navigator.pages`.
+  List<Page<void>> _pages = const <Page<void>>[];
+
+  @override
+  void initState() {
+    super.initState();
+    _pages = <Page<void>>[
+      _PanelPage(
+        records: widget.records,
+        onRecordTap: widget.onRecordTap,
+        onRecordTapped: _pushDetail,
+      ),
+    ];
+  }
+
+  void _pushDetail(ApiTraceRecord record) {
     final userCallback = widget.onRecordTap;
     if (userCallback != null) {
       userCallback(record);
       return;
     }
-    // Default: push the detail screen via MaterialPageRoute.
-    // We use the root Navigator so the route is added to the
-    // developer's main Navigator (and is therefore
-    // back-button-discoverable).
-    //
-    // When the overlay is mounted outside the Navigator subtree
-    // (e.g. as a sibling of the MaterialApp.builder child via
-    // ApiTraceBootstrap), `Navigator.of(context)` cannot find
-    // an ancestor Navigator and throws. The escape hatch is
-    // the shared `GlobalKey<NavigatorState>` on the MaterialApp,
-    // which always points at the MaterialApp's root Navigator.
-    final navigator = widget.navigatorKey?.currentState ??
-        Navigator.of(context, rootNavigator: true);
-    navigator.push<bool>(
-      MaterialPageRoute<bool>(
-        builder: (BuildContext _) {
-          return ApiTraceDetailScreen(record: record);
+    setState(() {
+      // Create a NEW list so the Navigator widget detects
+      // the change. See the `_pages` field doc.
+      _pages = <Page<void>>[
+        ..._pages,
+        _DetailPage(record: record),
+      ];
+    });
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    // The package-owned Navigator is nested inside the
+    // host app's `MaterialApp` Navigator. By default, both
+    // Navigators inherit the same `HeroController` from
+    // `MaterialApp`, which causes a runtime assert:
+    //   "A HeroController can not be shared by multiple
+    //    Navigators."
+    // The fix is to scope a fresh `HeroController` to this
+    // Navigator subtree. We use `.none` because the
+    // inspector's pages (`TimelinePanel`, `ApiTraceDetailScreen`)
+    // never declare a `Hero` widget, so an empty controller
+    // is correct and avoids the assertion.
+    return HeroControllerScope.none(
+      child: Navigator(
+        onDidRemovePage: (Page<dynamic> page) {
+          setState(() {
+            // Same rationale as `_pushDetail`: a NEW list so
+            // the Navigator widget detects the change.
+            _pages = _pages
+                .where((Page<void> p) => p.key != page.key)
+                .toList(growable: false);
+          });
         },
+        pages: _pages,
       ),
+    );
+  }
+}
+
+class _PanelPage extends Page<void> {
+  const _PanelPage({
+    required this.records,
+    required this.onRecordTap,
+    required this.onRecordTapped,
+  }) : super(key: const ValueKey('apiTracePanel'));
+
+  final List<ApiTraceRecord> records;
+  final void Function(ApiTraceRecord)? onRecordTap;
+  final void Function(ApiTraceRecord) onRecordTapped;
+
+  @override
+  Route<void> createRoute(BuildContext context) {
+    return MaterialPageRoute<void>(
+      settings: this,
+      builder: (BuildContext context) => TimelinePanel(
+        records: records,
+        onTap: onRecordTapped,
+      ),
+    );
+  }
+}
+
+class _DetailPage extends Page<void> {
+  const _DetailPage({required this.record})
+      : super(key: const ValueKey('apiTraceDetail'));
+
+  final ApiTraceRecord record;
+
+  @override
+  Route<void> createRoute(BuildContext context) {
+    return MaterialPageRoute<void>(
+      settings: this,
+      builder: (BuildContext context) => ApiTraceDetailScreen(record: record),
     );
   }
 }
