@@ -31,7 +31,6 @@ import 'package:flutter_api_inspector/src/config.dart';
 import 'package:flutter_api_inspector/src/model/api_trace_record.dart';
 import 'package:flutter_api_inspector/src/overlay/detail_screen.dart';
 import 'package:flutter_api_inspector/src/overlay/fab.dart';
-import 'package:flutter_api_inspector/src/overlay/fab_position.dart';
 import 'package:flutter_api_inspector/src/overlay/theme.dart';
 import 'package:flutter_api_inspector/src/overlay/timeline_panel.dart';
 
@@ -85,16 +84,12 @@ class _ApiTraceOverlayState extends State<ApiTraceOverlay> {
   /// Open/closed state of the timeline panel.
   bool _open = false;
 
-  /// Manual drag offset applied to the FAB. Zero (the default)
-  /// means the FAB sits at the corner chosen by
-  /// [ApiTraceConfig.overlayPosition]. When the developer
-  /// long-presses the FAB and drags, this offset grows. The
-  /// offset is session-scoped (resets when the overlay is
-  /// rebuilt; we do not persist it to disk).
-  ///
-  /// The drag is a no-op when [ApiTraceConfig.draggableFab] is
-  /// `false`.
-  Offset _fabDragOffset = Offset.zero;
+  /// Absolute position (left, top) of the FAB within the overlay
+  /// Stack. `null` until the first layout — initialized from
+  /// [ApiTraceConfig.overlayPosition] by [_initialFabPosition].
+  /// Using absolute coordinates (instead of Transform.translate)
+  /// guarantees the hit-test area always matches the visual position.
+  Offset? _fabPosition;
 
   /// Current panel height. `null` means the panel has never
   /// been opened; the first open computes the default.
@@ -142,7 +137,7 @@ class _ApiTraceOverlayState extends State<ApiTraceOverlay> {
                 _PanelResizeHandle(
                   onDrag: (double delta) {
                     setState(() {
-                      _panelHeight = (_panelHeight! - delta).clamp(
+                      _panelHeight = (_panelHeight! + delta).clamp(
                         widget.config.panelMinHeight,
                         widget.config.panelMaxHeight,
                       );
@@ -152,48 +147,82 @@ class _ApiTraceOverlayState extends State<ApiTraceOverlay> {
               ],
             ),
           ),
-        // The FAB, positioned per the config. The drag
-        // offset is applied as a `Transform.translate` on top
-        // of the aligned position. `onPanStart` + `onPanUpdate`
-        // give immediate drag (no long-press needed) so a
-        // developer can grab and move the FAB in one motion.
+        // FAB rendered via LayoutBuilder + Positioned so the
+        // hit-test area always matches the visual position.
+        // Transform.translate was dropped because the hit area
+        // stayed at the original Align position after dragging.
         Positioned.fill(
-          child: Align(
-            alignment: fabAlignment(widget.config.overlayPosition),
-            child: Padding(
-              padding: const EdgeInsets.all(16),
-              child: Transform.translate(
-                offset: _fabDragOffset,
-                child: GestureDetector(
-                  // `deferToChild` lets the FAB's own `onPressed`
-                  // win for quick taps (no movement). The
-                  // `onPanUpdate` is registered on this outer
-                  // detector so any movement drags the FAB. A
-                  // quick tap (no movement) never enters the
-                  // pan recognizer and falls through to the
-                  // FAB's `onPressed`.
-                  behavior: HitTestBehavior.deferToChild,
-                  onPanUpdate: (DragUpdateDetails d) {
-                    setState(() {
-                      _fabDragOffset = _fabDragOffset + d.delta;
-                    });
-                  },
-                  child: ApiTraceFab(
-                    onPressed: () {
-                      setState(() {
-                        _open = !_open;
-                      });
-                    },
-                    config: widget.config,
-                    recordCount: widget.records.length,
+          child: LayoutBuilder(
+            builder: (BuildContext context, BoxConstraints constraints) {
+              const double fabSlot = 56 + 32; // FAB (56) + padding (16*2)
+              _fabPosition ??= _initialFabPosition(
+                constraints,
+                widget.config.overlayPosition,
+                fabSlot,
+              );
+              final pos = _fabPosition!;
+              return Stack(
+                children: <Widget>[
+                  Positioned(
+                    left: pos.dx,
+                    top: pos.dy,
+                    child: GestureDetector(
+                      onPanUpdate: widget.config.draggableFab
+                          ? (DragUpdateDetails d) {
+                              setState(() {
+                                _fabPosition = Offset(
+                                  (pos.dx + d.delta.dx)
+                                      .clamp(0, constraints.maxWidth - fabSlot),
+                                  (pos.dy + d.delta.dy)
+                                      .clamp(0, constraints.maxHeight - fabSlot),
+                                );
+                              });
+                            }
+                          : null,
+                      child: Padding(
+                        padding: const EdgeInsets.all(16),
+                        child: ApiTraceFab(
+                          onPressed: () {
+                            setState(() {
+                              _open = !_open;
+                            });
+                          },
+                          config: widget.config,
+                          recordCount: widget.records.length,
+                        ),
+                      ),
+                    ),
                   ),
-                ),
-              ),
-            ),
+                ],
+              );
+            },
           ),
         ),
       ],
     );
+  }
+
+  @override
+  void didUpdateWidget(ApiTraceOverlay oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (oldWidget.config.overlayPosition != widget.config.overlayPosition) {
+      _fabPosition = null;
+    }
+  }
+
+  static Offset _initialFabPosition(
+    BoxConstraints c,
+    ApiTraceOverlayPosition pos,
+    double slot,
+  ) {
+    final maxX = (c.maxWidth - slot).clamp(0.0, double.infinity);
+    final maxY = (c.maxHeight - slot).clamp(0.0, double.infinity);
+    return switch (pos) {
+      ApiTraceOverlayPosition.bottomRight => Offset(maxX, maxY),
+      ApiTraceOverlayPosition.bottomLeft  => Offset(0, maxY),
+      ApiTraceOverlayPosition.topRight    => Offset(maxX, 0),
+      ApiTraceOverlayPosition.topLeft     => Offset.zero,
+    };
   }
 
   double _computeDefaultPanelHeight(BuildContext context) {
