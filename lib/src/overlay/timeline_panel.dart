@@ -293,7 +293,7 @@ class _TimelinePanelState extends State<TimelinePanel> {
   }
 
   Widget _buildEmptyState(BuildContext context) {
-    return Center(
+    return SingleChildScrollView(
       child: Padding(
         padding: const EdgeInsets.all(32),
         child: Column(

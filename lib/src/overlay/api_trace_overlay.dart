@@ -32,6 +32,7 @@ import 'package:flutter_api_inspector/src/model/api_trace_record.dart';
 import 'package:flutter_api_inspector/src/overlay/detail_screen.dart';
 import 'package:flutter_api_inspector/src/overlay/fab.dart';
 import 'package:flutter_api_inspector/src/overlay/fab_position.dart';
+import 'package:flutter_api_inspector/src/overlay/theme.dart';
 import 'package:flutter_api_inspector/src/overlay/timeline_panel.dart';
 
 /// The debug-only overlay that shows the FAB and the timeline
@@ -95,6 +96,10 @@ class _ApiTraceOverlayState extends State<ApiTraceOverlay> {
   /// `false`.
   Offset _fabDragOffset = Offset.zero;
 
+  /// Current panel height. `null` means the panel has never
+  /// been opened; the first open computes the default.
+  double? _panelHeight;
+
   @override
   Widget build(BuildContext context) {
     // REQ-UI-001: kDebugMode guard. In release builds
@@ -112,20 +117,37 @@ class _ApiTraceOverlayState extends State<ApiTraceOverlay> {
       return const SizedBox.shrink();
     }
 
+    if (_open && _panelHeight == null) {
+      _panelHeight = _computeDefaultPanelHeight(context);
+    }
+
     return Stack(
       children: <Widget>[
-        // The panel, when open, lives inside a package-owned
-        // `Navigator` so the detail screen can be pushed onto
-        // a separate stack from the host app.
         if (_open)
           Positioned(
-            top: 0,
+            top: MediaQuery.of(context).padding.top + kToolbarHeight,
             left: 0,
             right: 0,
-            height: widget.config.panelMaxHeight,
-            child: _PackageNavigator(
-              records: widget.records,
-              onRecordTap: widget.onRecordTap,
+            height: _panelHeight!,
+            child: Column(
+              children: <Widget>[
+                Expanded(
+                  child: _PackageNavigator(
+                    records: widget.records,
+                    onRecordTap: widget.onRecordTap,
+                  ),
+                ),
+                _PanelResizeHandle(
+                  onDrag: (double delta) {
+                    setState(() {
+                      _panelHeight = (_panelHeight! - delta).clamp(
+                        widget.config.panelMinHeight,
+                        widget.config.panelMaxHeight,
+                      );
+                    });
+                  },
+                ),
+              ],
             ),
           ),
         // The FAB, positioned per the config. The drag
@@ -169,6 +191,16 @@ class _ApiTraceOverlayState extends State<ApiTraceOverlay> {
           ),
         ),
       ],
+    );
+  }
+
+  double _computeDefaultPanelHeight(BuildContext context) {
+    final screenHeight = MediaQuery.of(context).size.height;
+    final topInset = MediaQuery.of(context).padding.top + kToolbarHeight;
+    final available = screenHeight - topInset;
+    return (available * 0.6).clamp(
+      widget.config.panelMinHeight,
+      widget.config.panelMaxHeight,
     );
   }
 }
@@ -298,6 +330,50 @@ class _DetailPage extends Page<void> {
     return MaterialPageRoute<void>(
       settings: this,
       builder: (BuildContext context) => ApiTraceDetailScreen(record: record),
+    );
+  }
+}
+
+/// Drag handle at the bottom of the timeline panel. The user
+/// drags vertically to resize the panel between
+/// [ApiTraceConfig.panelMinHeight] and [ApiTraceConfig.panelMaxHeight].
+class _PanelResizeHandle extends StatelessWidget {
+  const _PanelResizeHandle({required this.onDrag});
+
+  /// Called with the vertical drag delta. A positive delta
+  /// means the finger moved down (panel gets shorter); a
+  /// negative delta means the finger moved up (panel gets
+  /// taller).
+  final void Function(double delta) onDrag;
+
+  @override
+  Widget build(BuildContext context) {
+    return GestureDetector(
+      behavior: HitTestBehavior.opaque,
+      onVerticalDragUpdate: (DragUpdateDetails d) {
+        onDrag(d.delta.dy);
+      },
+      child: Container(
+        height: 28,
+        alignment: Alignment.center,
+        decoration: BoxDecoration(
+          color: inspectorPanelBackground(context),
+          border: Border(
+            top: BorderSide(
+              color: Theme.of(context).dividerColor,
+              width: 0.5,
+            ),
+          ),
+        ),
+        child: Container(
+          width: 36,
+          height: 4,
+          decoration: BoxDecoration(
+            color: inspectorMuted(context),
+            borderRadius: BorderRadius.circular(2),
+          ),
+        ),
+      ),
     );
   }
 }

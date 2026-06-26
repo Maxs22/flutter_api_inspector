@@ -19,7 +19,7 @@
 /// - PR 4 (example + acceptance) — no new public symbols.
 ///
 /// Internals (`Timeline`, id generator, body codec) are NOT re-exported.
-library flutter_api_inspector;
+library;
 
 // --- Model layer (PR 1) -----------------------------------------------------
 export 'src/detail.dart' show ApiTraceDetail;

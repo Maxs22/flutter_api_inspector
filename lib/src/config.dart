@@ -101,7 +101,8 @@ final class ApiTraceConfig {
     this.overlayLabel = ApiTraceOverlayLabel.icon,
     this.flowGroupGap = const Duration(seconds: 2),
     this.draggableFab = true,
-    this.panelMaxHeight = 320.0,
+    this.panelMaxHeight = 600.0,
+    this.panelMinHeight = 120.0,
   });
 
   /// Maximum gap between two consecutive records before the
@@ -120,8 +121,13 @@ final class ApiTraceConfig {
 
   /// Maximum height of the timeline panel in logical pixels.
   /// The panel auto-shrinks if the content is shorter than
-  /// this. Default 320 (about a third of a typical phone
-  /// screen). Lower this if the FAB is in a spot where a
-  /// taller panel would cover the action.
+  /// this. Default 600 (about 60% of a typical phone screen
+  /// in portrait, capped at 600). Lower this if the FAB is in
+  /// a spot where a taller panel would cover the action.
   final double panelMaxHeight;
+
+  /// Minimum height of the timeline panel in logical pixels.
+  /// The panel cannot be resized below this value when the
+  /// drag handle is used. Default 120.
+  final double panelMinHeight;
 }

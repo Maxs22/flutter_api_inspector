@@ -92,15 +92,33 @@ The overlay itself (`ApiTraceOverlay`) mounts automatically when
 URL, method, status, and duration — bodies and headers are opt-in via
 `detailOverride` (per-call) or `ApiTrace.config.details` (global).
 
+## Dio auto-tracing (optional)
+
+If your project already uses [dio](https://pub.dev/packages/dio), you
+can add `TracedDioInterceptor` to record every request automatically —
+no manual `ApiTrace.call(...)` needed for those calls:
+
+```dart
+import 'package:dio/dio.dart';
+import 'package:flutter_api_inspector/interceptor/dio_interceptor.dart';
+
+final dio = Dio()..interceptors.add(TracedDioInterceptor());
+```
+
+`TracedDioInterceptor` is an opt-in adapter shipped in
+`lib/interceptor/dio_interceptor.dart`. It is **not** exported from the
+main barrel, but because it lives under `lib/`, `dio` is a declared
+dependency of this package — meaning it will be pulled into your project
+transitively even if you use a different HTTP client. A dedicated
+`flutter_api_inspector_dio` package is planned for v0.2 to eliminate
+this overhead for non-Dio users.
+
 ## Limitations
 
 - **Debug-only.** The overlay is guarded by `kDebugMode` and is
   tree-shaken from `flutter build --release` builds. The
   instrumentation API still works in release mode (records are stored),
   but the visualization is gone.
-- **No auto-interceptor.** This package does not install an `http.Client`
-  wrap, a Dio interceptor, or any global networking shim. You must call
-  `ApiTrace.call(...)` explicitly at each call site.
 - **In-memory only.** The timeline ring buffer is reset on every app
   restart. There is no disk persistence, no file export, and no
   clipboard copy in v1.
@@ -108,18 +126,6 @@ URL, method, status, and duration — bodies and headers are opt-in via
   There is no cURL export, no re-run, and no replay.
 - **Single overlay per app.** Multi-window / multi-tab is out of scope
   for v1. Flutter web is also out of scope for v1.
-
-## Documentation
-
-- `openspec/changes/flutter_api_inspector-mvp/proposal.md` — product
-  proposal and locked decisions.
-- `openspec/changes/flutter_api_inspector-mvp/specs/*.md` — three
-  delta specifications (instrumentation API, overlay UI, timeline
-  model).
-- `openspec/changes/flutter_api_inspector-mvp/design.md` — module
-  layout, public surface, type definitions, file-by-file map.
-- `example/` — minimal example app with a stub call and one real
-  network call.
 
 ## License
 

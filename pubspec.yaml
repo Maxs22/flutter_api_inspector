@@ -8,7 +8,7 @@ description: >-
   response fields. The overlay is guarded by kDebugMode and tree-shaken
   from flutter build --release binaries.
 version: 0.1.0
-publish_to: none
+repository: https://github.com/Maxs22/flutter_api_inspector
 
 environment:
   sdk: ">=3.2.0 <4.0.0"
@@ -17,18 +17,15 @@ environment:
 dependencies:
   flutter:
     sdk: flutter
+  # Required by lib/interceptor/dio_interceptor.dart (TracedDioInterceptor).
+  # Users who don't use Dio still pull this in transitively; a separate
+  # flutter_api_inspector_dio package is planned for v0.2.
+  dio: ^5.9.2
 
-  dio: any
 dev_dependencies:
   flutter_test:
     sdk: flutter
-  # Justification: package:flutter_lints provides the official Flutter
-  # team lint ruleset (include: package:flutter_lints/flutter.yaml).
-  # This is the de-facto standard lint baseline for Dart/Flutter packages
-  # and is included in every flutter create --template=package scaffold.
-  # It is required by analysis_options.yaml and is the only non-SDK
-  # dependency in the package.
-  flutter_lints: ^3.0.0
+  flutter_lints: ^6.0.0
 
 flutter:
   uses-material-design: true
