@@ -71,6 +71,10 @@ final class ApiTraceRecord {
   /// `execute` callback returned normally.
   final Object? error;
 
+  /// The stack trace captured alongside [error]. `null` when no
+  /// exception was thrown.
+  final StackTrace? stackTrace;
+
   /// Developer-supplied tags / metadata. Stored as an unmodifiable
   /// view of the passed map.
   final Map<String, Object?> extra;
@@ -92,6 +96,7 @@ final class ApiTraceRecord {
     required this.request,
     required this.response,
     required this.error,
+    this.stackTrace,
     required this.extra,
   });
 
@@ -127,6 +132,7 @@ final class ApiTraceRecord {
     required ApiTraceResponse? response,
     required ApiTraceRequest? request,
     required Object? error,
+    StackTrace? stackTrace,
     required Map<String, Object?> extra,
     required int maxResponseBodyBytes,
   }) {
@@ -202,6 +208,7 @@ final class ApiTraceRecord {
       request: redactedRequest,
       response: redactedResponse,
       error: error,
+      stackTrace: stackTrace,
       extra: Map.unmodifiable(extra),
     );
   }

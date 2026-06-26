@@ -56,6 +56,7 @@ class TimelinePanel extends StatefulWidget {
     required this.records,
     required this.onTap,
     this.config = const ApiTraceConfig(),
+    this.onClear,
   });
 
   /// The records to render. The panel treats this list as
@@ -69,6 +70,10 @@ class TimelinePanel extends StatefulWidget {
   /// for backwards compatibility; the default value gives the
   /// same 2-second grouping as the package-wide default.
   final ApiTraceConfig config;
+
+  /// Optional callback fired when the user taps the clear button
+  /// in the panel header. When null, the clear button is hidden.
+  final VoidCallback? onClear;
 
   @override
   State<TimelinePanel> createState() => _TimelinePanelState();
@@ -128,7 +133,7 @@ class _TimelinePanelState extends State<TimelinePanel> {
 
   Widget _buildHeader(BuildContext context) {
     return Container(
-      padding: const EdgeInsets.fromLTRB(16, 8, 12, 8),
+      padding: const EdgeInsets.fromLTRB(16, 4, 4, 4),
       decoration: BoxDecoration(
         border: Border(
           bottom: BorderSide(
@@ -170,6 +175,17 @@ class _TimelinePanelState extends State<TimelinePanel> {
               ),
             ),
           ),
+          const Spacer(),
+          if (widget.onClear != null)
+            IconButton(
+              onPressed: widget.onClear,
+              icon: const Icon(Icons.delete_sweep_rounded),
+              iconSize: 18,
+              padding: EdgeInsets.zero,
+              constraints: const BoxConstraints(minWidth: 36, minHeight: 36),
+              tooltip: 'Clear timeline',
+              color: inspectorMuted(context),
+            ),
         ],
       ),
     );

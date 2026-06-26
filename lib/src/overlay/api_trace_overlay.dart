@@ -134,7 +134,9 @@ class _ApiTraceOverlayState extends State<ApiTraceOverlay> {
                 Expanded(
                   child: _PackageNavigator(
                     records: widget.records,
+                    config: widget.config,
                     onRecordTap: widget.onRecordTap,
+                    onClear: ApiTrace.timeline.clear,
                   ),
                 ),
                 _PanelResizeHandle(
@@ -206,49 +208,29 @@ class _ApiTraceOverlayState extends State<ApiTraceOverlay> {
 }
 
 /// Package-owned `Navigator` that hosts the [TimelinePanel]
-/// and the [ApiTraceDetailScreen]. Pushing the detail onto
-/// this Navigator (instead of the host app's) keeps the
-/// back stack local to the inspector: the detail page's
-/// back button returns to the panel without disturbing the
-/// app's own navigation history.
+/// and the [ApiTraceDetailScreen]. Using an imperative navigator
+/// (push/pop via [GlobalKey]) keeps back navigation simple and
+/// reliable: the back button in `ApiTraceDetailScreen` pops this
+/// navigator without disturbing the host app's own navigation history.
 class _PackageNavigator extends StatefulWidget {
   const _PackageNavigator({
     required this.records,
+    required this.config,
     required this.onRecordTap,
+    required this.onClear,
   });
 
   final List<ApiTraceRecord> records;
+  final ApiTraceConfig config;
   final void Function(ApiTraceRecord)? onRecordTap;
+  final VoidCallback onClear;
 
   @override
   State<_PackageNavigator> createState() => _PackageNavigatorState();
 }
 
 class _PackageNavigatorState extends State<_PackageNavigator> {
-  /// The current stack of pages. The bottom page is the
-  /// `TimelinePanel`; pushing a detail adds an `_DetailPage`
-  /// on top.
-  ///
-  /// IMPORTANT: the list is treated as IMMUTABLE. Each push
-  /// / pop creates a NEW list and assigns it through
-  /// `setState`. Mutating the existing list in place (e.g.
-  /// `_pages.add`) is invisible to the `Navigator` widget,
-  /// which compares `oldWidget.pages == newWidget.pages` by
-  /// reference and would not rebuild on a mutating call. See
-  /// the Flutter docs for `Navigator.pages`.
-  List<Page<void>> _pages = const <Page<void>>[];
-
-  @override
-  void initState() {
-    super.initState();
-    _pages = <Page<void>>[
-      _PanelPage(
-        records: widget.records,
-        onRecordTap: widget.onRecordTap,
-        onRecordTapped: _pushDetail,
-      ),
-    ];
-  }
+  final GlobalKey<NavigatorState> _navKey = GlobalKey<NavigatorState>();
 
   void _pushDetail(ApiTraceRecord record) {
     final userCallback = widget.onRecordTap;
@@ -256,80 +238,35 @@ class _PackageNavigatorState extends State<_PackageNavigator> {
       userCallback(record);
       return;
     }
-    setState(() {
-      // Create a NEW list so the Navigator widget detects
-      // the change. See the `_pages` field doc.
-      _pages = <Page<void>>[
-        ..._pages,
-        _DetailPage(record: record),
-      ];
-    });
+    _navKey.currentState?.push(
+      MaterialPageRoute<void>(
+        builder: (_) => ApiTraceDetailScreen(record: record),
+      ),
+    );
   }
 
   @override
   Widget build(BuildContext context) {
-    // The package-owned Navigator is nested inside the
-    // host app's `MaterialApp` Navigator. By default, both
-    // Navigators inherit the same `HeroController` from
-    // `MaterialApp`, which causes a runtime assert:
-    //   "A HeroController can not be shared by multiple
-    //    Navigators."
-    // The fix is to scope a fresh `HeroController` to this
-    // Navigator subtree. We use `.none` because the
-    // inspector's pages (`TimelinePanel`, `ApiTraceDetailScreen`)
-    // never declare a `Hero` widget, so an empty controller
-    // is correct and avoids the assertion.
+    // Scope a fresh HeroController so the nested Navigator does not
+    // share the one from the host app's MaterialApp — sharing causes
+    // a runtime assert ("A HeroController can not be shared by
+    // multiple Navigators").
     return HeroControllerScope.none(
       child: Navigator(
-        onDidRemovePage: (Page<dynamic> page) {
-          setState(() {
-            // Same rationale as `_pushDetail`: a NEW list so
-            // the Navigator widget detects the change.
-            _pages = _pages
-                .where((Page<void> p) => p.key != page.key)
-                .toList(growable: false);
-          });
-        },
-        pages: _pages,
+        key: _navKey,
+        onGenerateRoute: (_) => MaterialPageRoute<void>(
+          builder: (_) => ListenableBuilder(
+            listenable: ApiTrace.timeline.latest,
+            builder: (_, __) => TimelinePanel(
+              key: const ValueKey('inspectorPanel'),
+              records: widget.records,
+              config: widget.config,
+              onTap: _pushDetail,
+              onClear: widget.onClear,
+            ),
+          ),
+        ),
       ),
-    );
-  }
-}
-
-class _PanelPage extends Page<void> {
-  const _PanelPage({
-    required this.records,
-    required this.onRecordTap,
-    required this.onRecordTapped,
-  }) : super(key: const ValueKey('apiTracePanel'));
-
-  final List<ApiTraceRecord> records;
-  final void Function(ApiTraceRecord)? onRecordTap;
-  final void Function(ApiTraceRecord) onRecordTapped;
-
-  @override
-  Route<void> createRoute(BuildContext context) {
-    return MaterialPageRoute<void>(
-      settings: this,
-      builder: (BuildContext context) => TimelinePanel(
-        records: records,
-        onTap: onRecordTapped,
-      ),
-    );
-  }
-}
-
-class _DetailPage extends Page<void> {
-  const _DetailPage({required this.record})
-      : super(key: const ValueKey('apiTraceDetail'));
-
-  final ApiTraceRecord record;
-
-  @override
-  Route<void> createRoute(BuildContext context) {
-    return MaterialPageRoute<void>(
-      settings: this,
-      builder: (BuildContext context) => ApiTraceDetailScreen(record: record),
     );
   }
 }

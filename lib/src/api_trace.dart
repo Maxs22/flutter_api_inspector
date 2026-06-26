@@ -112,16 +112,12 @@ abstract final class ApiTrace {
     ApiTraceResponse? response;
     ApiTraceRequest? request;
     Object? error;
+    StackTrace? stackTrace;
     try {
       response = await execute();
-    } catch (e) {
-      // TASK-017: capture the thrown error. For TASK-014 the
-      // happy path never throws, so this branch is unreachable
-      // in the RED/GREEN cycle; TASK-017 adds the
-      // rethrow-vs-capture decision (we capture, do not rethrow,
-      // because the API contract is that `call` resolves with
-      // the record id even on error).
+    } catch (e, st) {
       error = e;
+      stackTrace = st;
     }
     final completedAt = DateTime.now();
 
@@ -141,6 +137,7 @@ abstract final class ApiTrace {
       response: response,
       request: request,
       error: error,
+      stackTrace: stackTrace,
       extra: extra ?? const <String, Object?>{},
       maxResponseBodyBytes: config.maxResponseBodyBytes,
     );

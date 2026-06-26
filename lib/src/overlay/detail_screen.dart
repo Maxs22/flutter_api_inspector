@@ -41,6 +41,7 @@ class ApiTraceDetailScreen extends StatelessWidget {
     return Scaffold(
       backgroundColor: inspectorPanelBackground(context),
       appBar: AppBar(
+        leading: const BackButton(),
         title: Text(record.name, overflow: TextOverflow.ellipsis),
         backgroundColor: inspectorPanelBackground(context),
         elevation: 0,
@@ -132,6 +133,11 @@ class ApiTraceDetailScreen extends StatelessWidget {
             _Section(context, 'Error'),
             _Field(context, 'Type', record.error.runtimeType.toString()),
             _CodeBlock(text: record.error.toString()),
+            if (record.stackTrace != null) ...<Widget>[
+              const SizedBox(height: 8),
+              _Section(context, 'Stack Trace'),
+              _CodeBlock(text: record.stackTrace.toString()),
+            ],
           ],
 
           // Extra tags.
