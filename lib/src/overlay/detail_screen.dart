@@ -43,8 +43,8 @@ class ApiTraceDetailScreen extends StatelessWidget {
       appBar: AppBar(
         leading: const BackButton(),
         title: Text(record.name, overflow: TextOverflow.ellipsis),
-        backgroundColor: inspectorGroupHeaderBackground(context),
-        foregroundColor: Theme.of(context).textTheme.bodyLarge?.color,
+        backgroundColor: Theme.of(context).colorScheme.primaryContainer,
+        foregroundColor: Theme.of(context).colorScheme.onPrimaryContainer,
         elevation: 0,
         scrolledUnderElevation: 0,
         bottom: PreferredSize(
