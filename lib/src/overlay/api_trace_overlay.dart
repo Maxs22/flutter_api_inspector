@@ -126,8 +126,8 @@ class _ApiTraceOverlayState extends State<ApiTraceOverlay> {
         if (_open)
           Positioned(
             top: MediaQuery.of(context).padding.top + kToolbarHeight,
-            left: 0,
-            right: 0,
+            left: 12,
+            right: 12,
             height: _panelHeight!,
             child: Column(
               children: <Widget>[

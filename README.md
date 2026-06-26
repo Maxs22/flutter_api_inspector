@@ -92,6 +92,41 @@ The overlay itself (`ApiTraceOverlay`) mounts automatically when
 URL, method, status, and duration — bodies and headers are opt-in via
 `detailOverride` (per-call) or `ApiTrace.config.details` (global).
 
+## Configuration
+
+All fields are optional — `const ApiTraceConfig()` gives the package
+defaults.
+
+```dart
+ApiTrace.config = const ApiTraceConfig(
+  // Which fields to capture on every call (privacy-conscious default).
+  details: {ApiTraceDetail.minimal},
+
+  // Overlay position: bottomRight | bottomLeft | topRight | topLeft.
+  overlayPosition: ApiTraceOverlayPosition.bottomRight,
+
+  // FAB label: icon (default) | badge (count) | chip (text + count).
+  overlayLabel: ApiTraceOverlayLabel.icon,
+
+  // Whether the FAB can be dragged around the screen. Default true.
+  draggableFab: true,
+
+  // Gap between two calls before the panel starts a new flow group.
+  // Set to Duration.zero to disable grouping.
+  flowGroupGap: Duration(seconds: 2),
+
+  // Timeline panel height range (logical pixels).
+  panelMaxHeight: 600,
+  panelMinHeight: 120,
+
+  // Max bytes stored per response body (truncated beyond this).
+  maxResponseBodyBytes: 4096,
+
+  // Ring buffer capacity (oldest record evicted when full).
+  timelineCapacity: 200,
+);
+```
+
 ## Dio auto-tracing (optional)
 
 If your project already uses [dio](https://pub.dev/packages/dio), you
