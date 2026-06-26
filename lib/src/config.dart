@@ -94,7 +94,10 @@ final class ApiTraceConfig {
   /// combination of fields can be overridden at the call site;
   /// omitting all arguments yields the package-wide default.
   const ApiTraceConfig({
-    this.details = const <ApiTraceDetail>{ApiTraceDetail.minimal},
+    this.details = const <ApiTraceDetail>{
+      ApiTraceDetail.minimal,
+      ApiTraceDetail.response,
+    },
     this.maxResponseBodyBytes = 4 * 1024,
     this.timelineCapacity = 200,
     this.overlayPosition = ApiTraceOverlayPosition.bottomRight,

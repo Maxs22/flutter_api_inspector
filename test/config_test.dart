@@ -62,10 +62,14 @@ void main() {
   });
 
   group('ApiTraceConfig defaults (REQ-API-004)', () {
-    test('default details is {ApiTraceDetail.minimal} only', () {
-      // Privacy-conscious default: no body, no headers.
+    test('default details includes minimal and response', () {
+      // Default captures status/duration/url plus the response body
+      // so developers can see why a call failed without extra config.
       const c = ApiTraceConfig();
-      expect(c.details, equals(<ApiTraceDetail>{ApiTraceDetail.minimal}));
+      expect(c.details, equals(<ApiTraceDetail>{
+        ApiTraceDetail.minimal,
+        ApiTraceDetail.response,
+      }));
     });
 
     test('default timelineCapacity is 200', () {
