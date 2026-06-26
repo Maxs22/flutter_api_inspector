@@ -48,6 +48,7 @@ class ApiTraceDetailScreen extends StatelessWidget {
           inspectorPanelBackground(context),
         ),
         foregroundColor: Theme.of(context).textTheme.bodyLarge?.color,
+        toolbarHeight: 44,
         elevation: 0,
         scrolledUnderElevation: 0,
         bottom: PreferredSize(
