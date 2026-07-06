@@ -12,6 +12,7 @@ import 'package:flutter/foundation.dart' show kDebugMode;
 import 'package:flutter_api_inspector/flutter_api_inspector.dart';
 // ignore: depend_on_referenced_packages
 import 'package:flutter_api_inspector/interceptor/dio_interceptor.dart';
+import 'package:flutter_api_inspector/src/interceptor_coordination.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 /// Minimal `HttpClientAdapter` mock: returns a canned
@@ -80,7 +81,7 @@ void main() {
       expect(ApiTrace.timeline.size, 1);
       final ApiTraceRecord r = ApiTrace.timeline.records.first;
       expect(r.method, equals('GET'));
-      expect(r.name, equals('GET https://api.example.com/user'));
+      expect(r.name, equals('GET /user'));
       expect(r.statusCode, equals(200));
       expect(r.outcome, equals(ApiTraceOutcome.success));
       expect(
@@ -106,7 +107,7 @@ void main() {
       expect(ApiTrace.timeline.size, 1);
       final ApiTraceRecord r = ApiTrace.timeline.records.first;
       expect(r.method, equals('POST'));
-      expect(r.name, equals('POST https://api.example.com/user'));
+      expect(r.name, equals('POST /user'));
       expect(r.statusCode, equals(201));
     });
 
@@ -236,6 +237,71 @@ void main() {
 
       final ApiTraceRecord r = ApiTrace.timeline.records.first;
       expect(r.response?.responseHeaders['set-cookie'], equals('a=1'));
+    });
+  });
+
+  group('TracedDioInterceptor — request capture & dedup', () {
+    tearDown(() {
+      InterceptorCoordination.httpOverridesActive = false;
+    });
+
+    test('captures request body and headers on the record', () async {
+      ApiTrace.config = const ApiTraceConfig(
+        details: <ApiTraceDetail>{ApiTraceDetail.full},
+      );
+      final adapter = _MockAdapter(
+        (RequestOptions req) async => ResponseBody.fromString('ok', 200),
+      );
+      final dio = Dio(BaseOptions())
+        ..httpClientAdapter = adapter
+        ..interceptors.add(const TracedDioInterceptor());
+
+      await dio.post<dynamic>(
+        'https://api.example.com/orders',
+        data: <String, Object?>{'qty': 3},
+        options: Options(headers: <String, Object?>{'x-team': 'bai'}),
+      );
+
+      final ApiTraceRecord r = ApiTrace.timeline.records.first;
+      expect(r.request, isNotNull);
+      expect('${r.request!.body}', contains('"qty": 3'));
+      expect(r.request!.headers['x-team'], equals('bai'));
+    });
+
+    test('defers to TracedHttpOverrides when the overrides layer is active',
+        () async {
+      // Dio's default adapter routes through dart:io HttpClient,
+      // so with TracedHttpOverrides installed the call is already
+      // recorded there; recording here too would duplicate it.
+      InterceptorCoordination.httpOverridesActive = true;
+      final adapter = _MockAdapter(
+        (RequestOptions req) async => ResponseBody.fromString('ok', 200),
+      );
+      final dio = Dio(BaseOptions())
+        ..httpClientAdapter = adapter
+        ..interceptors.add(const TracedDioInterceptor());
+
+      await dio.get<dynamic>('https://api.example.com/user');
+
+      expect(ApiTrace.timeline.size, 0);
+    });
+
+    test('deferToHttpOverrides: false records even when overrides are active',
+        () async {
+      // Escape hatch for custom adapters (mocks, http2) that
+      // bypass dart:io — the overrides layer never sees those.
+      InterceptorCoordination.httpOverridesActive = true;
+      final adapter = _MockAdapter(
+        (RequestOptions req) async => ResponseBody.fromString('ok', 200),
+      );
+      final dio = Dio(BaseOptions())
+        ..httpClientAdapter = adapter
+        ..interceptors
+            .add(const TracedDioInterceptor(deferToHttpOverrides: false));
+
+      await dio.get<dynamic>('https://api.example.com/user');
+
+      expect(ApiTrace.timeline.size, 1);
     });
   });
 }

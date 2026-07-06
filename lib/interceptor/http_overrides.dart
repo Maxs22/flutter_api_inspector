@@ -19,18 +19,23 @@
 //
 // void main() {
 //   HttpOverrides.global = TracedHttpOverrides();
-//   runApp(const MyApp());
+//   ApiTrace.runApp(const MyApp());
 // }
 // ```
 //
-// In release mode (`ApiTrace.enabled == false`) the wrapper is a
-// pass-through: the inherited `openUrl` runs the call directly
-// without creating a completer or appending to the timeline.
+// Body capture strategy: `_TracedHttpClientRequest.close()` eagerly
+// buffers the full response body (via `await for`) before returning to
+// the caller. The caller receives a `_ReplayHttpClientResponse` that
+// streams the buffered chunks — transparent to GetConnect, http, Dio,
+// and any other dart:io-backed client. Buffering is bounded by
+// `ApiTrace.config.maxResponseBodyBytes` for capture; the replay
+// buffer holds all bytes (acceptable for REST API payloads in debug
+// mode). The `ApiTrace` record is completed synchronously before
+// `close()` returns, so no microtask race between the inspector and
+// the test assertion.
 //
 // Scope: this file uses `dart:io` and is therefore mobile/desktop
-// only. Web builds must not import this file (the import will fail
-// to resolve on the `dart:html` build target). For the bai app
-// (and any other mobile/desktop Flutter app) this is fine.
+// only. Web builds must not import this file.
 // ---------------------------------------------------------------------------
 
 import 'dart:async';
@@ -38,6 +43,8 @@ import 'dart:convert';
 import 'dart:io';
 
 import 'package:flutter_api_inspector/src/api_trace.dart';
+import 'package:flutter_api_inspector/src/detail.dart';
+import 'package:flutter_api_inspector/src/interceptor_coordination.dart';
 import 'package:flutter_api_inspector/src/model/api_trace_response.dart';
 
 /// [HttpOverrides] that returns a [TracedHttpClient] for every
@@ -49,26 +56,19 @@ import 'package:flutter_api_inspector/src/model/api_trace_response.dart';
 ///
 /// The optional [nameFor] callback lets callers customize the
 /// human-readable label that shows up in the inspector timeline
-/// (default: `"<METHOD> <path>"`). The callback receives the HTTP
-/// method and the requested [Uri].
+/// (default: `"<METHOD> <path>"`).
 class TracedHttpOverrides extends HttpOverrides {
-  TracedHttpOverrides({this.nameFor});
+  TracedHttpOverrides({this.nameFor}) {
+    // Let TracedDioInterceptor know this layer is active so Dio
+    // requests (which route through dart:io HttpClient on
+    // mobile/desktop) are not recorded twice.
+    InterceptorCoordination.httpOverridesActive = true;
+  }
 
   final String Function(String method, Uri url)? nameFor;
 
-  /// Recursion guard. When [TracedHttpClient] builds its inner
-  /// `HttpClient`, it must skip the override chain (otherwise the
-  /// inner would be wrapped in another `TracedHttpClient` whose
-  /// own inner would be wrapped in another… infinite recursion,
-  /// Stack Overflow on the device). Setting [_bypass] = true
-  /// around the inner construction makes this override return
-  /// the raw `HttpClient` from `super.createHttpClient`.
-  ///
-  /// The guard is process-wide because `HttpOverrides` itself is
-  /// process-wide (the static `HttpOverrides.global`). In Flutter
-  /// this is safe: the UI thread is the only one constructing
-  /// `HttpClient` instances during normal operation, and isolates
-  /// use their own zone so they see their own override.
+  /// Recursion guard so the inner `HttpClient` inside [TracedHttpClient]
+  /// doesn't get wrapped in another [TracedHttpClient].
   static bool _bypass = false;
 
   @override
@@ -80,29 +80,13 @@ class TracedHttpOverrides extends HttpOverrides {
   }
 }
 
-/// Composition-style [HttpClient] implementation. Holds an inner
-/// [HttpClient] and forwards every member to it. Only [openUrl]
-/// (and the convenience URL helpers that delegate to it) does
-/// the actual work of recording into the inspector timeline.
-///
-/// We use composition rather than inheritance because
-/// `HttpClient` is an `abstract interface class` in modern Dart
-/// and the concrete implementation lives in a private
-/// `_HttpClient` class. Composition also means the user's
-/// configuration (`connectionTimeout`, `idleTimeout`, etc.) is
-/// applied directly to the inner client via the delegated
-/// setters / getters.
+/// Composition-style [HttpClient]. Forwards every member to an inner
+/// client; only [openUrl] instruments the call into the inspector.
 class TracedHttpClient implements HttpClient {
-  /// Public constructor used by callers that want a traced
-  /// client without going through [TracedHttpOverrides]
-  /// (e.g. tests, or an app that wires things manually).
+  /// Public constructor for direct use (e.g. tests, manual wiring).
   TracedHttpClient({String Function(String, Uri)? nameFor})
       : this._withNameFor(nameFor);
 
-  /// Internal constructor used by [TracedHttpOverrides] to
-  /// break the recursion: while constructing the inner
-  /// `HttpClient`, [_bypass] is set so the override returns a
-  /// raw client (not another traced one).
   TracedHttpClient._withNameFor(String Function(String, Uri)? nameFor)
       : _nameFor = nameFor,
         _inner = (() {
@@ -120,188 +104,241 @@ class TracedHttpClient implements HttpClient {
   String _label(String method, Uri url) =>
       _nameFor != null ? _nameFor(method, url) : '$method ${url.path}';
 
-  // --- Traced URL helpers ---------------------------------------------------
+  // --- Traced URL entry point -----------------------------------------------
 
   @override
   Future<HttpClientRequest> openUrl(String method, Uri url) async {
     if (!ApiTrace.enabled) {
       return _inner.openUrl(method, url);
     }
-    final completer = Completer<HttpClientResponse>();
-    // `ApiTrace.call` awaits `execute`, which awaits the
-    // completer, which completes when the request body is closed.
-    // The record's duration is measured from `openUrl` to
-    // `close`. We fire-and-forget because the interceptor must
-    // return the request synchronously to the caller.
+    final completer = Completer<ApiTraceResponse>();
     unawaited(
       ApiTrace.call(
         _label(method, url),
         method: method,
         url: url,
-        execute: () async {
-          final response = await completer.future;
-          return _toApiTraceResponse(response);
-        },
+        execute: () => completer.future,
       ),
     );
     final request = await _inner.openUrl(method, url);
-    return TracedHttpClientRequest._(request, completer);
+    return _TracedHttpClientRequest(request, completer);
   }
 
-  // --- Configuration: pass through to inner client --------------------------
+  // --- Configuration: pass through ------------------------------------------
 
   @override
   Duration get idleTimeout => _inner.idleTimeout;
-
   @override
   set idleTimeout(Duration value) => _inner.idleTimeout = value;
-
   @override
   Duration? get connectionTimeout => _inner.connectionTimeout;
-
   @override
   set connectionTimeout(Duration? value) => _inner.connectionTimeout = value;
-
   @override
   int? get maxConnectionsPerHost => _inner.maxConnectionsPerHost;
-
   @override
   set maxConnectionsPerHost(int? value) => _inner.maxConnectionsPerHost = value;
-
   @override
   bool get autoUncompress => _inner.autoUncompress;
-
   @override
   set autoUncompress(bool value) => _inner.autoUncompress = value;
-
   @override
   String? get userAgent => _inner.userAgent;
-
   @override
   set userAgent(String? value) => _inner.userAgent = value;
 
-  // --- URL helpers: all delegate to openUrl (so they are traced) -----------
+  // --- URL helpers: all delegate to openUrl ---------------------------------
 
   @override
   Future<HttpClientRequest> get(String host, int port, String path) =>
       openUrl('GET', Uri(scheme: 'http', host: host, port: port, path: path));
-
   @override
   Future<HttpClientRequest> getUrl(Uri url) => openUrl('GET', url);
-
   @override
   Future<HttpClientRequest> post(String host, int port, String path) =>
       openUrl('POST', Uri(scheme: 'http', host: host, port: port, path: path));
-
   @override
   Future<HttpClientRequest> postUrl(Uri url) => openUrl('POST', url);
-
   @override
   Future<HttpClientRequest> put(String host, int port, String path) =>
       openUrl('PUT', Uri(scheme: 'http', host: host, port: port, path: path));
-
   @override
   Future<HttpClientRequest> putUrl(Uri url) => openUrl('PUT', url);
-
   @override
   Future<HttpClientRequest> delete(String host, int port, String path) =>
       openUrl(
           'DELETE', Uri(scheme: 'http', host: host, port: port, path: path));
-
   @override
   Future<HttpClientRequest> deleteUrl(Uri url) => openUrl('DELETE', url);
-
   @override
   Future<HttpClientRequest> patch(String host, int port, String path) =>
       openUrl('PATCH', Uri(scheme: 'http', host: host, port: port, path: path));
-
   @override
   Future<HttpClientRequest> patchUrl(Uri url) => openUrl('PATCH', url);
-
   @override
   Future<HttpClientRequest> head(String host, int port, String path) =>
       openUrl('HEAD', Uri(scheme: 'http', host: host, port: port, path: path));
-
   @override
   Future<HttpClientRequest> headUrl(Uri url) => openUrl('HEAD', url);
-
   @override
   Future<HttpClientRequest> open(
           String method, String host, int port, String path) =>
       openUrl(method, Uri(scheme: 'http', host: host, port: port, path: path));
 
-  // --- Auth, credentials, proxy: pass through ------------------------------
+  // --- Auth / proxy: pass through -------------------------------------------
 
   @override
   void addCredentials(
-    Uri url,
-    String realm,
-    HttpClientCredentials credentials,
-  ) =>
+          Uri url, String realm, HttpClientCredentials credentials) =>
       _inner.addCredentials(url, realm, credentials);
-
   @override
-  void addProxyCredentials(
-    String host,
-    int port,
-    String realm,
-    HttpClientCredentials credentials,
-  ) =>
+  void addProxyCredentials(String host, int port, String realm,
+          HttpClientCredentials credentials) =>
       _inner.addProxyCredentials(host, port, realm, credentials);
-
   @override
   void close({bool force = false}) => _inner.close(force: force);
-
   @override
   set authenticate(
           Future<bool> Function(Uri url, String scheme, String? realm)? f) =>
       _inner.authenticate = f;
-
   @override
   set authenticateProxy(
           Future<bool> Function(
                   String host, int port, String scheme, String? realm)?
               f) =>
       _inner.authenticateProxy = f;
-
   @override
   set findProxy(String Function(Uri url)? f) => _inner.findProxy = f;
-
   @override
   set badCertificateCallback(
           bool Function(X509Certificate cert, String host, int port)?
               callback) =>
       _inner.badCertificateCallback = callback;
-
   @override
   set connectionFactory(
           Future<ConnectionTask<Socket>> Function(
                   Uri url, String? proxyHost, int? proxyPort)?
               factory) =>
       _inner.connectionFactory = factory;
-
   @override
   set keyLog(void Function(String line)? callback) => _inner.keyLog = callback;
 }
 
-/// Composition-style [HttpClientRequest] implementation. Forwards
-/// every member to an inner [HttpClientRequest]. Only [close]
-/// completes the inspector's pending completer with the response
-/// (status + duration).
-class TracedHttpClientRequest implements HttpClientRequest {
-  TracedHttpClientRequest._(this._inner, this._completer);
+/// Composition-style [HttpClientRequest]. [close] is overridden to
+/// eagerly buffer the response body so the inspector can capture it.
+/// All other members forward to the inner request unchanged.
+class _TracedHttpClientRequest implements HttpClientRequest {
+  _TracedHttpClientRequest(this._inner, this._completer);
 
   final HttpClientRequest _inner;
-  final Completer<HttpClientResponse> _completer;
+  final Completer<ApiTraceResponse> _completer;
 
+  /// Request-body bytes captured as the caller writes them, bounded
+  /// by `ApiTrace.config.maxResponseBodyBytes` (the package's single
+  /// body-capture cap). Only filled when the active detail set
+  /// includes `request` or `full`.
+  final List<int> _requestBodyBuffer = <int>[];
+
+  bool get _wantRequestBody {
+    final details = ApiTrace.config.details;
+    return details.contains(ApiTraceDetail.request) ||
+        details.contains(ApiTraceDetail.full);
+  }
+
+  void _captureRequestBytes(List<int> data) {
+    if (!_wantRequestBody) return;
+    final int remaining =
+        ApiTrace.config.maxResponseBodyBytes - _requestBodyBuffer.length;
+    if (remaining <= 0) return;
+    _requestBodyBuffer.addAll(
+        data.length <= remaining ? data : data.sublist(0, remaining));
+  }
+
+  /// Closes the request, buffers the full response body (if detail level
+  /// includes `response`), completes the inspector completer, and returns
+  /// a [_ReplayHttpClientResponse] so the caller can still read the body.
   @override
   Future<HttpClientResponse> close() async {
     try {
-      final response = await _inner.close();
-      if (!_completer.isCompleted) {
-        _completer.complete(response);
+      // Collapse request headers before closing: the caller has
+      // finished writing, so `_inner.headers` is final at this point.
+      final requestHeaders = <String, String>{};
+      _inner.headers.forEach((name, values) {
+        if (values.isNotEmpty) requestHeaders[name] = values.first;
+      });
+
+      // Decode the request-body bytes captured by the write wrappers
+      // (empty unless the detail set includes `request` / `full`).
+      String? requestBody;
+      if (_requestBodyBuffer.isNotEmpty) {
+        try {
+          final decoded = utf8.decode(_requestBodyBuffer, allowMalformed: true);
+          if (decoded.isNotEmpty) requestBody = decoded;
+        } catch (_) {}
       }
-      return response;
+
+      final rawResponse = await _inner.close();
+
+      // Collapse response headers once (used for both paths below).
+      final responseHeaders = <String, String>{};
+      rawResponse.headers.forEach((name, values) {
+        if (values.isNotEmpty) responseHeaders[name] = values.first;
+      });
+
+      final details = ApiTrace.config.details;
+      final captureBody = details.contains(ApiTraceDetail.response) ||
+          details.contains(ApiTraceDetail.full);
+
+      if (!captureBody) {
+        // Complete without the response body; caller reads it from
+        // the raw stream. `fromCapture` redacts headers / request
+        // body further if the detail set doesn't include them.
+        _completer.complete(ApiTraceResponse(
+          statusCode: rawResponse.statusCode,
+          requestHeaders: requestHeaders,
+          responseHeaders: responseHeaders,
+          requestBody: requestBody,
+        ));
+        return rawResponse;
+      }
+
+      // Eagerly buffer the full body for capture and replay.
+      // Only REST-API payloads are expected in debug mode; large streaming
+      // responses are an edge case the inspector does not optimise for.
+      final int limit = ApiTrace.config.maxResponseBodyBytes;
+      final captureBuffer = <int>[];
+      final replayChunks = <List<int>>[];
+
+      await for (final chunk in rawResponse) {
+        replayChunks.add(chunk);
+        final int remaining = limit - captureBuffer.length;
+        if (remaining > 0) {
+          captureBuffer.addAll(chunk.length <= remaining
+              ? chunk
+              : chunk.sublist(0, remaining));
+        }
+      }
+
+      // Decode the captured bytes to a UTF-8 string.
+      String? body;
+      if (captureBuffer.isNotEmpty) {
+        try {
+          final decoded = utf8.decode(captureBuffer, allowMalformed: true);
+          if (decoded.isNotEmpty) body = decoded;
+        } catch (_) {}
+      }
+
+      // Complete BEFORE returning — ensures the record is in the timeline
+      // before the next microtask the caller runs (no race condition).
+      _completer.complete(ApiTraceResponse(
+        statusCode: rawResponse.statusCode,
+        requestHeaders: requestHeaders,
+        responseHeaders: responseHeaders,
+        requestBody: requestBody,
+        responseBody: body,
+      ));
+
+      return _ReplayHttpClientResponse(rawResponse, replayChunks);
     } catch (e, st) {
       if (!_completer.isCompleted) {
         _completer.completeError(e, st);
@@ -310,112 +347,145 @@ class TracedHttpClientRequest implements HttpClientRequest {
     }
   }
 
-  // --- Request writing: pass through ---------------------------------------
+  // --- Request writing: capture + forward -----------------------------------
+  // Every body write funnels through [add] (the `write*` helpers are
+  // implemented locally per the `IOSink` contract instead of
+  // forwarding) so the capture buffer sees the same bytes the wire
+  // does.
 
   @override
-  void add(List<int> data) => _inner.add(data);
+  void add(List<int> data) {
+    _captureRequestBytes(data);
+    _inner.add(data);
+  }
 
   @override
   void addError(Object error, [StackTrace? stackTrace]) =>
       _inner.addError(error, stackTrace);
 
   @override
-  Future<void> addStream(Stream<List<int>> stream) => _inner.addStream(stream);
+  Future<void> addStream(Stream<List<int>> stream) {
+    if (!_wantRequestBody) return _inner.addStream(stream);
+    return _inner.addStream(stream.map((List<int> chunk) {
+      _captureRequestBytes(chunk);
+      return chunk;
+    }));
+  }
 
   @override
   Future<void> flush() => _inner.flush();
 
   @override
-  void write(Object? object) => _inner.write(object);
+  void write(Object? object) {
+    final string = '$object';
+    if (string.isEmpty) return;
+    add(encoding.encode(string));
+  }
 
   @override
-  void writeAll(Iterable<dynamic> objects, [String separator = '']) =>
-      _inner.writeAll(objects, separator);
+  void writeAll(Iterable<dynamic> objects, [String separator = '']) {
+    final iterator = objects.iterator;
+    if (!iterator.moveNext()) return;
+    if (separator.isEmpty) {
+      do {
+        write(iterator.current);
+      } while (iterator.moveNext());
+    } else {
+      write(iterator.current);
+      while (iterator.moveNext()) {
+        write(separator);
+        write(iterator.current);
+      }
+    }
+  }
 
   @override
-  void writeCharCode(int charCode) => _inner.writeCharCode(charCode);
+  void writeCharCode(int charCode) => write(String.fromCharCode(charCode));
 
   @override
-  void writeln([Object? object = '']) => _inner.writeln(object);
-
-  // --- Configuration: pass through -----------------------------------------
-
+  void writeln([Object? object = '']) {
+    write(object);
+    write('\n');
+  }
   @override
   HttpHeaders get headers => _inner.headers;
-
   @override
   int get contentLength => _inner.contentLength;
-
   @override
   set contentLength(int value) => _inner.contentLength = value;
-
   @override
   bool get persistentConnection => _inner.persistentConnection;
-
   @override
   set persistentConnection(bool value) => _inner.persistentConnection = value;
-
   @override
   bool get followRedirects => _inner.followRedirects;
-
   @override
   set followRedirects(bool value) => _inner.followRedirects = value;
-
   @override
   int get maxRedirects => _inner.maxRedirects;
-
   @override
   set maxRedirects(int value) => _inner.maxRedirects = value;
-
   @override
   bool get bufferOutput => _inner.bufferOutput;
-
   @override
   set bufferOutput(bool value) => _inner.bufferOutput = value;
-
   @override
   Encoding get encoding => _inner.encoding;
-
   @override
   set encoding(Encoding value) => _inner.encoding = value;
-
   @override
   String get method => _inner.method;
-
   @override
   Uri get uri => _inner.uri;
-
   @override
   void abort([Object? exception, StackTrace? stackTrace]) =>
       _inner.abort(exception, stackTrace);
-
   @override
   HttpConnectionInfo? get connectionInfo => _inner.connectionInfo;
-
   @override
   List<Cookie> get cookies => _inner.cookies;
-
   @override
   Future<HttpClientResponse> get done => _inner.done;
 }
 
-/// Builds an [ApiTraceResponse] from a [dart:io HttpClientResponse].
-/// Captures status code and headers. Body capture is intentionally
-/// NOT performed at this layer: the underlying `HttpClientResponse`
-/// streams chunks and buffering arbitrary payloads in memory just
-/// for the timeline is wasteful. Use `ApiTrace.call` directly at
-/// the call site if body capture is required.
-ApiTraceResponse _toApiTraceResponse(HttpClientResponse response) {
-  // `HttpHeaders` is iterable and produces `MapEntry<String,
-  // List<String>>`. The inspector's `ApiTraceResponse` expects
-  // `Map<String, String>`, so we collapse to the first value of
-  // each header (sufficient for status / content-type display).
-  final collapsed = <String, String>{};
-  response.headers.forEach((name, values) {
-    if (values.isNotEmpty) collapsed[name] = values.first;
-  });
-  return ApiTraceResponse(
-    statusCode: response.statusCode,
-    responseHeaders: collapsed,
-  );
+/// [HttpClientResponse] that replays pre-buffered body chunks.
+/// All metadata (status code, headers, etc.) delegates to the original
+/// response so the caller sees no difference.
+class _ReplayHttpClientResponse extends StreamView<List<int>>
+    implements HttpClientResponse {
+  _ReplayHttpClientResponse(HttpClientResponse inner, List<List<int>> chunks)
+      : _inner = inner,
+        super(Stream.fromIterable(chunks));
+
+  final HttpClientResponse _inner;
+
+  @override
+  int get statusCode => _inner.statusCode;
+  @override
+  String get reasonPhrase => _inner.reasonPhrase;
+  @override
+  int get contentLength => _inner.contentLength;
+  @override
+  bool get persistentConnection => _inner.persistentConnection;
+  @override
+  bool get isRedirect => _inner.isRedirect;
+  @override
+  List<RedirectInfo> get redirects => _inner.redirects;
+  @override
+  HttpHeaders get headers => _inner.headers;
+  @override
+  List<Cookie> get cookies => _inner.cookies;
+  @override
+  HttpConnectionInfo? get connectionInfo => _inner.connectionInfo;
+  @override
+  X509Certificate? get certificate => _inner.certificate;
+  @override
+  HttpClientResponseCompressionState get compressionState =>
+      _inner.compressionState;
+  @override
+  Future<HttpClientResponse> redirect(
+          [String? method, Uri? url, bool? followLoops]) =>
+      _inner.redirect(method, url, followLoops);
+  @override
+  Future<Socket> detachSocket() => _inner.detachSocket();
 }

@@ -18,23 +18,19 @@
 //   ..interceptors.add(TracedDioInterceptor());
 // ```
 //
-// The package's own `pubspec.yaml` declares `dio` as a
-// `dev_dependency` so the file is type-checked and tested
-// without polluting the public dependency graph.
+// The package's own `pubspec.yaml` currently declares `dio` as a
+// regular dependency (a separate `flutter_api_inspector_dio`
+// package is planned for v0.2 to remove it from the public
+// dependency graph — see the pubspec note).
 // ---------------------------------------------------------------------------
 
 import 'dart:async';
+import 'dart:convert';
 
-// `package:dio` is a dev_dependency of this package (see
-// pubspec.yaml justification). Users of `TracedDioInterceptor`
-// add `dio` to their own `pubspec.yaml`; this opt-in adapter
-// file is the only place in the package source that
-// references `package:dio`, so the rule
-// `depend_on_referenced_packages` is intentionally suppressed.
-// ignore: depend_on_referenced_packages
 import 'package:dio/dio.dart';
 
 import 'package:flutter_api_inspector/src/api_trace.dart';
+import 'package:flutter_api_inspector/src/interceptor_coordination.dart';
 import 'package:flutter_api_inspector/src/model/api_trace_response.dart';
 
 /// `dio` [Interceptor] that records every request into the
@@ -53,24 +49,48 @@ class TracedDioInterceptor extends Interceptor {
   /// lets callers customize the timeline label (default:
   /// `"<METHOD> <path>"`). The callback receives the [RequestOptions]
   /// so the caller can use headers, query parameters, etc.
-  const TracedDioInterceptor({this.nameFor});
+  const TracedDioInterceptor({this.nameFor, this.deferToHttpOverrides = true});
 
   final String Function(RequestOptions options)? nameFor;
 
+  /// When `true` (the default) and a `TracedHttpOverrides` has been
+  /// installed in this isolate, this interceptor records nothing:
+  /// Dio's default adapter routes through `dart:io HttpClient`, so
+  /// the overrides layer already captures the call and recording
+  /// here would produce a duplicate timeline entry.
+  ///
+  /// Set to `false` when Dio uses a custom [HttpClientAdapter]
+  /// (mocks, http2) that bypasses `dart:io` — in that case the
+  /// overrides layer never sees the request and this interceptor
+  /// must record it.
+  final bool deferToHttpOverrides;
+
   String _label(RequestOptions options) =>
-      nameFor != null ? nameFor!(options) : '${options.method} ${options.path}';
+      nameFor != null ? nameFor!(options) : '${options.method} ${options.uri.path}';
 
   @override
   void onRequest(
     RequestOptions options,
     RequestInterceptorHandler handler,
   ) {
-    if (!ApiTrace.enabled) {
+    if (!ApiTrace.enabled ||
+        (deferToHttpOverrides && InterceptorCoordination.httpOverridesActive)) {
+      // Either tracing is off, or TracedHttpOverrides is installed
+      // and will record this request at the dart:io layer —
+      // recording here too would duplicate the timeline entry.
       handler.next(options);
       return;
     }
     final completer = Completer<Response<dynamic>>();
     options.extra['_apiTraceCompleter'] = completer;
+    // Snapshot request data at request time: `options.data` and
+    // `options.headers` may be mutated by later interceptors, and
+    // the record must reflect what this request carried.
+    final requestBody = _encodeBody(options.data);
+    final requestHeaders = <String, String>{
+      for (final MapEntry<String, dynamic> e in options.headers.entries)
+        e.key: '${e.value}',
+    };
     // Fire-and-forget: ApiTrace.call resolves when the completer
     // completes (i.e. when onResponse or onError fires). We do
     // not await it because the interceptor must return
@@ -84,8 +104,10 @@ class TracedDioInterceptor extends Interceptor {
           final response = await completer.future;
           return ApiTraceResponse(
             statusCode: response.statusCode ?? 0,
+            requestHeaders: requestHeaders,
             responseHeaders: _collapseHeaders(response.headers.map),
-            responseBody: response.data?.toString(),
+            requestBody: requestBody,
+            responseBody: _encodeBody(response.data),
           );
         },
       ),
@@ -116,7 +138,15 @@ class TracedDioInterceptor extends Interceptor {
       '_apiTraceCompleter',
     ) as Completer<Response<dynamic>>?;
     if (completer != null && !completer.isCompleted) {
-      completer.completeError(err, err.stackTrace);
+      final serverResponse = err.response;
+      if (serverResponse != null) {
+        // Server returned 4xx/5xx — complete normally so the body is
+        // captured. _deriveOutcome marks the record ERROR via statusCode.
+        completer.complete(serverResponse);
+      } else {
+        // Network error, timeout, cancel — no body; record the exception.
+        completer.completeError(err, err.stackTrace);
+      }
     }
     handler.next(err);
   }
@@ -132,4 +162,17 @@ Map<String, String> _collapseHeaders(Map<String, List<String>> raw) {
     if (values.isNotEmpty) out[name] = values.first;
   });
   return out;
+}
+
+/// Encode a Dio response body to a readable string.
+/// Maps and Lists (parsed JSON) are pretty-printed; Strings
+/// are returned as-is; null stays null.
+String? _encodeBody(Object? data) {
+  if (data == null) return null;
+  if (data is String) return data;
+  try {
+    return const JsonEncoder.withIndent('  ').convert(data);
+  } catch (_) {
+    return data.toString();
+  }
 }

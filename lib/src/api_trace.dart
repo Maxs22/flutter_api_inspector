@@ -115,6 +115,17 @@ abstract final class ApiTrace {
     StackTrace? stackTrace;
     try {
       response = await execute();
+      // Lift the request payload delivered on the response envelope
+      // into the record's `request` slot so the detail screen's
+      // Request section renders it. `fromCapture` redacts it per
+      // the captured detail set (body needs `request`/`full`,
+      // headers need `headers`/`full`).
+      if (response.requestBody != null || response.requestHeaders.isNotEmpty) {
+        request = ApiTraceRequest(
+          headers: response.requestHeaders,
+          body: response.requestBody,
+        );
+      }
     } catch (e, st) {
       error = e;
       stackTrace = st;

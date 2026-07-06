@@ -174,6 +174,117 @@ void main() {
     });
   });
 
+  group('TracedHttpOverrides — body capture (REQ-INTERCEPTOR-006)', () {
+    test('response body is captured when the stream is drained', () async {
+      final _ServerHandle h = await _startServer(
+        status: 200,
+        body: '{"ok":true}',
+        headers: <String, String>{'content-type': 'application/json'},
+      );
+      addTearDown(h.shutdown);
+
+      ApiTrace.config = const ApiTraceConfig(
+        details: <ApiTraceDetail>{ApiTraceDetail.response},
+      );
+
+      final TracedHttpClient client = TracedHttpClient();
+      final HttpClientRequest req =
+          await client.openUrl('GET', h.baseUri.resolve('/data'));
+      final HttpClientResponse res = await req.close();
+      await res.drain<void>();
+      client.close();
+
+      final ApiTraceRecord r = ApiTrace.timeline.records.first;
+      expect(r.response?.responseBody, equals('{"ok":true}'));
+    });
+
+    test('body is not captured when detail level is minimal only', () async {
+      final _ServerHandle h = await _startServer(body: 'secret');
+      addTearDown(h.shutdown);
+
+      ApiTrace.config = const ApiTraceConfig(
+        details: <ApiTraceDetail>{ApiTraceDetail.minimal},
+      );
+
+      final TracedHttpClient client = TracedHttpClient();
+      final HttpClientRequest req =
+          await client.openUrl('GET', h.baseUri.resolve('/private'));
+      final HttpClientResponse res = await req.close();
+      await res.drain<void>();
+      client.close();
+
+      final ApiTraceRecord r = ApiTrace.timeline.records.first;
+      expect(r.response, isNull);
+    });
+
+    test('body is truncated to maxResponseBodyBytes', () async {
+      final _ServerHandle h = await _startServer(body: 'abcde');
+      addTearDown(h.shutdown);
+
+      ApiTrace.config = const ApiTraceConfig(
+        details: <ApiTraceDetail>{ApiTraceDetail.response},
+        maxResponseBodyBytes: 3,
+      );
+
+      final TracedHttpClient client = TracedHttpClient();
+      final HttpClientRequest req =
+          await client.openUrl('GET', h.baseUri.resolve('/big'));
+      final HttpClientResponse res = await req.close();
+      await res.drain<void>();
+      client.close();
+
+      final ApiTraceRecord r = ApiTrace.timeline.records.first;
+      expect(r.response?.responseBody, equals('abc'));
+    });
+  });
+
+  group('TracedHttpOverrides — request body capture', () {
+    test('POST body lands on the record when details include request',
+        () async {
+      final _ServerHandle h = await _startServer();
+      addTearDown(h.shutdown);
+
+      ApiTrace.config = const ApiTraceConfig(
+        details: <ApiTraceDetail>{ApiTraceDetail.full},
+      );
+
+      final TracedHttpClient client = TracedHttpClient();
+      final HttpClientRequest req =
+          await client.openUrl('POST', h.baseUri.resolve('/orders'));
+      req.headers.contentType = ContentType.json;
+      req.write('{"qty":3}');
+      final HttpClientResponse res = await req.close();
+      await res.drain<void>();
+      client.close();
+
+      expect(ApiTrace.timeline.size, 1);
+      final ApiTraceRecord r = ApiTrace.timeline.records.first;
+      expect(r.request, isNotNull);
+      expect(r.request!.body, equals('{"qty":3}'));
+      // The envelope the interceptor delivered carries it too.
+      expect(r.response?.requestBody, equals('{"qty":3}'));
+    });
+
+    test('request body is NOT captured under the default detail set',
+        () async {
+      // Default config: {minimal, response} — request stays opt-in.
+      final _ServerHandle h = await _startServer();
+      addTearDown(h.shutdown);
+
+      final TracedHttpClient client = TracedHttpClient();
+      final HttpClientRequest req =
+          await client.openUrl('POST', h.baseUri.resolve('/orders'));
+      req.write('{"qty":3}');
+      final HttpClientResponse res = await req.close();
+      await res.drain<void>();
+      client.close();
+
+      final ApiTraceRecord r = ApiTrace.timeline.records.first;
+      expect(r.request?.body, isNull);
+      expect(r.response?.requestBody, isNull);
+    });
+  });
+
   group('TracedHttpOverrides — nameFor callback (REQ-INTERCEPTOR-005)', () {
     test('nameFor overrides the default "<METHOD> <path>" label', () async {
       final _ServerHandle h = await _startServer();

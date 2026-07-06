@@ -38,25 +38,42 @@ class ApiTraceDetailScreen extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final tint = outcomeColor(record.outcome);
+    final bodyColor = Theme.of(context).textTheme.bodyLarge?.color;
     return Scaffold(
       backgroundColor: inspectorPanelBackground(context),
       appBar: AppBar(
-        leading: const BackButton(),
-        title: Text(record.name, overflow: TextOverflow.ellipsis),
+        leading: BackButton(color: tint),
+        titleSpacing: 0,
+        title: Row(
+          children: <Widget>[
+            _MethodChip(method: record.method, tint: tint),
+            const SizedBox(width: 8),
+            Expanded(
+              child: Text(
+                record.name,
+                overflow: TextOverflow.ellipsis,
+                style: TextStyle(
+                  fontSize: 14,
+                  fontWeight: FontWeight.w600,
+                  color: bodyColor,
+                ),
+              ),
+            ),
+          ],
+        ),
         backgroundColor: Color.alphaBlend(
-          inspectorAccent(context).withValues(alpha: 0.10),
+          tint.withValues(alpha: 0.14),
           inspectorPanelBackground(context),
         ),
-        foregroundColor: Theme.of(context).textTheme.bodyLarge?.color,
-        toolbarHeight: 44,
+        foregroundColor: bodyColor,
+        toolbarHeight: 52,
         elevation: 0,
         scrolledUnderElevation: 0,
         bottom: PreferredSize(
           preferredSize: const Size.fromHeight(1),
-          child: Divider(
+          child: Container(
             height: 1,
-            thickness: 0.5,
-            color: Theme.of(context).dividerColor,
+            color: tint.withValues(alpha: 0.35),
           ),
         ),
       ),
@@ -69,25 +86,9 @@ class ApiTraceDetailScreen extends StatelessWidget {
 
           // Overview section.
           _Section(context, 'Overview'),
-          _Field(context, 'Name', record.name),
-          _Field(context, 'Method', record.method),
           _Field(context, 'Status', record.statusCode?.toString() ?? '—'),
           _Field(context, 'Duration', _formatDuration(record.duration)),
-          _Field(
-            context,
-            'Started',
-            _formatTimestamp(record.startedAt),
-          ),
-          _Field(
-            context,
-            'Completed',
-            _formatTimestamp(record.completedAt),
-          ),
-          _Field(
-            context,
-            'Captured',
-            record.capturedDetails.map((d) => d.name).toList().join(', '),
-          ),
+          _Field(context, 'Started', _formatTimestamp(record.startedAt)),
 
           // URL with query parameters as a separate list.
           _Section(context, 'URL'),
@@ -113,14 +114,13 @@ class ApiTraceDetailScreen extends StatelessWidget {
           // Response section.
           if (record.response != null) ...<Widget>[
             _Section(context, 'Response'),
-            _Field(
-              context,
-              'Status',
-              record.response!.statusCode.toString(),
-            ),
             if (record.response!.responseHeaders.isNotEmpty)
               _HeadersTable(headers: record.response!.responseHeaders),
-            if (record.response!.requestHeaders.isNotEmpty) ...<Widget>[
+            // Echoed request headers — only when the Request section
+            // above did not already render them (record.request is
+            // populated whenever the envelope carried request data).
+            if (record.request == null &&
+                record.response!.requestHeaders.isNotEmpty) ...<Widget>[
               const SizedBox(height: 4),
               Padding(
                 padding: const EdgeInsets.only(left: 4, bottom: 2),
@@ -502,6 +502,37 @@ class _CodeBlock extends StatelessWidget {
           color: Theme.of(context).textTheme.bodyLarge?.color,
           fontFamily: 'monospace',
           height: 1.4,
+        ),
+      ),
+    );
+  }
+}
+
+/// HTTP method chip shown in the AppBar (GET, POST, etc.).
+/// Tinted with the outcome color so the header communicates both
+/// method and result at a glance.
+class _MethodChip extends StatelessWidget {
+  const _MethodChip({required this.method, required this.tint});
+
+  final String method;
+  final Color tint;
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 3),
+      decoration: BoxDecoration(
+        color: tint.withValues(alpha: 0.16),
+        borderRadius: BorderRadius.circular(4),
+        border: Border.all(color: tint.withValues(alpha: 0.45), width: 0.75),
+      ),
+      child: Text(
+        method,
+        style: TextStyle(
+          fontSize: 10,
+          fontWeight: FontWeight.w800,
+          color: tint,
+          letterSpacing: 0.6,
         ),
       ),
     );
