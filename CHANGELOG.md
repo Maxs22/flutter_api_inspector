@@ -8,6 +8,13 @@ and the project adheres to [Semantic Versioning](https://semver.org/).
 
 ### Added
 
+- `ApiTrace.forceEnabled` flag: when set to `true` before
+  `ApiTrace.runApp()`, the overlay works even in release builds.
+  Useful for QA tester builds, custom flavors, or feature-flag-gated
+  development modules. The three `kDebugMode` guards (`runApp`,
+  `ApiTraceBootstrap`, `ApiTraceOverlay`) now use
+  `!kDebugMode && !forceEnabled` so the harness and overlay are
+  constructed when either debug mode or force-enabled is active.
 - The overlay now adopts the HOST app's colors: every surface token
   derives from the app's `ColorScheme` (Material 3 tonal surface
   roles), so the panel carries the app's primary tint instead of a

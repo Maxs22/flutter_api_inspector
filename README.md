@@ -163,9 +163,31 @@ ApiTrace.config = const ApiTraceConfig(
   // Ring buffer capacity (oldest record evicted when full).
   timelineCapacity: 200,
 );
-```
+    ```
 
-### Detail levels
+    ## Release-mode testing (force enable)
+
+    By default the overlay is guarded by `kDebugMode` and tree-shaken
+    from release builds. When you need to test the overlay in a release
+    build — e.g. for QA, a tester flavor, or a feature-flag-gated
+    development module — set `ApiTrace.forceEnabled = true` **before**
+    calling `ApiTrace.runApp()`:
+
+    ```dart
+    void main() {
+      if (moduloDesarrollo.isHabilitado) {
+        ApiTrace.forceEnabled = true;
+      }
+      HttpOverrides.global = TracedHttpOverrides();
+      ApiTrace.runApp(const MyApp());
+    }
+    ```
+
+    The effective value of `ApiTrace.enabled` is `_enabled || forceEnabled`.
+    To temporarily disable the overlay on a force-enabled build, set both
+    `forceEnabled = false` and `enabled = false`.
+
+    ### Detail levels
 
 | Value | Captures |
 |-------|----------|

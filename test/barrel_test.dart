@@ -27,4 +27,12 @@ void main() {
     expect(ApiTraceDetail.values, isNotEmpty);
     expect(ApiTraceOutcome.values, isNotEmpty);
   });
+
+  test('barrel exposes forceEnabled on ApiTrace', () {
+    expect(ApiTrace.forceEnabled, isFalse);
+    ApiTrace.forceEnabled = true;
+    expect(ApiTrace.forceEnabled, isTrue);
+    expect(ApiTrace.enabled, isTrue);
+    ApiTrace.forceEnabled = false;
+  });
 }

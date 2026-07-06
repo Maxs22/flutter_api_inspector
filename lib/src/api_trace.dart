@@ -47,14 +47,28 @@ abstract final class ApiTrace {
   /// app-wide; the config object itself is immutable.
   static ApiTraceConfig config = const ApiTraceConfig();
 
+  /// Backing field for [enabled]. Defaults to `kDebugMode`
+  /// (REQ-API-006). Mutated via the [enabled] setter.
+  static bool _enabled = kDebugMode;
+
+  /// Override flag; when `true` the overlay works even in
+  /// release builds (useful for tester builds distributed via
+  /// a custom flavor / feature flag). Defaults to `false`.
+  ///
+  /// The effective value of [enabled] is `_enabled || forceEnabled`.
+  /// To temporarily disable the overlay on a force-enabled build,
+  /// set both `forceEnabled = false` and `enabled = false`.
+  static bool forceEnabled = false;
+
   /// Master switch. When `false`, `call` is a no-op that
   /// returns `null` without invoking the `execute` callback
-  /// or appending to the timeline (REQ-API-002). Initialised
-  /// to `kDebugMode` on first read (REQ-API-006): in debug
-  /// builds the overlay is on by default; in release builds
-  /// it is off. The field is mutable; assigning `false`
-  /// explicitly is the documented opt-out.
-  static bool enabled = kDebugMode;
+  /// or appending to the timeline (REQ-API-002). The getter
+  /// returns `true` when either the backing field (initialised
+  /// to `kDebugMode`) or [forceEnabled] is `true`. Assigning
+  /// `false` explicitly via the setter is the documented opt-out
+  /// (but see [forceEnabled] for tester builds).
+  static bool get enabled => _enabled || forceEnabled;
+  static set enabled(bool value) => _enabled = value;
 
   /// The in-memory ring buffer of `ApiTraceRecord`s. Initialised
   /// with the default `ApiTraceConfig.timelineCapacity` (200,
@@ -212,10 +226,11 @@ abstract final class ApiTrace {
     // MediaQuery widget ancestor found", because the root View's
     // MediaQuery never mounts). WidgetsApp/MaterialApp do NOT
     // create the View themselves on current Flutter.
-    final binding = WidgetsFlutterBinding.ensureInitialized();
-    if (!kDebugMode) {
+final binding = WidgetsFlutterBinding.ensureInitialized();
+    if (!kDebugMode && !forceEnabled) {
       // Release-mode pass-through: the developer's `app`
-      // is the root.
+      // is the root (unless [forceEnabled] is true for
+      // tester builds).
       binding
         ..attachRootWidget(binding.wrapWithDefaultView(app))
         ..scheduleFrame();

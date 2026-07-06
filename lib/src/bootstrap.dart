@@ -38,7 +38,7 @@ class ApiTraceBootstrap extends StatelessWidget {
     // REQ-UI-001: kDebugMode guard. In release mode the
     // bootstrap is a pass-through, so the developer's tree
     // is bit-identical to a tree without the bootstrap.
-    if (!kDebugMode) {
+    if (!kDebugMode && !ApiTrace.forceEnabled) {
       return child;
     }
     // In debug mode, mount the overlay above the developer's

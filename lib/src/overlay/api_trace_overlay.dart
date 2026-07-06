@@ -101,8 +101,9 @@ class _ApiTraceOverlayState extends State<ApiTraceOverlay> {
     // REQ-UI-001: kDebugMode guard. In release builds
     // (kDebugMode == false), this branch is `const false`,
     // so the AOT compiler eliminates the entire overlay
-    // surface from the final binary.
-    if (!kDebugMode) {
+    // surface from the final binary (unless
+    // [ApiTrace.forceEnabled] is true for tester builds).
+    if (!kDebugMode && !ApiTrace.forceEnabled) {
       return const SizedBox.shrink();
     }
 
