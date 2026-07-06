@@ -116,7 +116,7 @@ class _TimelinePanelState extends State<TimelinePanel> {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.stretch,
               children: <Widget>[
-                _buildHeader(context),
+                _buildHeader(context, filtered.length),
                 _buildFilterRow(context),
                 Expanded(
                   child: filtered.isEmpty
@@ -131,7 +131,10 @@ class _TimelinePanelState extends State<TimelinePanel> {
     );
   }
 
-  Widget _buildHeader(BuildContext context) {
+  /// [shownCount] is the number of records currently visible after
+  /// the outcome filter and the name query are applied — the badge
+  /// must reflect what the list shows, not the timeline total.
+  Widget _buildHeader(BuildContext context, int shownCount) {
     return Container(
       padding: const EdgeInsets.fromLTRB(16, 4, 4, 4),
       decoration: BoxDecoration(
@@ -166,7 +169,7 @@ class _TimelinePanelState extends State<TimelinePanel> {
               borderRadius: BorderRadius.circular(8),
             ),
             child: Text(
-              '${widget.records.length}',
+              '$shownCount',
               style: TextStyle(
                 fontSize: 11,
                 fontWeight: FontWeight.w700,

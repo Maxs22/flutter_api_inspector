@@ -579,6 +579,38 @@ void main() {
       );
     }
 
+    testWidgets('header badge reflects the FILTERED count, not the total',
+        (tester) async {
+      final records = <ApiTraceRecord>[
+        record(
+            name: 'ok1',
+            method: 'GET',
+            statusCode: 200,
+            outcome: ApiTraceOutcome.success),
+        record(
+            name: 'ok2',
+            method: 'GET',
+            statusCode: 200,
+            outcome: ApiTraceOutcome.success),
+        record(
+            name: 'bad',
+            method: 'GET',
+            statusCode: 500,
+            outcome: ApiTraceOutcome.error),
+      ];
+      await tester.pumpWidget(panelHost(records));
+      // No filter active: the badge shows the total.
+      expect(find.text('3'), findsOneWidget);
+
+      await tester.tap(find.text('Errors'));
+      await tester.pumpAndSettle();
+
+      // Errors filter active: only 1 record is visible, so the
+      // badge must say 1 — showing the stale total was the bug.
+      expect(find.text('3'), findsNothing);
+      expect(find.text('1'), findsWidgets);
+    });
+
     testWidgets('renders rows in newest-first order (REQ-UI-005)',
         (tester) async {
       // RED: import target missing for `timeline_panel.dart`.
@@ -824,12 +856,10 @@ void main() {
       // captured fields.
       final r = record();
       await tester.pumpWidget(detailHost(r));
-      // The name appears in both the AppBar title and the
-      // body Overview section. find.text matches both, so we
-      // use findsNWidgets(2) to assert at least one body
-      // occurrence (the AppBar is a fixed location).
-      expect(find.text('listOrders'), findsNWidgets(2));
-      expect(find.textContaining('GET'), findsWidgets);
+      // The name appears only in the AppBar title (the
+      // Overview Name field was removed to avoid redundancy).
+      expect(find.text('listOrders'), findsOneWidget);
+      // Method is now part of the name label, not a separate field.
       expect(find.text('https://api.example.com/v1/orders'), findsOneWidget);
       // '200' is rendered for both the status code field
       // (in body) and the response status (if shown). At
@@ -927,12 +957,10 @@ void main() {
         extra: const <String, Object?>{},
       );
       await tester.pumpWidget(detailHost(r));
-      // The screen renders without throwing. The name is
-      // shown in the AppBar title, the Overview Name field,
-      // and the Captured details list (since 'minimal' is
-      // one of the captured details). Assert at least 2
-      // occurrences (AppBar + body).
-      expect(find.text('minimal'), findsAtLeastNWidgets(2));
+      // The screen renders without throwing. The name 'minimal'
+      // appears only in the AppBar title (Name and Captured
+      // fields were removed from Overview to reduce noise).
+      expect(find.text('minimal'), findsOneWidget);
     });
   });
 
