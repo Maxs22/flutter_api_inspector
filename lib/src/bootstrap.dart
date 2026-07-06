@@ -139,57 +139,127 @@ class BootstrapMaterialAppHarness extends StatelessWidget {
   final MaterialApp materialApp;
   final bool enabled;
 
+  /// Wraps the developer's own `builder` (if any) and stacks the
+  /// [ApiTraceOverlay] on top of its result. The overlay is INSIDE
+  /// the MaterialApp's subtree, so its Material widgets find the
+  /// localizations / theme ancestors they need.
+  Widget _overlayBuilder(BuildContext context, Widget? child) {
+    final Widget? inner = materialApp.builder == null
+        ? child
+        : materialApp.builder!(context, child);
+    return Stack(
+      children: <Widget>[
+        if (inner != null) inner,
+        if (enabled)
+          ValueListenableBuilder<String?>(
+            valueListenable: ApiTrace.timeline.latest,
+            builder: (BuildContext context, String? _, Widget? __) {
+              if (!ApiTrace.enabled) {
+                return const SizedBox.shrink();
+              }
+              return ApiTraceOverlay(
+                config: ApiTrace.config,
+                records: ApiTrace.timeline.records,
+                navigatorKey: ApiTrace.navigatorKey,
+              );
+            },
+          ),
+      ],
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     // Rebuild a MaterialApp that mirrors the developer's
     // configuration but uses `builder` to inject the
-    // ApiTraceOverlay into the MaterialApp's Navigator
-    // subtree. We only forward the fields that are
-    // commonly used; for the rare cases not covered
-    // (e.g. custom routes / navigatorKey), the developer
-    // is expected to use `ApiTrace.runApp` instead of
-    // mounting the bootstrap manually.
+    // ApiTraceOverlay into the MaterialApp's subtree. EVERY
+    // constructor property is forwarded — routing (routes,
+    // onGenerateRoute, initialRoute...), localization, theming,
+    // shortcuts / actions, and debug flags — so activating the
+    // overlay never changes the app's behaviour. The developer's
+    // own `builder` (if any) still runs; the overlay stacks on
+    // top of its result (see [_overlayBuilder]).
+
+    // Router-based app (MaterialApp.router): forward the router
+    // configuration instead of the Navigator one. `navigatorKey`
+    // does not exist on router apps; the overlay uses its own
+    // internal Navigator for the detail screen, so nothing is lost.
+    if (materialApp.routerConfig != null || materialApp.routerDelegate != null) {
+      return MaterialApp.router(
+        key: materialApp.key,
+        scaffoldMessengerKey: materialApp.scaffoldMessengerKey,
+        routeInformationProvider: materialApp.routeInformationProvider,
+        routeInformationParser: materialApp.routeInformationParser,
+        routerDelegate: materialApp.routerDelegate,
+        routerConfig: materialApp.routerConfig,
+        backButtonDispatcher: materialApp.backButtonDispatcher,
+        builder: _overlayBuilder,
+        title: materialApp.title,
+        onGenerateTitle: materialApp.onGenerateTitle,
+        onNavigationNotification: materialApp.onNavigationNotification,
+        color: materialApp.color,
+        theme: materialApp.theme,
+        darkTheme: materialApp.darkTheme,
+        highContrastTheme: materialApp.highContrastTheme,
+        highContrastDarkTheme: materialApp.highContrastDarkTheme,
+        themeMode: materialApp.themeMode,
+        themeAnimationDuration: materialApp.themeAnimationDuration,
+        themeAnimationCurve: materialApp.themeAnimationCurve,
+        locale: materialApp.locale,
+        localizationsDelegates: materialApp.localizationsDelegates,
+        localeListResolutionCallback: materialApp.localeListResolutionCallback,
+        localeResolutionCallback: materialApp.localeResolutionCallback,
+        supportedLocales: materialApp.supportedLocales,
+        debugShowMaterialGrid: materialApp.debugShowMaterialGrid,
+        showPerformanceOverlay: materialApp.showPerformanceOverlay,
+        showSemanticsDebugger: materialApp.showSemanticsDebugger,
+        debugShowCheckedModeBanner: materialApp.debugShowCheckedModeBanner,
+        shortcuts: materialApp.shortcuts,
+        actions: materialApp.actions,
+        restorationScopeId: materialApp.restorationScopeId,
+        scrollBehavior: materialApp.scrollBehavior,
+      );
+    }
+
     return MaterialApp(
       key: materialApp.key,
-      // Pass a GlobalKey so the ApiTraceOverlay (mounted as a
-      // sibling of the child in the builder below) can push
-      // routes into the MaterialApp's Navigator even though
-      // Navigator.of(overlayContext) would fail (the overlay
-      // is outside the Navigator subtree).
+      // Pass a GlobalKey so overlay code outside the Navigator
+      // subtree can still reach the app's root Navigator.
       navigatorKey: materialApp.navigatorKey ?? ApiTrace.navigatorKey,
+      scaffoldMessengerKey: materialApp.scaffoldMessengerKey,
       home: materialApp.home,
+      routes: materialApp.routes ?? const <String, WidgetBuilder>{},
+      initialRoute: materialApp.initialRoute,
+      onGenerateRoute: materialApp.onGenerateRoute,
+      onGenerateInitialRoutes: materialApp.onGenerateInitialRoutes,
+      onUnknownRoute: materialApp.onUnknownRoute,
+      onNavigationNotification: materialApp.onNavigationNotification,
+      navigatorObservers:
+          materialApp.navigatorObservers ?? const <NavigatorObserver>[],
+      builder: _overlayBuilder,
       title: materialApp.title,
+      onGenerateTitle: materialApp.onGenerateTitle,
+      color: materialApp.color,
       theme: materialApp.theme,
       darkTheme: materialApp.darkTheme,
+      highContrastTheme: materialApp.highContrastTheme,
+      highContrastDarkTheme: materialApp.highContrastDarkTheme,
       themeMode: materialApp.themeMode,
-      color: materialApp.color,
-      builder: (BuildContext context, Widget? child) {
-        // The child's tree is the MaterialApp's content;
-        // we wrap it in a Stack with the overlay on top.
-        // The overlay is INSIDE the MaterialApp's Navigator
-        // subtree, so `Navigator.of(context)` finds the
-        // MaterialApp's root Navigator when pushing the
-        // detail screen.
-        return Stack(
-          children: <Widget>[
-            if (child != null) child,
-            if (enabled)
-              ValueListenableBuilder<String?>(
-                valueListenable: ApiTrace.timeline.latest,
-                builder: (BuildContext context, String? _, Widget? __) {
-                  if (!ApiTrace.enabled) {
-                    return const SizedBox.shrink();
-                  }
-                  return ApiTraceOverlay(
-                    config: ApiTrace.config,
-                    records: ApiTrace.timeline.records,
-                    navigatorKey: ApiTrace.navigatorKey,
-                  );
-                },
-              ),
-          ],
-        );
-      },
+      themeAnimationDuration: materialApp.themeAnimationDuration,
+      themeAnimationCurve: materialApp.themeAnimationCurve,
+      locale: materialApp.locale,
+      localizationsDelegates: materialApp.localizationsDelegates,
+      localeListResolutionCallback: materialApp.localeListResolutionCallback,
+      localeResolutionCallback: materialApp.localeResolutionCallback,
+      supportedLocales: materialApp.supportedLocales,
+      debugShowMaterialGrid: materialApp.debugShowMaterialGrid,
+      showPerformanceOverlay: materialApp.showPerformanceOverlay,
+      showSemanticsDebugger: materialApp.showSemanticsDebugger,
+      debugShowCheckedModeBanner: materialApp.debugShowCheckedModeBanner,
+      shortcuts: materialApp.shortcuts,
+      actions: materialApp.actions,
+      restorationScopeId: materialApp.restorationScopeId,
+      scrollBehavior: materialApp.scrollBehavior,
     );
   }
 }

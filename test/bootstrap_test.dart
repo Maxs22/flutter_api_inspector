@@ -13,6 +13,8 @@ import 'dart:io';
 import 'package:flutter/foundation.dart' show kDebugMode;
 import 'package:flutter/material.dart';
 import 'package:flutter_api_inspector/flutter_api_inspector.dart';
+import 'package:flutter_api_inspector/src/bootstrap.dart'
+    show BootstrapMaterialAppHarness;
 import 'package:flutter_test/flutter_test.dart';
 
 void main() {
@@ -294,6 +296,58 @@ void main() {
       // ApiTrace class.
       expect(ApiTrace.showOverlay, isNotNull);
       expect(ApiTrace.hideOverlay, isNotNull);
+    });
+  });
+
+  group('BootstrapMaterialAppHarness — property forwarding', () {
+    testWidgets('routes / initialRoute drive navigation (no home)',
+        (tester) async {
+      // Regression: the harness used to forward only home/theme/
+      // title, so a routes-based app lost its navigation table
+      // when the overlay was activated.
+      await tester.pumpWidget(BootstrapMaterialAppHarness(
+        materialApp: MaterialApp(
+          initialRoute: '/',
+          routes: <String, WidgetBuilder>{
+            '/': (_) => const Scaffold(body: Text('routes-home-marker')),
+          },
+        ),
+        enabled: false,
+      ));
+      expect(find.text('routes-home-marker'), findsOneWidget);
+    });
+
+    testWidgets('onGenerateRoute is forwarded', (tester) async {
+      await tester.pumpWidget(BootstrapMaterialAppHarness(
+        materialApp: MaterialApp(
+          onGenerateRoute: (RouteSettings settings) =>
+              MaterialPageRoute<void>(
+            builder: (_) => const Scaffold(body: Text('generated-marker')),
+          ),
+        ),
+        enabled: false,
+      ));
+      expect(find.text('generated-marker'), findsOneWidget);
+    });
+
+    testWidgets(
+        "the developer's builder still runs, composed with the overlay",
+        (tester) async {
+      await tester.pumpWidget(BootstrapMaterialAppHarness(
+        materialApp: MaterialApp(
+          home: const Scaffold(body: Text('home-marker')),
+          builder: (BuildContext context, Widget? child) => KeyedSubtree(
+            key: const Key('developer-builder'),
+            child: child ?? const SizedBox.shrink(),
+          ),
+        ),
+        enabled: true,
+      ));
+      // Both the developer's builder wrapper and the overlay
+      // must be present — composition, not replacement.
+      expect(find.byKey(const Key('developer-builder')), findsOneWidget);
+      expect(find.text('home-marker'), findsOneWidget);
+      expect(find.byType(ApiTraceOverlay), findsOneWidget);
     });
   });
 }
