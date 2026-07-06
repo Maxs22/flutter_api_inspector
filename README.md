@@ -28,7 +28,7 @@ Add the dependency:
 
 ```yaml
 dependencies:
-  flutter_api_inspector: ^0.1.0
+  flutter_api_inspector: ^0.2.0
 ```
 
 ### Option A — Automatic capture (recommended)

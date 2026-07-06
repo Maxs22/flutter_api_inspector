@@ -7,7 +7,7 @@ description: >-
   chronological order with status, duration, and captured request /
   response fields. The overlay is guarded by kDebugMode and tree-shaken
   from flutter build --release binaries.
-version: 0.1.0
+version: 0.2.0
 repository: https://github.com/Maxs22/flutter_api_inspector
 
 # Color.withValues and the ColorScheme surfaceContainer* roles the

@@ -226,7 +226,7 @@ abstract final class ApiTrace {
     // MediaQuery widget ancestor found", because the root View's
     // MediaQuery never mounts). WidgetsApp/MaterialApp do NOT
     // create the View themselves on current Flutter.
-final binding = WidgetsFlutterBinding.ensureInitialized();
+    final binding = WidgetsFlutterBinding.ensureInitialized();
     if (!kDebugMode && !forceEnabled) {
       // Release-mode pass-through: the developer's `app`
       // is the root (unless [forceEnabled] is true for

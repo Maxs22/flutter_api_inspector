@@ -197,8 +197,8 @@ class _ApiTraceOverlayState extends State<ApiTraceOverlay> {
                                 _fabPosition = Offset(
                                   (pos.dx + d.delta.dx)
                                       .clamp(0, constraints.maxWidth - fabSlot),
-                                  (pos.dy + d.delta.dy)
-                                      .clamp(0, constraints.maxHeight - fabSlot),
+                                  (pos.dy + d.delta.dy).clamp(
+                                      0, constraints.maxHeight - fabSlot),
                                 );
                               });
                             }
@@ -247,9 +247,9 @@ class _ApiTraceOverlayState extends State<ApiTraceOverlay> {
     final maxY = (c.maxHeight - slot).clamp(0.0, double.infinity);
     return switch (pos) {
       ApiTraceOverlayPosition.bottomRight => Offset(maxX, maxY),
-      ApiTraceOverlayPosition.bottomLeft  => Offset(0, maxY),
-      ApiTraceOverlayPosition.topRight    => Offset(maxX, 0),
-      ApiTraceOverlayPosition.topLeft     => Offset.zero,
+      ApiTraceOverlayPosition.bottomLeft => Offset(0, maxY),
+      ApiTraceOverlayPosition.topRight => Offset(maxX, 0),
+      ApiTraceOverlayPosition.topLeft => Offset.zero,
     };
   }
 
