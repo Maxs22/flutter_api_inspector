@@ -29,6 +29,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_api_inspector/src/api_trace.dart';
 import 'package:flutter_api_inspector/src/config.dart';
 import 'package:flutter_api_inspector/src/model/api_trace_record.dart';
+import 'package:flutter_api_inspector/src/outcome.dart';
 import 'package:flutter_api_inspector/src/overlay/detail_screen.dart';
 import 'package:flutter_api_inspector/src/overlay/fab.dart';
 import 'package:flutter_api_inspector/src/overlay/theme.dart';
@@ -118,6 +119,23 @@ class _ApiTraceOverlayState extends State<ApiTraceOverlay> {
 
     return Stack(
       children: <Widget>[
+        // Tap-outside-to-close scrim. Sits below the panel and
+        // the FAB, above the developer's app. The faint tint
+        // signals that the panel is dismissible.
+        if (_open)
+          Positioned.fill(
+            child: GestureDetector(
+              behavior: HitTestBehavior.opaque,
+              onTap: () {
+                setState(() {
+                  _open = false;
+                });
+              },
+              child: ColoredBox(
+                color: Colors.black.withValues(alpha: 0.05),
+              ),
+            ),
+          ),
         if (_open)
           Positioned(
             top: MediaQuery.of(context).padding.top + kToolbarHeight,
@@ -132,6 +150,11 @@ class _ApiTraceOverlayState extends State<ApiTraceOverlay> {
                     config: widget.config,
                     onRecordTap: widget.onRecordTap,
                     onClear: ApiTrace.timeline.clear,
+                    onClose: () {
+                      setState(() {
+                        _open = false;
+                      });
+                    },
                   ),
                 ),
                 _PanelResizeHandle(
@@ -189,6 +212,10 @@ class _ApiTraceOverlayState extends State<ApiTraceOverlay> {
                           },
                           config: widget.config,
                           recordCount: widget.records.length,
+                          errorCount: widget.records
+                              .where((ApiTraceRecord r) =>
+                                  r.outcome == ApiTraceOutcome.error)
+                              .length,
                         ),
                       ),
                     ),
@@ -247,12 +274,14 @@ class _PackageNavigator extends StatefulWidget {
     required this.config,
     required this.onRecordTap,
     required this.onClear,
+    required this.onClose,
   });
 
   final List<ApiTraceRecord> records;
   final ApiTraceConfig config;
   final void Function(ApiTraceRecord)? onRecordTap;
   final VoidCallback onClear;
+  final VoidCallback onClose;
 
   @override
   State<_PackageNavigator> createState() => _PackageNavigatorState();
@@ -292,6 +321,7 @@ class _PackageNavigatorState extends State<_PackageNavigator> {
               config: widget.config,
               onTap: _pushDetail,
               onClear: widget.onClear,
+              onClose: widget.onClose,
             ),
           ),
         ),

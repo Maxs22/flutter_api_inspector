@@ -184,7 +184,8 @@ class BootstrapMaterialAppHarness extends StatelessWidget {
     // configuration instead of the Navigator one. `navigatorKey`
     // does not exist on router apps; the overlay uses its own
     // internal Navigator for the detail screen, so nothing is lost.
-    if (materialApp.routerConfig != null || materialApp.routerDelegate != null) {
+    if (materialApp.routerConfig != null ||
+        materialApp.routerDelegate != null) {
       return MaterialApp.router(
         key: materialApp.key,
         scaffoldMessengerKey: materialApp.scaffoldMessengerKey,
@@ -213,7 +214,7 @@ class BootstrapMaterialAppHarness extends StatelessWidget {
         debugShowMaterialGrid: materialApp.debugShowMaterialGrid,
         showPerformanceOverlay: materialApp.showPerformanceOverlay,
         showSemanticsDebugger: materialApp.showSemanticsDebugger,
-        debugShowCheckedModeBanner: materialApp.debugShowCheckedModeBanner,
+        debugShowCheckedModeBanner: false,
         shortcuts: materialApp.shortcuts,
         actions: materialApp.actions,
         restorationScopeId: materialApp.restorationScopeId,
@@ -255,7 +256,7 @@ class BootstrapMaterialAppHarness extends StatelessWidget {
       debugShowMaterialGrid: materialApp.debugShowMaterialGrid,
       showPerformanceOverlay: materialApp.showPerformanceOverlay,
       showSemanticsDebugger: materialApp.showSemanticsDebugger,
-      debugShowCheckedModeBanner: materialApp.debugShowCheckedModeBanner,
+      debugShowCheckedModeBanner: false,
       shortcuts: materialApp.shortcuts,
       actions: materialApp.actions,
       restorationScopeId: materialApp.restorationScopeId,

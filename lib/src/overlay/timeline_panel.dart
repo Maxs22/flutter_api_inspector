@@ -57,6 +57,7 @@ class TimelinePanel extends StatefulWidget {
     required this.onTap,
     this.config = const ApiTraceConfig(),
     this.onClear,
+    this.onClose,
   });
 
   /// The records to render. The panel treats this list as
@@ -74,6 +75,12 @@ class TimelinePanel extends StatefulWidget {
   /// Optional callback fired when the user taps the clear button
   /// in the panel header. When null, the clear button is hidden.
   final VoidCallback? onClear;
+
+  /// Optional callback fired when the user taps the close (X)
+  /// button in the panel header. When null, the close button is
+  /// hidden (the overlay always passes it; standalone embeds may
+  /// omit it).
+  final VoidCallback? onClose;
 
   @override
   State<TimelinePanel> createState() => _TimelinePanelState();
@@ -189,6 +196,16 @@ class _TimelinePanelState extends State<TimelinePanel> {
               tooltip: 'Clear timeline',
               color: inspectorMuted(context),
             ),
+          if (widget.onClose != null)
+            IconButton(
+              onPressed: widget.onClose,
+              icon: const Icon(Icons.close_rounded),
+              iconSize: 18,
+              padding: EdgeInsets.zero,
+              constraints: const BoxConstraints(minWidth: 36, minHeight: 36),
+              tooltip: 'Close panel',
+              color: inspectorMuted(context),
+            ),
         ],
       ),
     );
@@ -217,9 +234,7 @@ class _TimelinePanelState extends State<TimelinePanel> {
               contentPadding:
                   const EdgeInsets.symmetric(horizontal: 8, vertical: 6),
               filled: true,
-              fillColor: Theme.of(context).brightness == Brightness.dark
-                  ? const Color(0xFF111827)
-                  : const Color(0xFFF3F4F6),
+              fillColor: inspectorFieldFill(context),
               border: OutlineInputBorder(
                 borderRadius: BorderRadius.circular(8),
                 borderSide: BorderSide.none,
@@ -279,11 +294,7 @@ class _TimelinePanelState extends State<TimelinePanel> {
           Icon(
             icon,
             size: 14,
-            color: selected
-                ? tint
-                : Theme.of(context).brightness == Brightness.dark
-                    ? const Color(0xFF9CA3AF)
-                    : const Color(0xFF6B7280),
+            color: selected ? tint : inspectorMuted(context),
           ),
           const SizedBox(width: 4),
           Text(label),
@@ -292,9 +303,7 @@ class _TimelinePanelState extends State<TimelinePanel> {
       selected: selected,
       showCheckmark: false,
       selectedColor: tint.withValues(alpha: 0.12),
-      backgroundColor: Theme.of(context).brightness == Brightness.dark
-          ? const Color(0xFF1F2937)
-          : const Color(0xFFF3F4F6),
+      backgroundColor: inspectorFieldFill(context),
       side: BorderSide(
         color: selected ? tint.withValues(alpha: 0.4) : Colors.transparent,
       ),

@@ -6,17 +6,17 @@
 /// import 'package:flutter_api_inspector/flutter_api_inspector.dart';
 /// ```
 ///
-/// The barrel is the only public file in `lib/`. All implementation
-/// lives under `lib/src/` and is re-exported here. The barrel is
-/// extended across the chained PRs:
+/// The barrel re-exports the full public surface — model, API,
+/// overlay, AND the two automatic interceptors — so one import is
+/// all a project needs.
 ///
-/// - PR 1 (skeleton + model) — `ApiTraceDetail`, `ApiTraceOutcome`,
-///   `ApiTraceRequest`, `ApiTraceResponse`, `ApiTraceRecord`.
-/// - PR 2 (instrumentation API) — `ApiTrace`, `ApiTraceConfig`,
-///   `ApiTraceOverlayPosition`, `ApiTraceOverlayLabel`.
-/// - PR 3 (overlay UI) — `ApiTraceOverlay`, `ApiTraceBootstrap`,
-///   `ApiTraceDetailScreen`.
-/// - PR 4 (example + acceptance) — no new public symbols.
+/// The package targets mobile / desktop (Flutter Web is a
+/// non-goal: the browser's own DevTools Network tab already covers
+/// web). `TracedHttpOverrides` is `dart:io`-based accordingly.
+///
+/// The per-file imports (`interceptor/http_overrides.dart`,
+/// `interceptor/dio_interceptor.dart`) keep working for backwards
+/// compatibility.
 ///
 /// Internals (`Timeline`, id generator, body codec) are NOT re-exported.
 library;
@@ -38,3 +38,8 @@ export 'src/bootstrap.dart' show ApiTraceBootstrap;
 export 'src/overlay/api_trace_overlay.dart' show ApiTraceOverlay;
 export 'src/overlay/detail_screen.dart' show ApiTraceDetailScreen;
 export 'src/overlay/fab.dart' show ApiTraceFab;
+
+// --- Automatic interceptors -------------------------------------------------
+export 'interceptor/dio_interceptor.dart' show TracedDioInterceptor;
+export 'interceptor/http_overrides.dart'
+    show TracedHttpOverrides, TracedHttpClient;

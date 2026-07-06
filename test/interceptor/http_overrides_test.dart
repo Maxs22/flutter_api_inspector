@@ -11,11 +11,10 @@
 import 'dart:io';
 
 import 'package:flutter/foundation.dart' show kDebugMode;
+// The interceptors are exported from the main barrel — a single
+// import is the whole integration story, and this test file
+// exercises it the same way a consumer app would.
 import 'package:flutter_api_inspector/flutter_api_inspector.dart';
-// The sub-library is opt-in: developers add `dart:io` to their
-// own pubspec and import the adapter by its sub-path. The test
-// imports it the same way.
-import 'package:flutter_api_inspector/interceptor/http_overrides.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 /// Spins up an in-process HTTP server on `127.0.0.1` with an

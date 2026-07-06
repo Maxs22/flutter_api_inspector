@@ -6,8 +6,40 @@ and the project adheres to [Semantic Versioning](https://semver.org/).
 
 ## Unreleased
 
+### Added
+
+- The overlay now adopts the HOST app's colors: every surface token
+  derives from the app's `ColorScheme` (Material 3 tonal surface
+  roles), so the panel carries the app's primary tint instead of a
+  fixed grey palette.
+- Contrast guarantee: accent, success/error, and HTTP-method colors
+  pass through `inspectorEnsureContrast`, which nudges any
+  low-contrast color toward black/white until it reaches WCAG 3.0
+  against the panel background — a pastel primary stays readable.
+- FAB polish: the icon is now the same bolt as the panel header,
+  colors come from the scheme's `primaryContainer` /
+  `onPrimaryContainer` pair, and a small error-colored dot appears
+  when the timeline holds failed calls.
+- Panel close affordances: tapping outside the panel (scrim) or the
+  new X button in the header closes it.
+- Single-import barrel: `flutter_api_inspector.dart` now exports
+  `TracedDioInterceptor` and `TracedHttpOverrides` /
+  `TracedHttpClient` too, so one import covers the whole package.
+  The sub-path imports remain available. (The package targets
+  mobile / desktop — web already has the browser Network tab.)
+
 ### Fixed
 
+- `BootstrapMaterialAppHarness` always forces `debugShowCheckedModeBanner:
+  false` so the debug-only overlay never adds an extra banner on top of
+  the developer's own banner setting.
+- `ApiTrace.runApp` crashed real apps on startup with "The render
+  object for Semantics cannot find ancestor render object to attach
+  to" + "No MediaQuery widget ancestor found": it called
+  `attachRootWidget` without `binding.wrapWithDefaultView`, so no
+  root `View` / `RenderView` was ever created (Flutter's own
+  `runApp` has wrapped with the default View since 3.10). Both the
+  debug and release paths now wrap correctly.
 - `BootstrapMaterialAppHarness` now forwards EVERY `MaterialApp`
   constructor property (`routes`, `onGenerateRoute`, `initialRoute`,
   `onUnknownRoute`, localization, `scrollBehavior`, `shortcuts` /
@@ -38,6 +70,10 @@ and the project adheres to [Semantic Versioning](https://semver.org/).
 - `Timeline` is now a true circular buffer: `append` is O(1) with no
   element shifting (was `List.insert(0, …)`, O(n) per append).
   `Timeline.records` remains an unmodifiable, newest-first `List`.
+- Minimum Flutter bumped to 3.27 / Dart 3.6: the code already used
+  `Color.withValues` (3.27+) and the theme now uses the
+  `surfaceContainer*` scheme roles (3.22+); the previous `>=3.16`
+  constraint was never accurate.
 
 ## 0.1.0 — 2026-06-23
 

@@ -18,6 +18,7 @@ import 'package:flutter_api_inspector/flutter_api_inspector.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:flutter_api_inspector/src/overlay/colors.dart';
 import 'package:flutter_api_inspector/src/overlay/fab_position.dart';
+import 'package:flutter_api_inspector/src/overlay/theme.dart';
 import 'package:flutter_api_inspector/src/overlay/timeline_row.dart';
 import 'package:flutter_api_inspector/src/overlay/timeline_panel.dart';
 
@@ -135,7 +136,7 @@ void main() {
       );
     }
 
-    testWidgets('renders the developer_mode icon (REQ-UI-004 default)',
+    testWidgets('renders the bolt icon (REQ-UI-004 default)',
         (tester) async {
       // RED: import target missing for `fab.dart`.
       await tester.pumpWidget(host(
@@ -145,7 +146,7 @@ void main() {
           recordCount: 1,
         ),
       ));
-      expect(find.byIcon(Icons.developer_mode), findsOneWidget);
+      expect(find.byIcon(Icons.bolt_rounded), findsOneWidget);
     });
 
     testWidgets('default label is icon-only (no count Text inside FAB subtree)',
@@ -274,7 +275,7 @@ void main() {
     });
 
     testWidgets(
-        'TRIANGULATE: FAB subtree contains developer_mode icon for all '
+        'TRIANGULATE: FAB subtree contains the bolt icon for all '
         'three label shapes', (tester) async {
       // REQ-UI-004: the icon is present regardless of the
       // label shape (icon, badge, chip).
@@ -291,7 +292,7 @@ void main() {
           ),
         ));
         expect(
-          find.byIcon(Icons.developer_mode),
+          find.byIcon(Icons.bolt_rounded),
           findsOneWidget,
           reason: 'icon should be present for label=$label',
         );
@@ -299,7 +300,7 @@ void main() {
     });
 
     testWidgets(
-        'TRIANGULATE: FAB subtree contains developer_mode icon at every '
+        'TRIANGULATE: FAB subtree contains the bolt icon at every '
         'corner (REQ-UI-003)', (tester) async {
       // REQ-UI-003: the icon is present at all four corners.
       // The fabAlignment helper is what positions the FAB; the
@@ -319,7 +320,7 @@ void main() {
           ),
         ));
         expect(
-          find.byIcon(Icons.developer_mode),
+          find.byIcon(Icons.bolt_rounded),
           findsOneWidget,
           reason: 'icon should be present for position=$position',
         );
@@ -419,11 +420,17 @@ void main() {
         ),
       ));
       // Find the row's status Icon (Icons.check_circle for
-      // success) and assert its color matches the helper.
+      // success) and assert it is green. The exact shade is
+      // theme-dependent: inspectorSuccess passes the base green
+      // through inspectorEnsureContrast against the panel
+      // background, so we assert the hue (green channel
+      // dominates) rather than a pinned hex value.
       final iconFinder = find.byIcon(Icons.check_circle_rounded);
       expect(iconFinder, findsOneWidget);
       final iconWidget = tester.widget<Icon>(iconFinder);
-      expect(iconWidget.color, equals(const Color(0xFF16A34A)));
+      final Color c = iconWidget.color!;
+      expect(c.g, greaterThan(c.r));
+      expect(c.g, greaterThan(c.b));
     });
 
     testWidgets('error row tints its Icon with the red color (REQ-UI-008)',
@@ -440,12 +447,14 @@ void main() {
         ),
       ));
       // For outcome == error, the row's leading icon is
-      // Icons.error (per design.md). The icon is tinted with
-      // the red color from outcomeColor.
+      // Icons.error (per design.md). The exact shade is
+      // theme-dependent (contrast-adjusted); assert the hue.
       final iconFinder = find.byIcon(Icons.error_rounded);
       expect(iconFinder, findsOneWidget);
       final iconWidget = tester.widget<Icon>(iconFinder);
-      expect(iconWidget.color, equals(const Color(0xFFDC2626)));
+      final Color c = iconWidget.color!;
+      expect(c.r, greaterThan(c.g));
+      expect(c.r, greaterThan(c.b));
     });
 
     testWidgets('4xx and 5xx rows have the same red color (REQ-UI-008)',
@@ -1235,6 +1244,116 @@ void main() {
         );
         await tester.pumpWidget(const SizedBox.shrink());
       }
+    });
+  });
+
+  group('Theme adaptation and contrast guarantee', () {
+    test('inspectorEnsureContrast fixes a low-contrast accent', () {
+      // A pastel-yellow primary on a white panel is the classic
+      // unreadable case; the helper must darken it to >= 3.0.
+      const Color pastel = Color(0xFFFFF59D);
+      final Color fixed = inspectorEnsureContrast(pastel, Colors.white);
+      final double ratio = (Colors.white.computeLuminance() + 0.05) /
+          (fixed.computeLuminance() + 0.05);
+      expect(ratio, greaterThanOrEqualTo(3.0));
+    });
+
+    test('inspectorEnsureContrast keeps a legible color unchanged', () {
+      const Color dark = Color(0xFF1D4ED8);
+      expect(inspectorEnsureContrast(dark, Colors.white), equals(dark));
+    });
+
+    testWidgets('panel surfaces derive from the host color scheme',
+        (tester) async {
+      // Pump under a deliberately tinted scheme and assert the
+      // panel background is the scheme's tonal surface, not a
+      // hard-coded grey.
+      late BuildContext ctx;
+      await tester.pumpWidget(MaterialApp(
+        theme: ThemeData(colorSchemeSeed: Colors.teal),
+        home: Builder(
+          builder: (BuildContext context) {
+            ctx = context;
+            return const SizedBox.shrink();
+          },
+        ),
+      ));
+      expect(
+        inspectorPanelBackground(ctx),
+        equals(Theme.of(ctx).colorScheme.surfaceContainerHigh),
+      );
+      expect(
+        inspectorMuted(ctx),
+        equals(Theme.of(ctx).colorScheme.onSurfaceVariant),
+      );
+    });
+  });
+
+  group('FAB error indicator and panel close affordances', () {
+    ApiTraceRecord errorRecord() {
+      final start = DateTime(2026, 1, 1);
+      return ApiTraceRecord(
+        id: 'id-err',
+        name: 'boom',
+        startedAt: start,
+        completedAt: start.add(const Duration(milliseconds: 10)),
+        method: 'GET',
+        url: Uri.parse('https://api.example.com/boom'),
+        statusCode: 500,
+        duration: const Duration(milliseconds: 10),
+        outcome: ApiTraceOutcome.error,
+        capturedDetails: const <ApiTraceDetail>{ApiTraceDetail.minimal},
+        request: null,
+        response: null,
+        error: null,
+        extra: const <String, Object?>{},
+      );
+    }
+
+    Finder errorDot() => find.descendant(
+          of: find.byType(FloatingActionButton),
+          matching: find.byWidgetPredicate((Widget w) =>
+              w is Container &&
+              w.decoration is BoxDecoration &&
+              (w.decoration as BoxDecoration).shape == BoxShape.circle),
+        );
+
+    testWidgets('FAB shows an error dot when the timeline has errors',
+        (tester) async {
+      await _pumpAppWithOverlay(tester,
+          records: <ApiTraceRecord>[errorRecord()]);
+      expect(errorDot(), findsOneWidget);
+    });
+
+    testWidgets('FAB shows no error dot when there are no errors',
+        (tester) async {
+      await _pumpAppWithOverlay(tester);
+      expect(errorDot(), findsNothing);
+    });
+
+    testWidgets('tapping outside the panel closes it (scrim)',
+        (tester) async {
+      await _pumpAppWithOverlay(tester);
+      await tester.tap(find.byType(FloatingActionButton));
+      await tester.pumpAndSettle();
+      expect(find.byKey(const ValueKey('inspectorPanel')), findsOneWidget);
+
+      // Tap a point below the panel and away from the FAB.
+      await tester.tapAt(const Offset(60, 560));
+      await tester.pumpAndSettle();
+      expect(find.byKey(const ValueKey('inspectorPanel')), findsNothing);
+    });
+
+    testWidgets('the header close (X) button closes the panel',
+        (tester) async {
+      await _pumpAppWithOverlay(tester);
+      await tester.tap(find.byType(FloatingActionButton));
+      await tester.pumpAndSettle();
+      expect(find.byKey(const ValueKey('inspectorPanel')), findsOneWidget);
+
+      await tester.tap(find.byIcon(Icons.close_rounded));
+      await tester.pumpAndSettle();
+      expect(find.byKey(const ValueKey('inspectorPanel')), findsNothing);
     });
   });
 }

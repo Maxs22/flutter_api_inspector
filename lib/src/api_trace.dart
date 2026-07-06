@@ -192,36 +192,32 @@ abstract final class ApiTrace {
     //
     // Implementation note (2026-06-24 fix #2): we do NOT
     // wrap the developer's `app` in `ApiTraceBootstrap`
-    // and pass the bootstrap to `attachRootWidget`. The
-    // `MaterialApp` (or `GetMaterialApp`, etc.) that the
-    // developer passes as `app` expects to be the ROOT
-    // widget of the app (because `WidgetsApp` — which
-    // `MaterialApp` delegates to — only creates the
-    // `View` widget that provides the `RenderView` render
-    // root when it is the root). If we wrap the
-    // `MaterialApp` in `ApiTraceBootstrap` and pass THAT
-    // to `attachRootWidget`, the bootstrap becomes the
-    // root and the `MaterialApp` is no longer the root,
-    // so no `View` is created — and every `RenderObject`
-    // in the tree (Semantics, Stack, etc.) throws
-    // "cannot find ancestor render object to attach to".
-    //
-    // The fix: construct a new `MaterialApp` (with the
-    // overlay injected via `builder`) and pass THAT as
-    // the root. The new `MaterialApp` is the root, so
-    // `WidgetsApp` creates the `View` and the render
-    // tree is valid. The developer's original `app` is
-    // nested inside the new `MaterialApp` as `home` (or
-    // is rebuilt via the harness if it is itself a
-    // `MaterialApp`). The bootstrap is still a public
-    // class for users who want to mount the overlay
+    // and pass the bootstrap to `attachRootWidget`; we
+    // construct a new `MaterialApp` (via the harness, with
+    // the overlay injected through `builder`) and pass THAT
+    // as the root. The developer's original `app` is nested
+    // inside (as `home`, or rebuilt by the harness when it
+    // is itself a `MaterialApp`). The bootstrap remains a
+    // public class for users who want to mount the overlay
     // manually inside their own `MaterialApp.builder`.
+    //
+    // Implementation note (2026-07-06 fix): `attachRootWidget`
+    // does NOT create the render-tree root. Since Flutter 3.10,
+    // Flutter's own `runApp` is
+    // `attachRootWidget(wrapWithDefaultView(app))` — the `View`
+    // widget from `wrapWithDefaultView` is what provides the
+    // `RenderView`. Attaching without it leaves the tree with no
+    // render root and every descendant throws "cannot find
+    // ancestor render object to attach to" (followed by "No
+    // MediaQuery widget ancestor found", because the root View's
+    // MediaQuery never mounts). WidgetsApp/MaterialApp do NOT
+    // create the View themselves on current Flutter.
     final binding = WidgetsFlutterBinding.ensureInitialized();
     if (!kDebugMode) {
       // Release-mode pass-through: the developer's `app`
       // is the root.
       binding
-        ..attachRootWidget(app)
+        ..attachRootWidget(binding.wrapWithDefaultView(app))
         ..scheduleFrame();
       return;
     }
@@ -237,7 +233,7 @@ abstract final class ApiTrace {
             enabled: ApiTrace.enabled,
           );
     binding
-      ..attachRootWidget(root)
+      ..attachRootWidget(binding.wrapWithDefaultView(root))
       ..scheduleFrame();
   }
 

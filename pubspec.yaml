@@ -10,16 +10,30 @@ description: >-
 version: 0.1.0
 repository: https://github.com/Maxs22/flutter_api_inspector
 
+# Color.withValues and the ColorScheme surfaceContainer* roles the
+# overlay theme uses require Flutter 3.27 / Dart 3.6.
 environment:
-  sdk: ">=3.2.0 <4.0.0"
-  flutter: ">=3.16.0"
+  sdk: ">=3.6.0 <4.0.0"
+  flutter: ">=3.27.0"
+
+# Web is intentionally unsupported: the browser's own DevTools
+# Network tab already covers web; this package exists for mobile /
+# desktop, where there is no console. pub.dev reads this key and
+# shows the platform badges accordingly.
+platforms:
+  android:
+  ios:
+  linux:
+  macos:
+  windows:
 
 dependencies:
   flutter:
     sdk: flutter
   # Required by lib/interceptor/dio_interceptor.dart (TracedDioInterceptor).
-  # Users who don't use Dio still pull this in transitively; a separate
-  # flutter_api_inspector_dio package is planned for v0.2.
+  # Users who don't use Dio can avoid this dependency by importing
+  # package:flutter_api_inspector/interceptor/http_overrides.dart
+  # directly instead of the main barrel.
   dio: ^5.9.2
 
 dev_dependencies:

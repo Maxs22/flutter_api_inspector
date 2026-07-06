@@ -10,8 +10,6 @@ import 'dart:async';
 import 'package:dio/dio.dart';
 import 'package:flutter/foundation.dart' show kDebugMode;
 import 'package:flutter_api_inspector/flutter_api_inspector.dart';
-// ignore: depend_on_referenced_packages
-import 'package:flutter_api_inspector/interceptor/dio_interceptor.dart';
 import 'package:flutter_api_inspector/src/interceptor_coordination.dart';
 import 'package:flutter_test/flutter_test.dart';
 

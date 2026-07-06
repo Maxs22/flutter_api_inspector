@@ -4,15 +4,12 @@
 // timeline.
 //
 // This file is in the package source so that users get a tested,
-// maintained implementation. It is NOT exported from the main
-// barrel because adding `package:dio` as a runtime dep of the
-// inspector would force every user to pull in `dio`. Users who
-// want this interceptor add `dio` to their own `pubspec.yaml`
-// and import it directly:
+// maintained implementation. It is exported from the main barrel
+// (single-import story); the direct sub-path import keeps working:
 //
 // ```dart
 // import 'package:dio/dio.dart';
-// import 'package:flutter_api_inspector/interceptor/dio_interceptor.dart';
+// import 'package:flutter_api_inspector/flutter_api_inspector.dart';
 //
 // final dio = Dio(BaseOptions(...))
 //   ..interceptors.add(TracedDioInterceptor());

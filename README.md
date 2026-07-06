@@ -1,7 +1,7 @@
 # flutter_api_inspector
 
-[![Flutter](https://img.shields.io/badge/Flutter-%3E%3D3.16.0-blue.svg)](https://flutter.dev)
-[![Dart](https://img.shields.io/badge/Dart-%3E%3D3.2.0-blue.svg)](https://dart.dev)
+[![Flutter](https://img.shields.io/badge/Flutter-%3E%3D3.27.0-blue.svg)](https://flutter.dev)
+[![Dart](https://img.shields.io/badge/Dart-%3E%3D3.6.0-blue.svg)](https://dart.dev)
 
 Debug-only in-app overlay that intercepts HTTP traffic and shows a
 live timeline with status codes, durations, and response bodies —
@@ -41,13 +41,17 @@ Install `TracedHttpOverrides` once in `main()`. It intercepts every
 ```dart
 import 'dart:io';
 import 'package:flutter_api_inspector/flutter_api_inspector.dart';
-import 'package:flutter_api_inspector/interceptor/http_overrides.dart';
 
 void main() {
   HttpOverrides.global = TracedHttpOverrides();
   ApiTrace.runApp(const MyApp());
 }
 ```
+
+One import covers everything — overlay, manual API, and both
+interceptors. The package targets mobile / desktop, where there is
+no browser console; on Flutter Web use the browser's own DevTools
+Network tab instead.
 
 That's it. Every HTTP call your app makes will appear in the overlay
 with its URL, method, status code, duration, and response body.
@@ -82,7 +86,7 @@ control, add `TracedDioInterceptor` instead of (or alongside)
 
 ```dart
 import 'package:dio/dio.dart';
-import 'package:flutter_api_inspector/interceptor/dio_interceptor.dart';
+import 'package:flutter_api_inspector/flutter_api_inspector.dart';
 
 final dio = Dio()..interceptors.add(TracedDioInterceptor());
 ```
@@ -95,10 +99,12 @@ custom `HttpClientAdapter` that bypasses `dart:io` (mocks, http2),
 pass `TracedDioInterceptor(deferToHttpOverrides: false)` so the
 interceptor records those requests itself.
 
-> **Note:** Because `TracedDioInterceptor` lives under `lib/`, `dio`
-> is a transitive dependency of this package. Users who only need
-> `TracedHttpOverrides` still pull in `dio`. A separate
-> `flutter_api_inspector_dio` package is planned for v0.2.
+> **Note:** Both interceptors are exported from the main barrel
+> (`flutter_api_inspector.dart`). `dio` is a transitive dependency
+> of this package regardless of which interceptor you use. If you
+> only need `TracedHttpOverrides` and want to avoid pulling in
+> `dio`, import directly from
+> `package:flutter_api_inspector/interceptor/http_overrides.dart`.
 
 ## Public API surface
 
@@ -177,6 +183,7 @@ the process — including inside `GetConnect`, `package:http`, and Dio's
 default adapter — goes through `TracedHttpClient`.
 
 When a request is closed, the wrapper:
+
 1. Captures the request body bytes as the caller writes them (only
    when the detail set includes `request` or `full`, capped at
    `maxResponseBodyBytes`).
@@ -192,6 +199,7 @@ The interception is transparent: `GetConnect`, `http`, and Dio see no
 difference in the response they receive.
 
 **Limitations of `TracedHttpOverrides`:**
+
 - Mobile and desktop only (`dart:io`). Flutter Web uses `XMLHttpRequest`;
   install `TracedHttpOverrides` conditionally with `!kIsWeb`.
 - Eagerly buffers the full response before returning it to the caller.
@@ -208,8 +216,12 @@ difference in the response they receive.
 - **In-memory only.** The ring buffer resets on every app restart.
   No disk persistence, no file export in v1.
 - **Read-only detail view.** No cURL export, no re-run, no replay in v1.
-- **Single overlay per app.** Multi-window and Flutter Web are out of
-  scope for v1.
+- **No Flutter Web support.** Web is intentionally out of scope: the
+  browser's DevTools Network tab already covers it. This package
+  exists for mobile / desktop, where there is no console. The
+  pubspec declares `platforms:` accordingly, so pub.dev shows web
+  as unsupported.
+- **Single overlay per app.** Multi-window is out of scope for v1.
 
 ## License
 

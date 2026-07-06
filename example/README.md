@@ -1,16 +1,17 @@
-# flutter_api_inspector_example
+# flutter_api_inspector example
 
-A new Flutter project.
+Example app demonstrating all three integration options:
 
-## Getting Started
+- **Option A** — Automatic capture via `TracedHttpOverrides`
+- **Option B** — Manual instrumentation via `ApiTrace.call()`
+- **Option C** — Dio interceptor via `TracedDioInterceptor`
 
-This project is a starting point for a Flutter application.
+## Run
 
-A few resources to get you started if this is your first Flutter project:
+```bash
+cd example
+flutter run
+```
 
-- [Lab: Write your first Flutter app](https://docs.flutter.dev/get-started/codelab)
-- [Cookbook: Useful Flutter samples](https://docs.flutter.dev/cookbook)
-
-For help getting started with Flutter development, view the
-[online documentation](https://docs.flutter.dev/), which offers tutorials,
-samples, guidance on mobile development, and a full API reference.
+The debug-only overlay (FAB + timeline panel) appears automatically
+in debug builds. Tap the FAB (⚡) to open the timeline.

@@ -192,7 +192,7 @@ class _MethodChip extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final color = _methodColor(method);
+    final color = inspectorMethodColor(context, method);
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
       decoration: BoxDecoration(
@@ -212,24 +212,6 @@ class _MethodChip extends StatelessWidget {
     );
   }
 
-  static Color _methodColor(String method) {
-    switch (method.toUpperCase()) {
-      case 'GET':
-        return const Color(0xFF2563EB); // blue-600
-      case 'POST':
-        return const Color(0xFF16A34A); // green-600
-      case 'PUT':
-      case 'PATCH':
-        return const Color(0xFFEA580C); // orange-600
-      case 'DELETE':
-        return const Color(0xFFDC2626); // red-600
-      case 'HEAD':
-      case 'OPTIONS':
-        return const Color(0xFF6B7280); // gray-500
-      default:
-        return const Color(0xFF4B5563); // gray-600
-    }
-  }
 }
 
 /// Small badge showing the HTTP status code, color-coded by

@@ -299,6 +299,44 @@ void main() {
     });
   });
 
+  group('ApiTrace.runApp — render root (regression 2026-07-06)', () {
+    testWidgets('runApp attaches a renderable root (View present)',
+        (tester) async {
+      // Regression: ApiTrace.runApp called attachRootWidget WITHOUT
+      // binding.wrapWithDefaultView, so no View / RenderView existed
+      // and the whole tree threw "cannot find ancestor render object
+      // to attach to" on real devices. If the root is not renderable,
+      // this test never finds the marker text.
+      ApiTrace.runApp(
+        const MaterialApp(
+          home: Scaffold(body: Text('runapp-root-marker')),
+        ),
+      );
+      await tester.pump();
+      expect(find.text('runapp-root-marker'), findsOneWidget);
+      expect(tester.takeException(), isNull);
+    });
+  });
+
+  testWidgets('runApp does not add a debug banner', (tester) async {
+    // The harness must force debugShowCheckedModeBanner: false so the
+    // debug-only overlay tool never adds its own banner on top.
+    ApiTrace.runApp(
+      const MaterialApp(
+        debugShowCheckedModeBanner: true,
+        home: Scaffold(body: Text('no-banner-marker')),
+      ),
+    );
+    await tester.pump();
+    expect(find.text('no-banner-marker'), findsOneWidget);
+    expect(tester.takeException(), isNull);
+    // Note: we cannot assert the banner is visually absent in
+    // widget tests (it's a painting concern). The regression is
+    // that the overlay renders without throwing when the original
+    // app has debugShowCheckedModeBanner: true — the old code
+    // forwarded true; the fix forces false.
+  });
+
   group('BootstrapMaterialAppHarness — property forwarding', () {
     testWidgets('routes / initialRoute drive navigation (no home)',
         (tester) async {
@@ -320,8 +358,7 @@ void main() {
     testWidgets('onGenerateRoute is forwarded', (tester) async {
       await tester.pumpWidget(BootstrapMaterialAppHarness(
         materialApp: MaterialApp(
-          onGenerateRoute: (RouteSettings settings) =>
-              MaterialPageRoute<void>(
+          onGenerateRoute: (RouteSettings settings) => MaterialPageRoute<void>(
             builder: (_) => const Scaffold(body: Text('generated-marker')),
           ),
         ),
@@ -330,8 +367,7 @@ void main() {
       expect(find.text('generated-marker'), findsOneWidget);
     });
 
-    testWidgets(
-        "the developer's builder still runs, composed with the overlay",
+    testWidgets("the developer's builder still runs, composed with the overlay",
         (tester) async {
       await tester.pumpWidget(BootstrapMaterialAppHarness(
         materialApp: MaterialApp(

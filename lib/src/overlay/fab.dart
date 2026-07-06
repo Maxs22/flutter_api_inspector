@@ -3,8 +3,11 @@
 //
 // `ApiTraceFab` is a thin wrapper around `FloatingActionButton`
 // that:
-// - Renders `Icons.developer_mode` as the icon (per design.md
-//   resolved Q1).
+// - Renders `Icons.bolt_rounded` as the icon — the same bolt the
+//   panel header uses, so FAB and panel share one identity.
+//   Colors come from the host scheme's primaryContainer /
+//   onPrimaryContainer pair (contrast-guaranteed by design), and
+//   an error-colored dot appears when the timeline holds errors.
 // - Renders one of three label shapes per `config.overlayLabel`:
 //   `icon` (icon-only, default), `badge` (icon + numeric
 //   badge), `chip` (icon + "API N" text).
@@ -25,6 +28,7 @@
 import 'package:flutter/material.dart';
 
 import 'package:flutter_api_inspector/src/config.dart';
+import 'package:flutter_api_inspector/src/overlay/theme.dart';
 
 /// The debug-only floating action button.
 class ApiTraceFab extends StatelessWidget {
@@ -41,6 +45,7 @@ class ApiTraceFab extends StatelessWidget {
     required this.onPressed,
     required this.config,
     required this.recordCount,
+    this.errorCount = 0,
   });
 
   /// Tap callback. Typically opens the timeline panel.
@@ -54,9 +59,14 @@ class ApiTraceFab extends StatelessWidget {
   /// `badge` and `chip` label shapes; hidden when zero.
   final int recordCount;
 
-  /// The FAB icon. Locked in design.md (resolved Q1):
-  /// `Icons.developer_mode` ("developer surface").
-  static const IconData _icon = Icons.developer_mode;
+  /// Number of error records in the timeline. When positive, a
+  /// small error-colored dot renders on the FAB so failures are
+  /// visible at a glance without opening the panel.
+  final int errorCount;
+
+  /// The FAB icon: the same bolt used by the panel header, so
+  /// the FAB and the panel read as one surface.
+  static const IconData _icon = Icons.bolt_rounded;
 
   @override
   Widget build(BuildContext context) {
@@ -67,12 +77,44 @@ class ApiTraceFab extends StatelessWidget {
     final isChip =
         config.overlayLabel == ApiTraceOverlayLabel.chip && recordCount > 0;
 
-    final child = _buildLabel();
+    // Explicit container pair from the host scheme: the two
+    // roles are a contrast-guaranteed pair by definition, so the
+    // FAB adopts the app's colors and stays legible on any theme.
+    final scheme = Theme.of(context).colorScheme;
+
+    Widget child = _buildLabel();
+    if (errorCount > 0) {
+      child = Stack(
+        clipBehavior: Clip.none,
+        alignment: Alignment.center,
+        children: <Widget>[
+          child,
+          Positioned(
+            left: -9,
+            top: -7,
+            child: Container(
+              width: 9,
+              height: 9,
+              decoration: BoxDecoration(
+                color: inspectorEnsureContrast(
+                  scheme.error,
+                  scheme.primaryContainer,
+                ),
+                shape: BoxShape.circle,
+                border: Border.all(color: scheme.primaryContainer, width: 1.5),
+              ),
+            ),
+          ),
+        ],
+      );
+    }
 
     return FloatingActionButton(
       onPressed: onPressed,
       heroTag: 'flutter_api_inspector.fab',
       mini: !isChip,
+      backgroundColor: scheme.primaryContainer,
+      foregroundColor: scheme.onPrimaryContainer,
       child: child,
     );
   }
@@ -122,13 +164,16 @@ class _BadgeIcon extends StatelessWidget {
           child: Container(
             padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 1),
             decoration: BoxDecoration(
-              color: Theme.of(context).colorScheme.onPrimary,
+              // onPrimaryContainer/primaryContainer is a
+              // scheme-guaranteed contrast pair — the badge stays
+              // legible on the FAB whatever the app's palette.
+              color: Theme.of(context).colorScheme.onPrimaryContainer,
               borderRadius: BorderRadius.circular(8),
             ),
             child: Text(
               '$count',
               style: TextStyle(
-                color: Theme.of(context).colorScheme.primary,
+                color: Theme.of(context).colorScheme.primaryContainer,
                 fontSize: 10,
                 fontWeight: FontWeight.bold,
                 height: 1.0,

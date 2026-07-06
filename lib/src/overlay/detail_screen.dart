@@ -312,9 +312,7 @@ class _ParametersTable extends StatelessWidget {
     final entries = parameters.entries.toList(growable: false);
     return Container(
       decoration: BoxDecoration(
-        color: Theme.of(context).brightness == Brightness.dark
-            ? const Color(0xFF111827)
-            : const Color(0xFFF9FAFB),
+        color: inspectorCodeBlockBackground(context),
         borderRadius: BorderRadius.circular(6),
         border: Border.all(
           color: Theme.of(context).dividerColor,
@@ -402,9 +400,7 @@ class _HeadersTable extends StatelessWidget {
   Widget build(BuildContext context) {
     return Container(
       decoration: BoxDecoration(
-        color: Theme.of(context).brightness == Brightness.dark
-            ? const Color(0xFF111827)
-            : const Color(0xFFF9FAFB),
+        color: inspectorCodeBlockBackground(context),
         borderRadius: BorderRadius.circular(6),
         border: Border.all(
           color: Theme.of(context).dividerColor,
@@ -486,9 +482,7 @@ class _CodeBlock extends StatelessWidget {
       width: double.infinity,
       padding: const EdgeInsets.all(10),
       decoration: BoxDecoration(
-        color: Theme.of(context).brightness == Brightness.dark
-            ? const Color(0xFF111827)
-            : const Color(0xFFF9FAFB),
+        color: inspectorCodeBlockBackground(context),
         borderRadius: BorderRadius.circular(6),
         border: Border.all(
           color: Theme.of(context).dividerColor,
