@@ -4,6 +4,11 @@ All notable changes to `flutter_api_inspector` are documented in this
 file. The format follows [Keep a Changelog](https://keepachangelog.com/)
 and the project adheres to [Semantic Versioning](https://semver.org/).
 
+## 0.2.1 — 2026-07-06
+
+- Fix pub.dev score: shorten package description to ~100 characters
+  (was too long for pub.dev's 180-char limit).
+
 ## 0.2.0 — 2026-07-06
 
 ### Added
