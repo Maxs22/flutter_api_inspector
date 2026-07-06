@@ -98,6 +98,23 @@ void main() {
       );
     });
 
+    test('ring buffer stays consistent after wrapping several times', () {
+      // The circular-buffer implementation overwrites slots in
+      // place once full; after several full wraps the view must
+      // still expose exactly the newest `capacity` records,
+      // newest-first.
+      final tl = Timeline(capacity: 3);
+      final t0 = DateTime.utc(2026, 1, 1);
+      for (var i = 0; i < 10; i++) {
+        tl.append(_record('r$i', t0.add(Duration(seconds: i))));
+      }
+      expect(tl.size, 3);
+      expect(
+        tl.records.map((r) => r.name).toList(),
+        equals(<String>['r9', 'r8', 'r7']),
+      );
+    });
+
     test('newest record first (REQ-MODEL-004)', () {
       final tl = Timeline(capacity: 10);
       final t0 = DateTime.utc(2026, 1, 1);
