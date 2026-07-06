@@ -97,8 +97,9 @@ class _ExampleHome extends StatelessWidget {
       'stub',
       method: 'GET',
       url: Uri.parse('https://example.com/stub'),
-      // The default config (details: {ApiTraceDetail.minimal}) applies,
-      // so request and response are nulled by the privacy default.
+      // The default config (details: {minimal, response}) applies:
+      // status, duration, and the response body are recorded. The
+      // stub returns no body, so only status/duration show up.
       // The id is returned so the call site can correlate logs.
       execute: () async {
         return const ApiTraceResponse(statusCode: 200);

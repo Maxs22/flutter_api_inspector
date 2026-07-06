@@ -63,9 +63,11 @@ enum ApiTraceOverlayLabel {
 /// `design.md`. The `const` constructor makes the default instance
 /// (`const ApiTraceConfig()`) a compile-time constant.
 ///
-/// Per REQ-API-004, the default `details` is the singleton
-/// `{ApiTraceDetail.minimal}` — privacy-conscious, no body, no
-/// headers.
+/// Per REQ-API-004 (amended), the default `details` is
+/// `{ApiTraceDetail.minimal, ApiTraceDetail.response}` — status,
+/// duration, and the truncated response body, so failed calls are
+/// readable out of the box. Request bodies and headers remain
+/// opt-in.
 final class ApiTraceConfig {
   /// The set of detail levels active for every call by default.
   /// Per-call `detailOverride` on `ApiTrace.call(...)` widens this

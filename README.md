@@ -3,73 +3,112 @@
 [![Flutter](https://img.shields.io/badge/Flutter-%3E%3D3.16.0-blue.svg)](https://flutter.dev)
 [![Dart](https://img.shields.io/badge/Dart-%3E%3D3.2.0-blue.svg)](https://dart.dev)
 
-Manual API instrumentation and a debug-only in-app overlay timeline for
-Flutter. Developers call `ApiTrace.call(name, …, execute: …)` at the
-call site; the package records each call into an in-memory ring buffer
-and renders a floating action button plus panel that lists calls in
-chronological order with status, duration, and (optionally) request /
-response fields. The overlay is guarded by `kDebugMode` and tree-shaken
-from `flutter build --release` binaries.
+Debug-only in-app overlay that intercepts HTTP traffic and shows a
+live timeline with status codes, durations, and response bodies —
+without leaving the app, without proxy certificates, and without
+modifying a single API call.
+
+The overlay is guarded by `kDebugMode` and tree-shaken from
+`flutter build --release` binaries automatically.
 
 ## Why
 
 When an endpoint misbehaves (wrong status, slow response, unexpected
-body, missing header), Flutter developers waste time sprinkling
-`print` calls, rebuilding, and reading scrolling console output. There
-is no in-app visualization that shows "the last N calls, in order,
-with the bodies I care about" — and no way to do that without either
-taking over the networking layer or leaving the app.
+body), Flutter developers waste time sprinkling `debugPrint` calls,
+rebuilding, and reading scrolling console output. There is no in-app
+visualization that shows "the last N calls, in order, with the bodies
+I care about."
 
-`flutter_api_inspector` fills that gap with **manual instrumentation**
-at the call site (you stay in control of what is traced) and a
-**debug-only in-app overlay** (no extra tooling, no MITM certs, no
-global network mutation). The overlay is opt-out via
-`ApiTrace.enabled` and is guaranteed to be tree-shaken from release
-binaries.
+`flutter_api_inspector` fills that gap with a floating action button
+that opens a timeline panel inside your running debug app.
 
 ## Quickstart
 
-Add the dependency to your `pubspec.yaml`:
+Add the dependency:
 
 ```yaml
 dependencies:
   flutter_api_inspector: ^0.1.0
 ```
 
-Wrap your `runApp` call:
+### Option A — Automatic capture (recommended)
+
+Install `TracedHttpOverrides` once in `main()`. It intercepts every
+`dart:io HttpClient` constructed anywhere in the process — this covers
+`GetConnect`, `package:http`, `Dio`, and any other client that uses
+`dart:io` under the hood:
+
+```dart
+import 'dart:io';
+import 'package:flutter_api_inspector/flutter_api_inspector.dart';
+import 'package:flutter_api_inspector/interceptor/http_overrides.dart';
+
+void main() {
+  HttpOverrides.global = TracedHttpOverrides();
+  ApiTrace.runApp(const MyApp());
+}
+```
+
+That's it. Every HTTP call your app makes will appear in the overlay
+with its URL, method, status code, duration, and response body.
+
+### Option B — Manual instrumentation
+
+Wrap individual calls with `ApiTrace.call(...)` for fine-grained
+control over what is captured and what label appears in the timeline:
 
 ```dart
 import 'package:flutter_api_inspector/flutter_api_inspector.dart';
 
-void main() => ApiTrace.runApp(const MyApp());
-```
-
-Instrument the calls you care about:
-
-```dart
-final response = await ApiTrace.call(
-  'listOrders',
-  method: 'GET',
-  url: Uri.parse('https://api.example.com/orders'),
+await ApiTrace.call(
+  'POST authenticator/v2',
+  method: 'POST',
+  url: Uri.parse('$baseUrl/pxauth/authenticator/v2'),
   execute: () async {
-    final res = await http.get(Uri.parse('https://api.example.com/orders'));
-    return ApiTraceResponse(statusCode: res.statusCode, responseBody: res.body);
+    final res = await post(url, body, contentType: 'application/json');
+    return ApiTraceResponse(
+      statusCode: res.statusCode ?? 0,
+      responseBody: res.bodyString,
+    );
   },
 );
 ```
 
-In debug builds, tap the floating action button to open the timeline.
-Release builds (`flutter build --release`) compile the overlay out.
+### Option C — Dio interceptor
+
+If you use [Dio](https://pub.dev/packages/dio) and want per-instance
+control, add `TracedDioInterceptor` instead of (or alongside)
+`TracedHttpOverrides`:
+
+```dart
+import 'package:dio/dio.dart';
+import 'package:flutter_api_inspector/interceptor/dio_interceptor.dart';
+
+final dio = Dio()..interceptors.add(TracedDioInterceptor());
+```
+
+Installing both is safe: on mobile/desktop Dio routes through
+`dart:io HttpClient`, so `TracedDioInterceptor` detects that
+`TracedHttpOverrides` is active and defers to it automatically —
+each call is recorded exactly once. If your Dio instance uses a
+custom `HttpClientAdapter` that bypasses `dart:io` (mocks, http2),
+pass `TracedDioInterceptor(deferToHttpOverrides: false)` so the
+interceptor records those requests itself.
+
+> **Note:** Because `TracedDioInterceptor` lives under `lib/`, `dio`
+> is a transitive dependency of this package. Users who only need
+> `TracedHttpOverrides` still pull in `dio`. A separate
+> `flutter_api_inspector_dio` package is planned for v0.2.
 
 ## Public API surface
 
 ```dart
 // Master switch + global config.
-ApiTrace.enabled;             // bool, defaults to kDebugMode
-ApiTrace.config;              // ApiTraceConfig, mutable
-ApiTrace.timeline;            // in-memory ring buffer (Timeline)
+ApiTrace.enabled;            // bool, defaults to kDebugMode
+ApiTrace.config;             // ApiTraceConfig, mutable
+ApiTrace.timeline;           // in-memory ring buffer (Timeline)
 
-// Capture one call.
+// Capture one call manually.
 Future<String?> ApiTrace.call(
   String name, {
   required String method,
@@ -79,30 +118,23 @@ Future<String?> ApiTrace.call(
   Map<String, Object?>? extra,
 });
 
-// Programmatic overlay control.
-ApiTrace.showOverlay(BuildContext context);
-ApiTrace.hideOverlay(BuildContext context);
-
 // One-line bootstrap.
 ApiTrace.runApp(Widget app);
 ```
 
-The overlay itself (`ApiTraceOverlay`) mounts automatically when
-`ApiTrace.runApp` is used. The default `ApiTraceConfig` captures only
-URL, method, status, and duration — bodies and headers are opt-in via
-`detailOverride` (per-call) or `ApiTrace.config.details` (global).
-
 ## Configuration
 
 All fields are optional — `const ApiTraceConfig()` gives the package
-defaults.
+defaults:
 
 ```dart
 ApiTrace.config = const ApiTraceConfig(
-  // Which fields to capture on every call (privacy-conscious default).
-  details: {ApiTraceDetail.minimal},
+  // Which fields to capture on every call.
+  // Default: {minimal, response} — captures status/duration/url
+  // plus the response body so failed calls are immediately readable.
+  details: {ApiTraceDetail.minimal, ApiTraceDetail.response},
 
-  // Overlay position: bottomRight | bottomLeft | topRight | topLeft.
+  // Overlay FAB position: bottomRight | bottomLeft | topRight | topLeft.
   overlayPosition: ApiTraceOverlayPosition.bottomRight,
 
   // FAB label: icon (default) | badge (count) | chip (text + count).
@@ -111,7 +143,7 @@ ApiTrace.config = const ApiTraceConfig(
   // Whether the FAB can be dragged around the screen. Default true.
   draggableFab: true,
 
-  // Gap between two calls before the panel starts a new flow group.
+  // Gap between two calls before the panel groups them separately.
   // Set to Duration.zero to disable grouping.
   flowGroupGap: Duration(seconds: 2),
 
@@ -127,40 +159,57 @@ ApiTrace.config = const ApiTraceConfig(
 );
 ```
 
-## Dio auto-tracing (optional)
+### Detail levels
 
-If your project already uses [dio](https://pub.dev/packages/dio), you
-can add `TracedDioInterceptor` to record every request automatically —
-no manual `ApiTrace.call(...)` needed for those calls:
+| Value | Captures |
+|-------|----------|
+| `minimal` | URL, method, status code, duration (always on) |
+| `response` | Response body (truncated to `maxResponseBodyBytes`) |
+| `request` | Request body |
+| `headers` | Request + response headers |
+| `full` | Everything above |
 
-```dart
-import 'package:dio/dio.dart';
-import 'package:flutter_api_inspector/interceptor/dio_interceptor.dart';
+## `TracedHttpOverrides` — how it works
 
-final dio = Dio()..interceptors.add(TracedDioInterceptor());
-```
+`TracedHttpOverrides` replaces `HttpClient.createHttpClient` globally
+(via `HttpOverrides.global`). Every `HttpClient` created anywhere in
+the process — including inside `GetConnect`, `package:http`, and Dio's
+default adapter — goes through `TracedHttpClient`.
 
-`TracedDioInterceptor` is an opt-in adapter shipped in
-`lib/interceptor/dio_interceptor.dart`. It is **not** exported from the
-main barrel, but because it lives under `lib/`, `dio` is a declared
-dependency of this package — meaning it will be pulled into your project
-transitively even if you use a different HTTP client. A dedicated
-`flutter_api_inspector_dio` package is planned for v0.2 to eliminate
-this overhead for non-Dio users.
+When a request is closed, the wrapper:
+1. Captures the request body bytes as the caller writes them (only
+   when the detail set includes `request` or `full`, capped at
+   `maxResponseBodyBytes`).
+2. Reads the full response body into memory (up to `maxResponseBodyBytes`
+   for the inspector; the complete body is replayed transparently to the
+   caller).
+3. Completes the `ApiTrace` record with status code, request/response
+   headers, and decoded bodies.
+4. Returns a `_ReplayHttpClientResponse` so the caller receives every
+   byte unchanged.
+
+The interception is transparent: `GetConnect`, `http`, and Dio see no
+difference in the response they receive.
+
+**Limitations of `TracedHttpOverrides`:**
+- Mobile and desktop only (`dart:io`). Flutter Web uses `XMLHttpRequest`;
+  install `TracedHttpOverrides` conditionally with `!kIsWeb`.
+- Eagerly buffers the full response before returning it to the caller.
+  This is a non-issue for REST API payloads; avoid it for large file
+  downloads in debug mode.
+- Dio with a custom `HttpClientAdapter` (e.g. mocks) bypasses
+  `dart:io` entirely — use `TracedDioInterceptor` in that case.
 
 ## Limitations
 
-- **Debug-only.** The overlay is guarded by `kDebugMode` and is
-  tree-shaken from `flutter build --release` builds. The
-  instrumentation API still works in release mode (records are stored),
-  but the visualization is gone.
-- **In-memory only.** The timeline ring buffer is reset on every app
-  restart. There is no disk persistence, no file export, and no
-  clipboard copy in v1.
-- **Visualization only.** Tapping a call opens a read-only detail view.
-  There is no cURL export, no re-run, and no replay.
-- **Single overlay per app.** Multi-window / multi-tab is out of scope
-  for v1. Flutter web is also out of scope for v1.
+- **Debug-only.** The overlay is tree-shaken from release builds.
+  `ApiTrace.call` in release mode is a no-op when `ApiTrace.enabled`
+  is false (the default in release).
+- **In-memory only.** The ring buffer resets on every app restart.
+  No disk persistence, no file export in v1.
+- **Read-only detail view.** No cURL export, no re-run, no replay in v1.
+- **Single overlay per app.** Multi-window and Flutter Web are out of
+  scope for v1.
 
 ## License
 

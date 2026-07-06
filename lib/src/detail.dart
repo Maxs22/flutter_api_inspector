@@ -1,8 +1,9 @@
 /// The level of detail captured for a single API call.
 ///
 /// Ordered from least to most detail. The default `ApiTraceConfig`
-/// uses `{ApiTraceDetail.minimal}` only — no body, no headers — per
-/// the privacy-conscious default (REQ-MODEL-005).
+/// uses `{ApiTraceDetail.minimal, ApiTraceDetail.response}` — status,
+/// duration, and the truncated response body. Request bodies and
+/// headers remain opt-in (REQ-MODEL-005).
 ///
 /// See `openspec/changes/flutter_api_inspector-mvp/specs/instrumentation-api.md`
 /// (REQ-API-004) and `design.md` for the locked semantics.

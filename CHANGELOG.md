@@ -4,6 +4,41 @@ All notable changes to `flutter_api_inspector` are documented in this
 file. The format follows [Keep a Changelog](https://keepachangelog.com/)
 and the project adheres to [Semantic Versioning](https://semver.org/).
 
+## Unreleased
+
+### Fixed
+
+- `BootstrapMaterialAppHarness` now forwards EVERY `MaterialApp`
+  constructor property (`routes`, `onGenerateRoute`, `initialRoute`,
+  `onUnknownRoute`, localization, `scrollBehavior`, `shortcuts` /
+  `actions`, debug flags, …) instead of a small subset, composes the
+  developer's own `builder` with the overlay, and supports
+  router-based apps (`MaterialApp.router`). Activating the overlay no
+  longer breaks routes-based navigation or localization.
+- Request bodies are now actually captured. `TracedHttpOverrides`
+  buffers request bytes as they are written (capped at
+  `maxResponseBodyBytes`) and `TracedDioInterceptor` snapshots
+  `options.data` / `options.headers` at request time. `ApiTrace.call`
+  lifts the request payload into `record.request` so the detail
+  screen renders it (previously `record.request` was always null).
+- Installing `TracedHttpOverrides` and `TracedDioInterceptor`
+  together no longer records every Dio call twice: the Dio
+  interceptor defers to the overrides layer automatically (opt out
+  with `TracedDioInterceptor(deferToHttpOverrides: false)` for
+  custom adapters that bypass `dart:io`).
+- The timeline panel header badge now shows the FILTERED record
+  count instead of the timeline total when an outcome filter or a
+  name query is active.
+- Doc comments in `detail.dart`, `config.dart`, and the example
+  claimed the default detail set was `{minimal}`; the actual default
+  is `{minimal, response}` (aligned with the README).
+
+### Changed
+
+- `Timeline` is now a true circular buffer: `append` is O(1) with no
+  element shifting (was `List.insert(0, …)`, O(n) per append).
+  `Timeline.records` remains an unmodifiable, newest-first `List`.
+
 ## 0.1.0 — 2026-06-23
 
 ### Added
