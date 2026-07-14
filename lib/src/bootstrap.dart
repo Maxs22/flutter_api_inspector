@@ -22,6 +22,7 @@ import 'package:flutter/material.dart';
 
 import 'package:flutter_api_inspector/src/api_trace.dart';
 import 'package:flutter_api_inspector/src/overlay/api_trace_overlay.dart';
+import 'package:flutter_api_inspector/src/route_scope_observer.dart';
 
 /// Wraps the developer's [child] in the debug-only overlay.
 class ApiTraceBootstrap extends StatelessWidget {
@@ -235,8 +236,16 @@ class BootstrapMaterialAppHarness extends StatelessWidget {
       onGenerateInitialRoutes: materialApp.onGenerateInitialRoutes,
       onUnknownRoute: materialApp.onUnknownRoute,
       onNavigationNotification: materialApp.onNavigationNotification,
-      navigatorObservers:
-          materialApp.navigatorObservers ?? const <NavigatorObserver>[],
+      navigatorObservers: [
+        ...switch (materialApp.navigatorObservers) {
+          null || const [] => [if (enabled) RouteScopeObserver()],
+          final list => [
+              ...list,
+              if (enabled && !list.any((o) => o is RouteScopeObserver))
+                RouteScopeObserver(),
+            ],
+        },
+      ],
       builder: _overlayBuilder,
       title: materialApp.title,
       onGenerateTitle: materialApp.onGenerateTitle,

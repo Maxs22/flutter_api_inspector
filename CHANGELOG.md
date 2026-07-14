@@ -4,6 +4,24 @@ All notable changes to `flutter_api_inspector` are documented in this
 file. The format follows [Keep a Changelog](https://keepachangelog.com/)
 and the project adheres to [Semantic Versioning](https://semver.org/).
 
+## 0.3.0 — 2026-07-14
+
+### Added
+
+- **Route-Scoped Network Inspector**: network calls are now grouped by
+  the screen that triggered them. QA sees "CheckoutScreen → POST /orders
+  (500) → GET /payment-methods (timeout)" instead of a flat timeline.
+
+### Fixed
+
+- **pub.dev score**: package description shortened to 166 chars (was
+  187, over the 180-char limit). Score back to 160/160.
+
+### Changed
+
+- README now includes a demo GIF placeholder showing the FAB → Timeline
+  → Detail flow.
+
 ## 0.2.1 — 2026-07-06
 
 - Fix pub.dev score: shorten package description to ~100 characters

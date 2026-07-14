@@ -28,11 +28,15 @@ class TimelineRow extends StatelessWidget {
   /// [onTap] is the callback fired when the row is tapped.
   /// [now] is the reference time used to compute the
   /// "time-ago" label; if null, the row uses `DateTime.now()`.
+  /// [relativeTimestamp] overrides the trailing timestamp with a
+  /// relative offset (e.g. `+500ms`) when the timeline is filtered
+  /// to a specific route scope.
   const TimelineRow({
     super.key,
     required this.record,
     required this.onTap,
     this.now,
+    this.relativeTimestamp,
   });
 
   /// The record to render. Read-only; the row does not mutate
@@ -41,6 +45,10 @@ class TimelineRow extends StatelessWidget {
 
   /// Fired when the row is tapped.
   final VoidCallback onTap;
+
+  /// Optional relative timestamp (e.g. `+500ms`) shown instead of
+  /// the absolute "X ago" label when a route-scope filter is active.
+  final String? relativeTimestamp;
 
   /// Reference time for the "X ago" label. Tests pass a fixed
   /// value; production code leaves it null and uses now().
@@ -137,11 +145,13 @@ class TimelineRow extends StatelessWidget {
               SizedBox(
                 width: 52,
                 child: Text(
-                  _timeAgo(record.completedAt, now ?? DateTime.now()),
+                  relativeTimestamp ??
+                      _timeAgo(record.completedAt, now ?? DateTime.now()),
                   textAlign: TextAlign.right,
                   style: TextStyle(
                     fontSize: 10,
                     color: inspectorMuted(context),
+                    fontFamily: relativeTimestamp != null ? 'monospace' : null,
                   ),
                 ),
               ),
@@ -211,7 +221,6 @@ class _MethodChip extends StatelessWidget {
       ),
     );
   }
-
 }
 
 /// Small badge showing the HTTP status code, color-coded by

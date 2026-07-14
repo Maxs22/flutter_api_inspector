@@ -29,6 +29,7 @@ import 'package:dio/dio.dart';
 import 'package:flutter_api_inspector/src/api_trace.dart';
 import 'package:flutter_api_inspector/src/interceptor_coordination.dart';
 import 'package:flutter_api_inspector/src/model/api_trace_response.dart';
+import 'package:flutter_api_inspector/src/route_scope.dart';
 
 /// `dio` [Interceptor] that records every request into the
 /// inspector timeline. The interceptor hooks the three `dio`
@@ -62,8 +63,9 @@ class TracedDioInterceptor extends Interceptor {
   /// must record it.
   final bool deferToHttpOverrides;
 
-  String _label(RequestOptions options) =>
-      nameFor != null ? nameFor!(options) : '${options.method} ${options.uri.path}';
+  String _label(RequestOptions options) => nameFor != null
+      ? nameFor!(options)
+      : '${options.method} ${options.uri.path}';
 
   @override
   void onRequest(
@@ -77,6 +79,12 @@ class TracedDioInterceptor extends Interceptor {
       // recording here too would duplicate the timeline entry.
       handler.next(options);
       return;
+    }
+    // Tag with the current route scope (REQ-RS-002).
+    final scope = RouteScope.current;
+    if (scope != null) {
+      options.extra['routeScopeId'] = scope.scopeId;
+      options.extra['routeName'] = scope.routeName;
     }
     final completer = Completer<Response<dynamic>>();
     options.extra['_apiTraceCompleter'] = completer;
@@ -107,6 +115,14 @@ class TracedDioInterceptor extends Interceptor {
             responseBody: _encodeBody(response.data),
           );
         },
+        // Forward options.extra (which now carries routeScopeId /
+        // routeName when a RouteScope is active) onto the record's
+        // extra map (REQ-RS-002 / TASK-RS-003). By the time this
+        // executes (after `await completer.future` inside
+        // `execute`), `_apiTraceCompleter` has already been
+        // removed from this same map by onResponse/onError, so no
+        // internal bookkeeping key leaks onto the record.
+        extra: options.extra,
       ),
     );
     handler.next(options);

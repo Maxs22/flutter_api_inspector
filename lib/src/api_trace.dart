@@ -28,6 +28,7 @@ import 'package:flutter_api_inspector/src/model/api_trace_record.dart';
 import 'package:flutter_api_inspector/src/model/api_trace_request.dart';
 import 'package:flutter_api_inspector/src/model/api_trace_response.dart';
 import 'package:flutter_api_inspector/src/model/timeline.dart';
+import 'package:flutter_api_inspector/src/route_scope.dart';
 
 /// The single developer-facing entry point for the package.
 ///
@@ -238,6 +239,7 @@ abstract final class ApiTrace {
     }
     // Debug-mode: build the harness `MaterialApp` (with
     // the overlay injected) and pass it as the root.
+    RouteScope.init();
     final Widget root = app is MaterialApp
         ? BootstrapMaterialAppHarness(
             materialApp: app,

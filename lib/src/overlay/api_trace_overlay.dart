@@ -25,6 +25,7 @@
 
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 
 import 'package:flutter_api_inspector/src/api_trace.dart';
 import 'package:flutter_api_inspector/src/config.dart';
@@ -32,8 +33,10 @@ import 'package:flutter_api_inspector/src/model/api_trace_record.dart';
 import 'package:flutter_api_inspector/src/outcome.dart';
 import 'package:flutter_api_inspector/src/overlay/detail_screen.dart';
 import 'package:flutter_api_inspector/src/overlay/fab.dart';
+import 'package:flutter_api_inspector/src/overlay/route_tree_tab.dart';
 import 'package:flutter_api_inspector/src/overlay/theme.dart';
 import 'package:flutter_api_inspector/src/overlay/timeline_panel.dart';
+import 'package:flutter_api_inspector/src/route_scope.dart';
 
 /// The debug-only overlay that shows the FAB and the timeline
 /// panel.
@@ -84,6 +87,14 @@ class ApiTraceOverlay extends StatefulWidget {
 class _ApiTraceOverlayState extends State<ApiTraceOverlay> {
   /// Open/closed state of the timeline panel.
   bool _open = false;
+
+  /// Currently selected route-scope ID for timeline filtering.
+  /// `null` means no filter (show all records).
+  int? _selectedScopeId;
+
+  /// The RouteScopeEntry corresponding to [_selectedScopeId], used
+  /// for computing relative timestamps.
+  RouteScopeEntry? _scopeEntry;
 
   /// Absolute position (left, top) of the FAB within the overlay
   /// Stack. `null` until the first layout — initialized from
@@ -156,6 +167,17 @@ class _ApiTraceOverlayState extends State<ApiTraceOverlay> {
                         _open = false;
                       });
                     },
+                    selectedScopeId: _selectedScopeId,
+                    scopeEntry: _scopeEntry,
+                    onScopeSelected: (RouteScopeEntry? entry) {
+                      setState(() {
+                        _selectedScopeId = entry?.scopeId;
+                        _scopeEntry = entry;
+                      });
+                    },
+                    onExport: _selectedScopeId != null
+                        ? (records) => _exportFilteredRecords(records)
+                        : null,
                   ),
                 ),
                 _PanelResizeHandle(
@@ -262,13 +284,50 @@ class _ApiTraceOverlayState extends State<ApiTraceOverlay> {
       widget.config.panelMaxHeight,
     );
   }
+
+  Future<void> _exportFilteredRecords(List<ApiTraceRecord> records) async {
+    final scopeEntry = _scopeEntry;
+    final scopeId = _selectedScopeId;
+    final routeName = scopeEntry?.routeName ?? 'Unknown';
+
+    final buffer = StringBuffer();
+    buffer.writeln('// Route: $routeName (scopeId: $scopeId)');
+    buffer.writeln();
+
+    for (final record in records) {
+      final curl = _recordToCurl(record);
+      buffer.writeln(curl);
+      buffer.writeln();
+    }
+
+    await Clipboard.setData(ClipboardData(text: buffer.toString()));
+  }
+
+  String _recordToCurl(ApiTraceRecord record) {
+    final method = record.method;
+    final url = record.url.toString();
+
+    final buffer = StringBuffer();
+    buffer.write('curl -X $method "$url"');
+
+    if (record.request?.headers.isNotEmpty ?? false) {
+      for (final entry in record.request!.headers.entries) {
+        buffer.write(' -H "${entry.key}: ${entry.value}"');
+      }
+    }
+
+    if (record.request?.body != null &&
+        record.request!.body.toString().isNotEmpty) {
+      buffer.write(
+          ' -d \'${record.request!.body.toString().replaceAll('\'', '\\\'')}\'');
+    }
+
+    return buffer.toString();
+  }
 }
 
-/// Package-owned `Navigator` that hosts the [TimelinePanel]
-/// and the [ApiTraceDetailScreen]. Using an imperative navigator
-/// (push/pop via [GlobalKey]) keeps back navigation simple and
-/// reliable: the back button in `ApiTraceDetailScreen` pops this
-/// navigator without disturbing the host app's own navigation history.
+/// Tabbed content container that shows [TimelinePanel] or
+/// [RouteTreeTab] and pushes the detail screen.
 class _PackageNavigator extends StatefulWidget {
   const _PackageNavigator({
     required this.records,
@@ -276,6 +335,10 @@ class _PackageNavigator extends StatefulWidget {
     required this.onRecordTap,
     required this.onClear,
     required this.onClose,
+    this.selectedScopeId,
+    this.scopeEntry,
+    required this.onScopeSelected,
+    this.onExport,
   });
 
   final List<ApiTraceRecord> records;
@@ -283,6 +346,10 @@ class _PackageNavigator extends StatefulWidget {
   final void Function(ApiTraceRecord)? onRecordTap;
   final VoidCallback onClear;
   final VoidCallback onClose;
+  final int? selectedScopeId;
+  final RouteScopeEntry? scopeEntry;
+  final void Function(RouteScopeEntry?) onScopeSelected;
+  final void Function(List<ApiTraceRecord>)? onExport;
 
   @override
   State<_PackageNavigator> createState() => _PackageNavigatorState();
@@ -290,6 +357,9 @@ class _PackageNavigator extends StatefulWidget {
 
 class _PackageNavigatorState extends State<_PackageNavigator> {
   final GlobalKey<NavigatorState> _navKey = GlobalKey<NavigatorState>();
+
+  /// Active tab index (0 = Timeline, 1 = Routes).
+  int _activeTab = 0;
 
   void _pushDetail(ApiTraceRecord record) {
     final userCallback = widget.onRecordTap;
@@ -304,6 +374,16 @@ class _PackageNavigatorState extends State<_PackageNavigator> {
     );
   }
 
+  void _handleExport() {
+    final onExport = widget.onExport;
+    if (onExport == null) return;
+    final scopeId = widget.selectedScopeId;
+    final filtered = scopeId != null
+        ? widget.records.where((r) => r.routeScopeId == scopeId).toList()
+        : widget.records;
+    onExport(filtered);
+  }
+
   @override
   Widget build(BuildContext context) {
     // Scope a fresh HeroController so the nested Navigator does not
@@ -316,14 +396,138 @@ class _PackageNavigatorState extends State<_PackageNavigator> {
         onGenerateRoute: (_) => MaterialPageRoute<void>(
           builder: (_) => ListenableBuilder(
             listenable: ApiTrace.timeline.latest,
-            builder: (_, __) => TimelinePanel(
-              key: const ValueKey('inspectorPanel'),
-              records: widget.records,
-              config: widget.config,
-              onTap: _pushDetail,
-              onClear: widget.onClear,
-              onClose: widget.onClose,
+            builder: (_, __) => _buildTabbedContent(),
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildTabbedContent() {
+    final theme = Theme.of(context);
+    final tabColor = theme.textTheme.bodySmall?.color ?? Colors.grey;
+    final activeColor = theme.colorScheme.primary;
+
+    return Column(
+      children: <Widget>[
+        Container(
+          decoration: BoxDecoration(
+            border: Border(
+              bottom: BorderSide(
+                color: theme.dividerColor,
+                width: 0.5,
+              ),
             ),
+          ),
+          child: Row(
+            children: <Widget>[
+              _buildTabButton(
+                label: 'Timeline',
+                icon: Icons.list_rounded,
+                selected: _activeTab == 0,
+                activeColor: activeColor,
+                inactiveColor: tabColor,
+                onTap: () => setState(() => _activeTab = 0),
+              ),
+              _buildTabButton(
+                label: 'Routes',
+                icon: Icons.account_tree_rounded,
+                selected: _activeTab == 1,
+                activeColor: activeColor,
+                inactiveColor: tabColor,
+                onTap: () => setState(() => _activeTab = 1),
+              ),
+              const Spacer(),
+              if (widget.selectedScopeId != null)
+                IconButton(
+                  icon: const Icon(Icons.filter_alt_off_rounded, size: 18),
+                  tooltip: 'Clear route filter',
+                  onPressed: () => widget.onScopeSelected(null),
+                  padding: const EdgeInsets.all(4),
+                  constraints: const BoxConstraints(
+                    minWidth: 32,
+                    minHeight: 32,
+                  ),
+                  visualDensity: VisualDensity.compact,
+                  style: IconButton.styleFrom(
+                    foregroundColor: activeColor,
+                  ),
+                ),
+              if (_activeTab == 0 && widget.onExport != null)
+                IconButton(
+                  icon: const Icon(Icons.file_download_rounded, size: 18),
+                  tooltip: 'Export as cURL',
+                  onPressed: _handleExport,
+                  padding: const EdgeInsets.all(4),
+                  constraints: const BoxConstraints(
+                    minWidth: 32,
+                    minHeight: 32,
+                  ),
+                  visualDensity: VisualDensity.compact,
+                  style: IconButton.styleFrom(
+                    foregroundColor: activeColor,
+                  ),
+                ),
+            ],
+          ),
+        ),
+        Expanded(
+          child: _activeTab == 0
+              ? TimelinePanel(
+                  key: const ValueKey('inspectorPanel'),
+                  records: widget.records,
+                  config: widget.config,
+                  onTap: _pushDetail,
+                  onClear: widget.onClear,
+                  onClose: widget.onClose,
+                  onExport: widget.onExport,
+                  scopeFilter: widget.selectedScopeId != null
+                      ? (ApiTraceRecord r) =>
+                          r.routeScopeId == widget.selectedScopeId
+                      : null,
+                  scopeEntry: widget.scopeEntry,
+                )
+              : RouteTreeTab(
+                  records: widget.records,
+                  onScopeSelected: widget.onScopeSelected,
+                  selectedScopeId: widget.selectedScopeId,
+                ),
+        ),
+      ],
+    );
+  }
+
+  Widget _buildTabButton({
+    required String label,
+    required IconData icon,
+    required bool selected,
+    required Color activeColor,
+    required Color inactiveColor,
+    required VoidCallback onTap,
+  }) {
+    final color = selected ? activeColor : inactiveColor;
+    return Material(
+      color: selected
+          ? activeColor.withValues(alpha: 0.12)
+          : Colors.transparent,
+      child: InkWell(
+        onTap: onTap,
+        child: Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+          child: Row(
+            mainAxisSize: MainAxisSize.min,
+            children: <Widget>[
+              Icon(icon, size: 16, color: color),
+              const SizedBox(width: 4),
+              Text(
+                label,
+                style: TextStyle(
+                  fontSize: 12,
+                  fontWeight: selected ? FontWeight.w700 : FontWeight.w500,
+                  color: color,
+                ),
+              ),
+            ],
           ),
         ),
       ),
