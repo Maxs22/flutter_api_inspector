@@ -141,14 +141,12 @@ quality:
       framework: "dart format"
 
 # --- Active change -----------------------------------------------------------
-# Active change: route-scoped-network-inspector (verified GREEN-WITH-MINOR,
-# ready for sdd-archive). Created 2026-07-13. All 10 tasks (TASK-RS-001..010)
-# checked off with TDD/verification evidence: 237/237 tests pass, `flutter
-# analyze` clean, release APK confirmed to tree-shake all route-scope
-# symbols. sdd-verify (2026-07-14) found 0 CRITICAL, 5 WARNING (see
-# verify-report.md); the PR-size-budget warning was resolved by switching
-# from 2 chained PRs to a single PR (team decision 2026-07-14, nothing was
-# committed yet at that point).
-active_change: route-scoped-network-inspector
-active_change_strategy: single-pr
-active_change_branch: feat/route-scoped-network-inspector
+# [ARCHIVED 2026-07-14] route-scoped-network-inspector
+# See: openspec/changes/archive/2026-07-14-route-scoped-network-inspector/
+# All 10 tasks complete and verified (237/237 tests, flutter analyze clean).
+# Merged to main via PR #1 (commit e5045e2, merge commit 6cfa70d).
+# Verdict: GREEN-WITH-MINOR (5 non-blocking warnings documented in verify-report.md).
+# Delta spec synced to openspec/specs/route-scope.md.
+active_change: null
+active_change_strategy: null
+active_change_branch: null
