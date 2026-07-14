@@ -11,6 +11,8 @@
 import 'dart:io';
 
 import 'package:flutter/foundation.dart' show kDebugMode;
+import 'package:flutter/material.dart'
+    show MaterialPageRoute, RouteSettings, SizedBox;
 // The interceptors are exported from the main barrel — a single
 // import is the whole integration story, and this test file
 // exercises it the same way a consumer app would.
@@ -299,6 +301,95 @@ void main() {
       client.close();
 
       expect(ApiTrace.timeline.records.first.name, equals('AUTH GET'));
+    });
+  });
+
+  group(
+      'TracedHttpOverrides — route-scope tagging (REQ-RS-003, TASK-RS-004)',
+      () {
+    setUp(() {
+      RouteScope.dispose();
+      RouteScope.init();
+    });
+
+    tearDown(() {
+      RouteScope.dispose();
+    });
+
+    test(
+        'route A active: the resulting ApiTraceRecord is tagged with '
+        'routeScopeId/routeName (spec scenario: HttpClient request '
+        'tagged with route scope)', () async {
+      // RED: with the tagging block removed from `openUrl`, the
+      // record's routeScopeId/routeName getters return null.
+      RouteScope.onPush(MaterialPageRoute<void>(
+        builder: (_) => const SizedBox.shrink(),
+        settings: const RouteSettings(name: 'A'),
+      ));
+
+      final _ServerHandle h = await _startServer();
+      addTearDown(h.shutdown);
+
+      final TracedHttpClient client = TracedHttpClient();
+      final HttpClientRequest req =
+          await client.openUrl('GET', h.baseUri.resolve('/scoped'));
+      final HttpClientResponse res = await req.close();
+      await res.drain<void>();
+      client.close();
+
+      final ApiTraceRecord r = ApiTrace.timeline.records.first;
+      expect(r.routeScopeId, equals(1));
+      expect(r.routeName, equals('A'));
+    });
+
+    test(
+        'TRIANGULATE: after a push to B (scopeId 2), the record is '
+        'tagged with scopeId 2 / "B"', () async {
+      RouteScope.onPush(MaterialPageRoute<void>(
+        builder: (_) => const SizedBox.shrink(),
+        settings: const RouteSettings(name: 'A'),
+      ));
+      RouteScope.onPush(MaterialPageRoute<void>(
+        builder: (_) => const SizedBox.shrink(),
+        settings: const RouteSettings(name: 'B'),
+      ));
+
+      final _ServerHandle h = await _startServer();
+      addTearDown(h.shutdown);
+
+      final TracedHttpClient client = TracedHttpClient();
+      final HttpClientRequest req =
+          await client.openUrl('GET', h.baseUri.resolve('/scoped'));
+      final HttpClientResponse res = await req.close();
+      await res.drain<void>();
+      client.close();
+
+      final ApiTraceRecord r = ApiTrace.timeline.records.first;
+      expect(r.routeScopeId, equals(2));
+      expect(r.routeName, equals('B'));
+    });
+
+    test(
+        'no RouteScope active (release-mode style): no crash and no '
+        'routeScopeId/routeName on the record', () async {
+      // Edge case (Risks table / REQ-RS-008): with RouteScope
+      // disposed, openUrl must not throw and must simply omit the
+      // scope tags.
+      RouteScope.dispose();
+
+      final _ServerHandle h = await _startServer();
+      addTearDown(h.shutdown);
+
+      final TracedHttpClient client = TracedHttpClient();
+      final HttpClientRequest req =
+          await client.openUrl('GET', h.baseUri.resolve('/unscoped'));
+      final HttpClientResponse res = await req.close();
+      await res.drain<void>();
+      client.close();
+
+      final ApiTraceRecord r = ApiTrace.timeline.records.first;
+      expect(r.routeScopeId, isNull);
+      expect(r.routeName, isNull);
     });
   });
 }

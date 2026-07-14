@@ -107,7 +107,7 @@ final class ApiTraceConfig {
     this.flowGroupGap = const Duration(seconds: 2),
     this.draggableFab = true,
     this.panelMaxHeight = 600.0,
-    this.panelMinHeight = 120.0,
+    this.panelMinHeight = 360.0,
   });
 
   /// Maximum gap between two consecutive records before the
@@ -133,6 +133,9 @@ final class ApiTraceConfig {
 
   /// Minimum height of the timeline panel in logical pixels.
   /// The panel cannot be resized below this value when the
-  /// drag handle is used. Default 120.
+  /// drag handle is used; it is also the floor used by the
+  /// default (unresized) panel height computation. Default 360
+  /// — tall enough to fit the tab bar, header, and filter row
+  /// chrome with room left for at least one visible record.
   final double panelMinHeight;
 }

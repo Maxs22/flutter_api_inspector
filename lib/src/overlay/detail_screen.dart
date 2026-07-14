@@ -30,10 +30,17 @@ import 'package:flutter_api_inspector/src/overlay/theme.dart';
 /// The read-only detail screen for a single `ApiTraceRecord`.
 class ApiTraceDetailScreen extends StatelessWidget {
   /// Creates the detail screen for [record].
-  const ApiTraceDetailScreen({super.key, required this.record});
+  ///
+  /// [onBack] is called when the user taps the back button. When
+  /// null (default), uses `Navigator.of(context).pop()`.
+  const ApiTraceDetailScreen({super.key, required this.record, this.onBack});
 
   /// The record to display.
   final ApiTraceRecord record;
+
+  /// Optional callback for back navigation. When null, uses
+  /// `Navigator.of(context).pop()`.
+  final VoidCallback? onBack;
 
   @override
   Widget build(BuildContext context) {
@@ -42,7 +49,10 @@ class ApiTraceDetailScreen extends StatelessWidget {
     return Scaffold(
       backgroundColor: inspectorPanelBackground(context),
       appBar: AppBar(
-        leading: BackButton(color: tint),
+        leading: IconButton(
+          icon: Icon(Icons.arrow_back_rounded, color: tint),
+          onPressed: onBack ?? () => Navigator.of(context).pop(),
+        ),
         titleSpacing: 0,
         title: Row(
           children: <Widget>[

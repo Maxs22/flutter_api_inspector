@@ -1,20 +1,27 @@
 // Example app for the flutter_api_inspector package.
 //
-// This app demonstrates manual API instrumentation via [ApiTrace.call].
-// Two buttons are exposed:
+// This app demonstrates manual API instrumentation via [ApiTrace.call]
+// across TWO screens, so the overlay's "Routes" tab has more than one
+// group to show (TASK-RS-010, route-scoped-network-inspector).
 //
-//   * **Run stub call** — synchronous, returns a fake [ApiTraceResponse]
-//     with `statusCode == 200`. Works offline and is deterministic in
-//     both debug and release builds.
-//   * **Run real call to httpbin** — one real call to
-//     `https://httpbin.org/get` using `dart:io`'s [HttpClient]
-//     directly (no `package:http`, no `package:dio`). The button is
-//     gated by [kDebugMode] and is hidden in release builds so the
-//     example is deterministic offline.
+//   * **Home screen** (`/home`) — has a stub call button and a button
+//     that navigates to the Detail screen.
+//   * **Detail screen** (`/detail`) — has its own stub call button and
+//     (debug-only) a real call to `https://httpbin.org/get`.
 //
-// The app is wrapped with [ApiTrace.runApp] so the debug-only
-// overlay (floating action button + timeline panel + detail screen)
-// mounts automatically under [kDebugMode].
+// Both screens tag their `ApiTrace.call` with the active [RouteScope]
+// (`routeScopeId` + `routeName` in `extra`), the same convention the
+// package's own `TracedDioInterceptor` / `TracedHttpOverrides` use
+// internally. This is the documented pattern for apps that use manual
+// instrumentation (per `openspec/AGENTS.md` rule 7 — no auto-interceptor
+// in this example) but still want their calls grouped by screen in the
+// "Routes" tab: read `RouteScope.current` at the call site and forward
+// it through `extra`.
+//
+// The app is wrapped with [ApiTrace.runApp], which auto-injects
+// [RouteScopeObserver] into the `MaterialApp`'s `navigatorObservers`
+// (debug-only), so both screens' visits are tracked automatically —
+// no extra setup needed beyond naming the routes.
 //
 // Run: `flutter run` from the `example/` directory.
 
@@ -28,7 +35,9 @@ void main() => ApiTrace.runApp(const ExampleApp());
 
 /// The root [MaterialApp] of the example.
 ///
-/// The home screen ([_ExampleHome]) exposes the two trace buttons.
+/// Uses named routes (`/home`, `/detail`) so [RouteScope.current.routeName]
+/// resolves to a readable label instead of falling back to
+/// `route.runtimeType.toString()`.
 class ExampleApp extends StatelessWidget {
   const ExampleApp({super.key});
 
@@ -40,19 +49,52 @@ class ExampleApp extends StatelessWidget {
         colorSchemeSeed: Colors.indigo,
         useMaterial3: true,
       ),
-      home: const _ExampleHome(),
+      initialRoute: '/home',
+      routes: <String, WidgetBuilder>{
+        '/home': (_) => const _HomeScreen(),
+        '/detail': (_) => const _DetailScreen(),
+      },
     );
   }
 }
 
-class _ExampleHome extends StatelessWidget {
-  const _ExampleHome();
+/// Builds the `extra` map that tags an `ApiTrace.call` with the route
+/// active at dispatch time — the manual-instrumentation equivalent of
+/// what `TracedDioInterceptor` / `TracedHttpOverrides` do automatically.
+/// Returns an empty map if route-scope tracking is inactive (e.g. a
+/// release build, where [RouteScope.current] is always null).
+Map<String, Object?> _routeScopeExtra() {
+  final scope = RouteScope.current;
+  return <String, Object?>{
+    if (scope != null) 'routeScopeId': scope.scopeId,
+    if (scope != null) 'routeName': scope.routeName,
+  };
+}
+
+class _HomeScreen extends StatelessWidget {
+  const _HomeScreen();
+
+  Future<void> _runStubCall(BuildContext context) async {
+    final messenger = ScaffoldMessenger.of(context);
+    final id = await ApiTrace.call(
+      'home.stub',
+      method: 'GET',
+      url: Uri.parse('https://example.com/home/stub'),
+      extra: _routeScopeExtra(),
+      execute: () async {
+        return const ApiTraceResponse(statusCode: 200);
+      },
+    );
+    messenger.showSnackBar(
+      SnackBar(content: Text('Home stub call recorded: id=$id')),
+    );
+  }
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: const Text('flutter_api_inspector example'),
+        title: const Text('Home'),
       ),
       body: Center(
         child: Column(
@@ -61,59 +103,55 @@ class _ExampleHome extends StatelessWidget {
             const Padding(
               padding: EdgeInsets.all(16),
               child: Text(
-                'Tap a button to record an API call.\n'
-                'The debug-only overlay (FAB) appears automatically in debug builds.',
+                'Tap a button to record an API call, then open the '
+                'debug-only overlay (FAB) and check the "Routes" tab.',
                 textAlign: TextAlign.center,
               ),
             ),
             const SizedBox(height: 16),
             ElevatedButton.icon(
-              key: const Key('stub-button'),
+              key: const Key('home-stub-button'),
               icon: const Icon(Icons.bug_report),
               label: const Text('Run stub call'),
               onPressed: () => _runStubCall(context),
             ),
             const SizedBox(height: 12),
-            // The Real button is hidden in release builds. The
-            // kDebugMode gate keeps the example deterministic
-            // offline (per the task brief: "gated by kDebugMode").
-            if (kDebugMode) ...<Widget>[
-              ElevatedButton.icon(
-                key: const Key('real-button'),
-                icon: const Icon(Icons.cloud),
-                label: const Text('Run real call to httpbin'),
-                onPressed: () => _runRealCall(context),
-              ),
-            ],
+            ElevatedButton.icon(
+              key: const Key('go-to-detail-button'),
+              icon: const Icon(Icons.arrow_forward),
+              label: const Text('Go to Detail screen'),
+              onPressed: () => Navigator.of(context).pushNamed('/detail'),
+            ),
           ],
         ),
       ),
     );
   }
+}
+
+class _DetailScreen extends StatelessWidget {
+  const _DetailScreen();
 
   Future<void> _runStubCall(BuildContext context) async {
     final messenger = ScaffoldMessenger.of(context);
     final id = await ApiTrace.call(
-      'stub',
+      'detail.orders',
       method: 'GET',
-      url: Uri.parse('https://example.com/stub'),
-      // The default config (details: {minimal, response}) applies:
-      // status, duration, and the response body are recorded. The
-      // stub returns no body, so only status/duration show up.
-      // The id is returned so the call site can correlate logs.
+      url: Uri.parse('https://example.com/detail/orders'),
+      extra: _routeScopeExtra(),
       execute: () async {
         return const ApiTraceResponse(statusCode: 200);
       },
     );
     messenger.showSnackBar(
-      SnackBar(content: Text('Stub call recorded: id=$id')),
+      SnackBar(content: Text('Detail stub call recorded: id=$id')),
     );
   }
 
   Future<void> _runRealCall(BuildContext context) async {
     final messenger = ScaffoldMessenger.of(context);
     final id = await ApiTrace.call(
-      'httpbin.get',
+      'detail.httpbin.get',
       method: 'GET',
       url: Uri.parse('https://httpbin.org/get'),
       // Widen the capture to {headers, response} so the overlay
@@ -122,6 +160,7 @@ class _ExampleHome extends StatelessWidget {
         ApiTraceDetail.headers,
         ApiTraceDetail.response,
       },
+      extra: _routeScopeExtra(),
       execute: () async {
         // Use dart:io's HttpClient directly — no package:http,
         // no package:dio (per AGENTS.md rule 7).
@@ -146,7 +185,50 @@ class _ExampleHome extends StatelessWidget {
       },
     );
     messenger.showSnackBar(
-      SnackBar(content: Text('Real call recorded: id=$id')),
+      SnackBar(content: Text('Detail real call recorded: id=$id')),
+    );
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      appBar: AppBar(
+        title: const Text('Detail'),
+      ),
+      body: Center(
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: <Widget>[
+            const Padding(
+              padding: EdgeInsets.all(16),
+              child: Text(
+                'This screen\'s calls show up under a separate '
+                '"Detail" group in the Routes tab.',
+                textAlign: TextAlign.center,
+              ),
+            ),
+            const SizedBox(height: 16),
+            ElevatedButton.icon(
+              key: const Key('detail-stub-button'),
+              icon: const Icon(Icons.bug_report),
+              label: const Text('Run stub call'),
+              onPressed: () => _runStubCall(context),
+            ),
+            const SizedBox(height: 12),
+            // The Real button is hidden in release builds. The
+            // kDebugMode gate keeps the example deterministic
+            // offline (per the task brief: "gated by kDebugMode").
+            if (kDebugMode) ...<Widget>[
+              ElevatedButton.icon(
+                key: const Key('detail-real-button'),
+                icon: const Icon(Icons.cloud),
+                label: const Text('Run real call to httpbin'),
+                onPressed: () => _runRealCall(context),
+              ),
+            ],
+          ],
+        ),
+      ),
     );
   }
 }

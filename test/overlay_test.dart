@@ -14,10 +14,12 @@
 
 import 'package:flutter/foundation.dart' show kDebugMode, kReleaseMode;
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_api_inspector/flutter_api_inspector.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:flutter_api_inspector/src/overlay/colors.dart';
 import 'package:flutter_api_inspector/src/overlay/fab_position.dart';
+import 'package:flutter_api_inspector/src/overlay/route_tree_tab.dart';
 import 'package:flutter_api_inspector/src/overlay/theme.dart';
 import 'package:flutter_api_inspector/src/overlay/timeline_row.dart';
 import 'package:flutter_api_inspector/src/overlay/timeline_panel.dart';
@@ -136,8 +138,7 @@ void main() {
       );
     }
 
-    testWidgets('renders the bolt icon (REQ-UI-004 default)',
-        (tester) async {
+    testWidgets('renders the bolt icon (REQ-UI-004 default)', (tester) async {
       // RED: import target missing for `fab.dart`.
       await tester.pumpWidget(host(
         ApiTraceFab(
@@ -1331,8 +1332,7 @@ void main() {
       expect(errorDot(), findsNothing);
     });
 
-    testWidgets('tapping outside the panel closes it (scrim)',
-        (tester) async {
+    testWidgets('tapping outside the panel closes it (scrim)', (tester) async {
       await _pumpAppWithOverlay(tester);
       await tester.tap(find.byType(FloatingActionButton));
       await tester.pumpAndSettle();
@@ -1344,8 +1344,7 @@ void main() {
       expect(find.byKey(const ValueKey('inspectorPanel')), findsNothing);
     });
 
-    testWidgets('the header close (X) button closes the panel',
-        (tester) async {
+    testWidgets('the header close (X) button closes the panel', (tester) async {
       await _pumpAppWithOverlay(tester);
       await tester.tap(find.byType(FloatingActionButton));
       await tester.pumpAndSettle();
@@ -1354,6 +1353,401 @@ void main() {
       await tester.tap(find.byIcon(Icons.close_rounded));
       await tester.pumpAndSettle();
       expect(find.byKey(const ValueKey('inspectorPanel')), findsNothing);
+    });
+  });
+
+  group('RouteTreeTab widget (REQ-RS-005, REQ-RS-006, TASK-RS-007)', () {
+    setUp(() {
+      RouteScope.dispose();
+      RouteScope.init();
+    });
+
+    tearDown(() {
+      RouteScope.dispose();
+    });
+
+    Route<void> pushRoute(String name) {
+      final route = MaterialPageRoute<void>(
+        builder: (_) => const SizedBox.shrink(),
+        settings: RouteSettings(name: name),
+      );
+      RouteScope.onPush(route);
+      return route;
+    }
+
+    ApiTraceRecord scopedRecord({
+      required String name,
+      required int? routeScopeId,
+      ApiTraceOutcome outcome = ApiTraceOutcome.success,
+    }) {
+      final start = DateTime(2026, 1, 1, 0, 0, 0);
+      return ApiTraceRecord(
+        id: 'id-$name',
+        name: name,
+        startedAt: start,
+        completedAt: start.add(const Duration(milliseconds: 10)),
+        method: 'GET',
+        url: Uri.parse('https://api.example.com/$name'),
+        statusCode: outcome == ApiTraceOutcome.error ? 500 : 200,
+        duration: const Duration(milliseconds: 10),
+        outcome: outcome,
+        capturedDetails: const <ApiTraceDetail>{ApiTraceDetail.minimal},
+        request: null,
+        response: null,
+        error: null,
+        extra: <String, Object?>{
+          if (routeScopeId != null) 'routeScopeId': routeScopeId,
+        },
+      );
+    }
+
+    Widget host(Widget child) {
+      return MaterialApp(
+        home: Scaffold(
+          body: SizedBox(width: 400, height: 600, child: child),
+        ),
+      );
+    }
+
+    testWidgets(
+        'shows a tree of visited routes indented by depth '
+        '(spec scenario: Route tree shows visited routes)', (tester) async {
+      // RED: import target missing / tree not built from
+      // RouteScope.entries — none of A/B/C would render.
+      pushRoute('A');
+      pushRoute('B');
+      pushRoute('C');
+
+      await tester.pumpWidget(host(RouteTreeTab(
+        records: const <ApiTraceRecord>[],
+        onScopeSelected: (_) {},
+      )));
+
+      expect(find.text('A'), findsOneWidget);
+      expect(find.text('B'), findsOneWidget);
+      expect(find.text('C'), findsOneWidget);
+
+      final xA = tester.getTopLeft(find.text('A')).dx;
+      final xB = tester.getTopLeft(find.text('B')).dx;
+      final xC = tester.getTopLeft(find.text('C')).dx;
+      expect(xA, lessThan(xB));
+      expect(xB, lessThan(xC));
+    });
+
+    testWidgets('tapping a route fires onScopeSelected with that entry',
+        (tester) async {
+      pushRoute('A');
+
+      RouteScopeEntry? selected;
+      await tester.pumpWidget(host(RouteTreeTab(
+        records: const <ApiTraceRecord>[],
+        onScopeSelected: (RouteScopeEntry? entry) => selected = entry,
+      )));
+
+      await tester.tap(find.text('A'));
+      await tester.pumpAndSettle();
+
+      expect(selected, isNotNull);
+      expect(selected!.routeName, equals('A'));
+    });
+
+    testWidgets(
+        'the Clear button fires onScopeSelected(null) '
+        '(spec scenario: Clear resets filter)', (tester) async {
+      pushRoute('A');
+      final scopeId = RouteScope.current!.scopeId;
+
+      var calledWithNull = false;
+      await tester.pumpWidget(host(RouteTreeTab(
+        records: const <ApiTraceRecord>[],
+        selectedScopeId: scopeId,
+        onScopeSelected: (RouteScopeEntry? entry) {
+          calledWithNull = entry == null;
+        },
+      )));
+
+      await tester.tap(find.text('Clear'));
+      await tester.pumpAndSettle();
+
+      expect(calledWithNull, isTrue);
+    });
+
+    testWidgets(
+        'the RouteScope.current route is highlighted even with no '
+        'filter selected (spec scenario: Active route is highlighted)',
+        (tester) async {
+      // RED: RouteTreeTab only bolds a row when it matches
+      // selectedScopeId (the tap-to-filter state); with no filter
+      // active, neither row is bold, so this assertion on B's
+      // fontWeight fails until an "is this the live RouteScope.current
+      // route" concept is added to the row.
+      pushRoute('A');
+      pushRoute('B');
+      // RouteScope.current is now B; no filter (selectedScopeId) is set.
+
+      await tester.pumpWidget(host(RouteTreeTab(
+        records: const <ApiTraceRecord>[],
+        onScopeSelected: (_) {},
+      )));
+
+      final textB = tester.widget<Text>(find.text('B'));
+      final textA = tester.widget<Text>(find.text('A'));
+      expect(textB.style?.fontWeight, equals(FontWeight.w700));
+      expect(textA.style?.fontWeight, isNot(equals(FontWeight.w700)));
+    });
+
+    testWidgets(
+        'TRIANGULATE: call count and error count badges reflect the '
+        'records tagged to that scope', (tester) async {
+      pushRoute('A');
+      final scopeId = RouteScope.current!.scopeId;
+
+      await tester.pumpWidget(host(RouteTreeTab(
+        records: <ApiTraceRecord>[
+          scopedRecord(name: 'r1', routeScopeId: scopeId),
+          scopedRecord(name: 'r2', routeScopeId: scopeId),
+          scopedRecord(
+            name: 'r3',
+            routeScopeId: scopeId,
+            outcome: ApiTraceOutcome.error,
+          ),
+        ],
+        onScopeSelected: (_) {},
+      )));
+
+      expect(find.text('3'), findsOneWidget);
+      expect(find.text('!1'), findsOneWidget);
+    });
+
+    testWidgets('TRIANGULATE: an empty RouteScope shows a friendly '
+        'empty state', (tester) async {
+      await tester.pumpWidget(host(RouteTreeTab(
+        records: const <ApiTraceRecord>[],
+        onScopeSelected: (_) {},
+      )));
+
+      expect(find.textContaining('No routes tracked'), findsOneWidget);
+    });
+  });
+
+  group('TimelinePanel scope filter (REQ-RS-006, TASK-RS-008)', () {
+    ApiTraceRecord scopedRecord({
+      required String name,
+      required int? routeScopeId,
+      DateTime? startedAt,
+    }) {
+      final start = startedAt ?? DateTime(2026, 1, 1, 0, 0, 0);
+      return ApiTraceRecord(
+        id: 'id-$name',
+        name: name,
+        startedAt: start,
+        completedAt: start.add(const Duration(milliseconds: 10)),
+        method: 'GET',
+        url: Uri.parse('https://api.example.com/$name'),
+        statusCode: 200,
+        duration: const Duration(milliseconds: 10),
+        outcome: ApiTraceOutcome.success,
+        capturedDetails: const <ApiTraceDetail>{ApiTraceDetail.minimal},
+        request: null,
+        response: null,
+        error: null,
+        extra: <String, Object?>{
+          if (routeScopeId != null) 'routeScopeId': routeScopeId,
+        },
+      );
+    }
+
+    Widget panelHost(
+      List<ApiTraceRecord> records, {
+      bool Function(ApiTraceRecord)? scopeFilter,
+      RouteScopeEntry? scopeEntry,
+    }) {
+      return MaterialApp(
+        home: Scaffold(
+          body: SizedBox(
+            width: 400,
+            height: 800,
+            child: TimelinePanel(
+              records: List<ApiTraceRecord>.unmodifiable(records),
+              onTap: (ApiTraceRecord _) {},
+              scopeFilter: scopeFilter,
+              scopeEntry: scopeEntry,
+            ),
+          ),
+        ),
+      );
+    }
+
+    testWidgets(
+        'scopeFilter narrows the rendered records to the matching '
+        'scope (spec scenario: Tapping a route filters the timeline)',
+        (tester) async {
+      // RED: with `scopeFilter` not applied inside `_applyFilters`,
+      // all 10 records render regardless of the predicate.
+      final records = <ApiTraceRecord>[
+        for (var i = 0; i < 4; i++) scopedRecord(name: 'a$i', routeScopeId: 1),
+        for (var i = 0; i < 6; i++) scopedRecord(name: 'b$i', routeScopeId: 2),
+      ];
+      await tester.pumpWidget(panelHost(
+        records,
+        scopeFilter: (ApiTraceRecord r) => r.routeScopeId == 1,
+      ));
+
+      for (var i = 0; i < 4; i++) {
+        expect(find.text('a$i'), findsOneWidget);
+      }
+      for (var i = 0; i < 6; i++) {
+        expect(find.text('b$i'), findsNothing);
+      }
+    });
+
+    testWidgets(
+        'TRIANGULATE: a null scopeFilter preserves existing behavior '
+        '(all records shown)', (tester) async {
+      final records = <ApiTraceRecord>[
+        scopedRecord(name: 'x', routeScopeId: 1),
+        scopedRecord(name: 'y', routeScopeId: 2),
+      ];
+      await tester.pumpWidget(panelHost(records));
+      expect(find.text('x'), findsOneWidget);
+      expect(find.text('y'), findsOneWidget);
+    });
+
+    testWidgets(
+        'relative timestamp is shown when scopeEntry is set '
+        '(spec scenario: Relative timestamp shown when filtered)',
+        (tester) async {
+      final enteredAt = DateTime(2026, 1, 1, 12, 0, 0);
+      final scopeEntry = RouteScopeEntry(
+        scopeId: 1,
+        routeName: 'A',
+        enteredAt: enteredAt,
+      );
+      final records = <ApiTraceRecord>[
+        scopedRecord(
+          name: 'r1',
+          routeScopeId: 1,
+          startedAt: enteredAt.add(const Duration(milliseconds: 500)),
+        ),
+      ];
+      await tester.pumpWidget(panelHost(
+        records,
+        scopeFilter: (ApiTraceRecord r) => r.routeScopeId == 1,
+        scopeEntry: scopeEntry,
+      ));
+
+      expect(find.text('+500ms'), findsOneWidget);
+    });
+
+    testWidgets(
+        'absolute timestamp remains when scopeEntry is null '
+        '(spec scenario: Absolute timestamp when unfiltered)',
+        (tester) async {
+      final records = <ApiTraceRecord>[
+        scopedRecord(name: 'r1', routeScopeId: null),
+      ];
+      await tester.pumpWidget(panelHost(records));
+      expect(find.text('+500ms'), findsNothing);
+    });
+  });
+
+  group('Export per route (REQ-RS-007)', () {
+    setUp(() {
+      RouteScope.dispose();
+      RouteScope.init();
+      ApiTrace.enabled = true;
+      ApiTrace.config = const ApiTraceConfig();
+      ApiTrace.timeline.clear();
+    });
+
+    tearDown(() {
+      RouteScope.dispose();
+    });
+
+    testWidgets(
+        'Copy as cURL exports only the filtered records with the '
+        'route header (spec scenario: Export respects route filter)',
+        (tester) async {
+      // RED: with the export button wired to the full timeline
+      // instead of the scope-filtered subset, the clipboard would
+      // contain all 6 calls (and no route header) instead of 4.
+      String? clipboardText;
+      tester.binding.defaultBinaryMessenger.setMockMethodCallHandler(
+        SystemChannels.platform,
+        (MethodCall call) async {
+          if (call.method == 'Clipboard.setData') {
+            clipboardText =
+                (call.arguments as Map<dynamic, dynamic>)['text'] as String?;
+          }
+          return null;
+        },
+      );
+      addTearDown(() {
+        tester.binding.defaultBinaryMessenger
+            .setMockMethodCallHandler(SystemChannels.platform, null);
+      });
+
+      RouteScope.onPush(MaterialPageRoute<void>(
+        builder: (_) => const SizedBox.shrink(),
+        settings: const RouteSettings(name: 'A'),
+      ));
+      final scopeId = RouteScope.current!.scopeId;
+
+      for (var i = 0; i < 4; i++) {
+        await ApiTrace.call(
+          'callA$i',
+          method: 'GET',
+          url: Uri.parse('https://api.example.com/a$i'),
+          execute: () async => const ApiTraceResponse(statusCode: 200),
+          extra: <String, Object?>{'routeScopeId': scopeId, 'routeName': 'A'},
+        );
+      }
+      for (var i = 0; i < 2; i++) {
+        await ApiTrace.call(
+          'other$i',
+          method: 'GET',
+          url: Uri.parse('https://api.example.com/other$i'),
+          execute: () async => const ApiTraceResponse(statusCode: 200),
+        );
+      }
+
+      await tester.pumpWidget(MaterialApp(
+        home: Scaffold(
+          body: SizedBox(
+            width: 400,
+            height: 800,
+            child: Stack(
+              children: <Widget>[
+                ApiTraceOverlay(
+                  config: const ApiTraceConfig(),
+                  records: ApiTrace.timeline.records,
+                ),
+              ],
+            ),
+          ),
+        ),
+      ));
+
+      await tester.tap(find.byType(FloatingActionButton));
+      await tester.pumpAndSettle();
+
+      // Switch to the Routes tab and tap route A to activate the filter.
+      await tester.tap(find.text('Routes'));
+      await tester.pumpAndSettle();
+      await tester.tap(find.text('A'));
+      await tester.pumpAndSettle();
+
+      // Switch back to Timeline and tap the export icon.
+      await tester.tap(find.text('Timeline'));
+      await tester.pumpAndSettle();
+      await tester.tap(find.byIcon(Icons.file_download_rounded).first);
+      await tester.pumpAndSettle();
+
+      expect(clipboardText, isNotNull);
+      expect(clipboardText, startsWith('// Route: A (scopeId: $scopeId)'));
+      final curlCount = 'curl -X GET'.allMatches(clipboardText!).length;
+      expect(curlCount, equals(4));
+      expect(clipboardText, isNot(contains('other')));
     });
   });
 }

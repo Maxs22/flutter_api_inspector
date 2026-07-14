@@ -3,6 +3,14 @@
 [![Flutter](https://img.shields.io/badge/Flutter-%3E%3D3.27.0-blue.svg)](https://flutter.dev)
 [![Dart](https://img.shields.io/badge/Dart-%3E%3D3.6.0-blue.svg)](https://dart.dev)
 
+<p align="center">
+  <img src="https://raw.githubusercontent.com/Maxs22/flutter_api_inspector/main/assets/demo.gif"
+       alt="flutter_api_inspector demo"
+       width="360">
+  <br>
+  <em>FAB → Timeline → Request detail — all inside your running debug app.</em>
+</p>
+
 Debug-only in-app overlay that intercepts HTTP traffic and shows a
 live timeline with status codes, durations, and response bodies —
 without leaving the app, without proxy certificates, and without

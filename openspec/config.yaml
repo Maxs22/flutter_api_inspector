@@ -141,30 +141,14 @@ quality:
       framework: "dart format"
 
 # --- Active change -----------------------------------------------------------
-# No active change in flight as of 2026-06-24. The flutter_api_inspector-mvp
-# change was archived on 2026-06-24; its 4 chained PRs are merged to main and
-# its delta specs are promoted to openspec/specs/ as the canonical spec layer.
-# The historical record lives at:
-#   openspec/changes/archive/flutter_api_inspector-mvp/
-# The full archive report is at:
-#   openspec/changes/archive/flutter_api_inspector-mvp/archive-report.md
-#
-# To start a new change, run sdd-proposal; the new change will create a
-# fresh openspec/changes/<name>/ directory and set active_change to the new
-# name. Do not start sdd-archive on a non-existent active change; this field
-# is the source of truth for the sdd-status engine.
-#
-# Historical snapshot of the closed flutter_api_inspector-mvp chained PRs
-# (kept for traceability; not used by the sdd-status engine):
-#
-#   PR 1 (TASK-001..012) — skeleton + model — merged to main (head 76482ec)
-#   PR 2 (TASK-013..017) — instrumentation API — merged to main (head 158e188)
-#   PR 3 (TASK-018..025) — overlay UI — merged to main (head 284d00c)
-#   PR 4 (TASK-026..030) — example + acceptance — merged to main (squash at 1ab13eb; post-merge re-verify at b7ee9b0)
-#
-# Out of band: TASK-028 release-build smoke test recorded at PR 4;
-# iOS path verification deferred to a CI runner with Xcode.
-active_change: null
-# active_change_strategy / active_change_branch / active_change_chained_prs
-# were removed when the change was archived on 2026-06-24. They will be
-# re-introduced by the next sdd-proposal that creates a new active change.
+# Active change: route-scoped-network-inspector (verified GREEN-WITH-MINOR,
+# ready for sdd-archive). Created 2026-07-13. All 10 tasks (TASK-RS-001..010)
+# checked off with TDD/verification evidence: 237/237 tests pass, `flutter
+# analyze` clean, release APK confirmed to tree-shake all route-scope
+# symbols. sdd-verify (2026-07-14) found 0 CRITICAL, 5 WARNING (see
+# verify-report.md); the PR-size-budget warning was resolved by switching
+# from 2 chained PRs to a single PR (team decision 2026-07-14, nothing was
+# committed yet at that point).
+active_change: route-scoped-network-inspector
+active_change_strategy: single-pr
+active_change_branch: feat/route-scoped-network-inspector

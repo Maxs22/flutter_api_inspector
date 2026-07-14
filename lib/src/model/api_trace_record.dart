@@ -232,3 +232,18 @@ ApiTraceOutcome _deriveOutcome({
   if (code >= 400 && code < 600) return ApiTraceOutcome.error;
   return ApiTraceOutcome.success;
 }
+
+/// Extension on [ApiTraceRecord] that provides convenience accessors
+/// for route-scope data stored in the `extra` map.
+///
+/// Zero breaking change: the `extra` map already exists on every
+/// record; these getters merely unpack it (REQ-RS-005).
+extension ApiTraceRecordScope on ApiTraceRecord {
+  /// The route-scope ID of the screen active when this request was
+  /// dispatched, or `null` if route-scope tracking was not active.
+  int? get routeScopeId => extra['routeScopeId'] as int?;
+
+  /// The route name of the screen active when this request was
+  /// dispatched, or `null` if route-scope tracking was not active.
+  String? get routeName => extra['routeName'] as String?;
+}

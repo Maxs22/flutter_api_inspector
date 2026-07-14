@@ -23,7 +23,8 @@ library;
 
 // --- Model layer (PR 1) -----------------------------------------------------
 export 'src/detail.dart' show ApiTraceDetail;
-export 'src/model/api_trace_record.dart' show ApiTraceRecord;
+export 'src/model/api_trace_record.dart'
+    show ApiTraceRecord, ApiTraceRecordScope;
 export 'src/model/api_trace_request.dart' show ApiTraceRequest;
 export 'src/model/api_trace_response.dart' show ApiTraceResponse;
 export 'src/outcome.dart' show ApiTraceOutcome;
@@ -38,6 +39,14 @@ export 'src/bootstrap.dart' show ApiTraceBootstrap;
 export 'src/overlay/api_trace_overlay.dart' show ApiTraceOverlay;
 export 'src/overlay/detail_screen.dart' show ApiTraceDetailScreen;
 export 'src/overlay/fab.dart' show ApiTraceFab;
+
+// --- Route-scoped network inspector (route-scoped-network-inspector) -------
+// `RouteScopeObserver` MUST be public: `MaterialApp.router` users add it to
+// their router's `observers` list manually (design.md section 2); it cannot
+// be auto-injected for router-based apps the way `BootstrapMaterialAppHarness`
+// does for `MaterialApp`.
+export 'src/route_scope.dart' show RouteScope, RouteScopeEntry;
+export 'src/route_scope_observer.dart' show RouteScopeObserver;
 
 // --- Automatic interceptors -------------------------------------------------
 export 'interceptor/dio_interceptor.dart' show TracedDioInterceptor;

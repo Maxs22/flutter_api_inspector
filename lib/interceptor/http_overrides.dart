@@ -46,6 +46,7 @@ import 'package:flutter_api_inspector/src/api_trace.dart';
 import 'package:flutter_api_inspector/src/detail.dart';
 import 'package:flutter_api_inspector/src/interceptor_coordination.dart';
 import 'package:flutter_api_inspector/src/model/api_trace_response.dart';
+import 'package:flutter_api_inspector/src/route_scope.dart';
 
 /// [HttpOverrides] that returns a [TracedHttpClient] for every
 /// `createHttpClient` call. Install once at process start:
@@ -112,12 +113,21 @@ class TracedHttpClient implements HttpClient {
       return _inner.openUrl(method, url);
     }
     final completer = Completer<ApiTraceResponse>();
+
+    // Tag with the current route scope (REQ-RS-003).
+    final scope = RouteScope.current;
+    final taggedExtra = <String, Object?>{
+      if (scope != null) 'routeScopeId': scope.scopeId,
+      if (scope != null) 'routeName': scope.routeName,
+    };
+
     unawaited(
       ApiTrace.call(
         _label(method, url),
         method: method,
         url: url,
         execute: () => completer.future,
+        extra: taggedExtra,
       ),
     );
     final request = await _inner.openUrl(method, url);
@@ -250,8 +260,8 @@ class _TracedHttpClientRequest implements HttpClientRequest {
     final int remaining =
         ApiTrace.config.maxResponseBodyBytes - _requestBodyBuffer.length;
     if (remaining <= 0) return;
-    _requestBodyBuffer.addAll(
-        data.length <= remaining ? data : data.sublist(0, remaining));
+    _requestBodyBuffer
+        .addAll(data.length <= remaining ? data : data.sublist(0, remaining));
   }
 
   /// Closes the request, buffers the full response body (if detail level
@@ -313,9 +323,8 @@ class _TracedHttpClientRequest implements HttpClientRequest {
         replayChunks.add(chunk);
         final int remaining = limit - captureBuffer.length;
         if (remaining > 0) {
-          captureBuffer.addAll(chunk.length <= remaining
-              ? chunk
-              : chunk.sublist(0, remaining));
+          captureBuffer.addAll(
+              chunk.length <= remaining ? chunk : chunk.sublist(0, remaining));
         }
       }
 
@@ -407,6 +416,7 @@ class _TracedHttpClientRequest implements HttpClientRequest {
     write(object);
     write('\n');
   }
+
   @override
   HttpHeaders get headers => _inner.headers;
   @override

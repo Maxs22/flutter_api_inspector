@@ -224,4 +224,71 @@ void main() {
       expect(r.duration, equals(Duration.zero));
     });
   });
+
+  group(
+      'ApiTraceRecordScope extension — routeScopeId / routeName '
+      '(REQ-RS-004, TASK-RS-005)', () {
+    test(
+        'routeScopeId and routeName are accessible via convenience '
+        'getters (spec scenario)', () {
+      // RED: with the extension's getters removed, the analyzer
+      // rejects `.routeScopeId` / `.routeName` entirely (they are
+      // not defined on ApiTraceRecord); with the getters present
+      // but reading the wrong key, the values below would not match.
+      final r = makeRecord();
+      final tagged = ApiTraceRecord(
+        id: r.id,
+        name: r.name,
+        startedAt: r.startedAt,
+        completedAt: r.completedAt,
+        method: r.method,
+        url: r.url,
+        statusCode: r.statusCode,
+        duration: r.duration,
+        outcome: r.outcome,
+        capturedDetails: r.capturedDetails,
+        request: r.request,
+        response: r.response,
+        error: r.error,
+        extra: <String, Object?>{'routeScopeId': 1, 'routeName': 'A'},
+      );
+      expect(tagged.routeScopeId, equals(1));
+      expect(tagged.routeName, equals('A'));
+    });
+
+    test('legacy records (no scope data) return null without throwing', () {
+      // A record captured before RouteScope was active (or by an
+      // older version of the package) has no routeScopeId/routeName
+      // keys in `extra`. The getters must return null, not throw.
+      final r = makeRecord();
+      expect(r.extra.containsKey('routeScopeId'), isFalse);
+      expect(() => r.routeScopeId, returnsNormally);
+      expect(r.routeScopeId, isNull);
+      expect(r.routeName, isNull);
+    });
+
+    test(
+        'TRIANGULATE: a record tagged with only routeScopeId (no '
+        'routeName) still returns null for the missing key', () {
+      final r = makeRecord();
+      final partiallyTagged = ApiTraceRecord(
+        id: r.id,
+        name: r.name,
+        startedAt: r.startedAt,
+        completedAt: r.completedAt,
+        method: r.method,
+        url: r.url,
+        statusCode: r.statusCode,
+        duration: r.duration,
+        outcome: r.outcome,
+        capturedDetails: r.capturedDetails,
+        request: r.request,
+        response: r.response,
+        error: r.error,
+        extra: <String, Object?>{'routeScopeId': 7},
+      );
+      expect(partiallyTagged.routeScopeId, equals(7));
+      expect(partiallyTagged.routeName, isNull);
+    });
+  });
 }

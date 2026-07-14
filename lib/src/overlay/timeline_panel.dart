@@ -26,6 +26,7 @@ import 'package:flutter_api_inspector/src/outcome.dart';
 import 'package:flutter_api_inspector/src/overlay/theme.dart';
 import 'package:flutter_api_inspector/src/overlay/timeline_group_header.dart';
 import 'package:flutter_api_inspector/src/overlay/timeline_row.dart';
+import 'package:flutter_api_inspector/src/route_scope.dart';
 
 /// The three filter modes the panel supports.
 enum _PanelFilter {
@@ -58,6 +59,9 @@ class TimelinePanel extends StatefulWidget {
     this.config = const ApiTraceConfig(),
     this.onClear,
     this.onClose,
+    this.onExport,
+    this.scopeFilter,
+    this.scopeEntry,
   });
 
   /// The records to render. The panel treats this list as
@@ -82,6 +86,22 @@ class TimelinePanel extends StatefulWidget {
   /// omit it).
   final VoidCallback? onClose;
 
+  /// Optional callback fired when the user taps the export button.
+  /// When null, the export button is hidden.
+  /// The callback receives the list of records to export (filtered
+  /// by scope if active, otherwise all records).
+  final void Function(List<ApiTraceRecord>)? onExport;
+
+  /// Optional filter predicate. When set, the timeline shows only
+  /// records for which this predicate returns true (REQ-RS-005).
+  final bool Function(ApiTraceRecord)? scopeFilter;
+
+  /// When [scopeFilter] is set, the route-scope entry that the
+  /// filter corresponds to. Used to render relative timestamps
+  /// (`+500ms`) relative to this entry's [RouteScopeEntry.enteredAt]
+  /// (REQ-RS-006).
+  final RouteScopeEntry? scopeEntry;
+
   @override
   State<TimelinePanel> createState() => _TimelinePanelState();
 }
@@ -97,6 +117,22 @@ class _TimelinePanelState extends State<TimelinePanel> {
   /// panel owns this state; the group headers are expanded by
   /// default.
   final Set<int> _collapsed = <int>{};
+
+  /// Formats a [Duration] as a relative timestamp for the route-scope
+  /// filtered timeline (REQ-RS-006). Examples: `+50ms`, `+2.3s`, `+1m05s`.
+  static String _formatRelativeTime(Duration delta) {
+    if (delta.inMilliseconds < 1000) {
+      return '+${delta.inMilliseconds}ms';
+    }
+    if (delta.inSeconds < 60) {
+      final whole = delta.inSeconds;
+      final tenths = (delta.inMilliseconds % 1000) ~/ 100;
+      return '+$whole.${tenths}s';
+    }
+    final minutes = delta.inMinutes;
+    final seconds = delta.inSeconds % 60;
+    return '+${minutes}m${seconds.toString().padLeft(2, '0')}s';
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -186,6 +222,16 @@ class _TimelinePanelState extends State<TimelinePanel> {
             ),
           ),
           const Spacer(),
+          if (widget.onExport != null)
+            IconButton(
+              onPressed: () => widget.onExport!(_applyFilters(widget.records)),
+              icon: const Icon(Icons.file_download_rounded),
+              iconSize: 18,
+              padding: EdgeInsets.zero,
+              constraints: const BoxConstraints(minWidth: 36, minHeight: 36),
+              tooltip: 'Export as cURL',
+              color: inspectorMuted(context),
+            ),
           if (widget.onClear != null)
             IconButton(
               onPressed: widget.onClear,
@@ -356,11 +402,13 @@ class _TimelinePanelState extends State<TimelinePanel> {
     );
   }
 
-  /// Applies the active filter + substring query to a copy
+  /// Applies the active filter + substring query + scope filter to a copy
   /// of [records]. The input list is never mutated.
   List<ApiTraceRecord> _applyFilters(List<ApiTraceRecord> records) {
     final query = _query.trim().toLowerCase();
+    final scopeFilter = widget.scopeFilter;
     return records.where((ApiTraceRecord r) {
+      if (scopeFilter != null && !scopeFilter(r)) return false;
       if (_filter == _PanelFilter.success &&
           r.outcome != ApiTraceOutcome.success) {
         return false;
@@ -383,6 +431,7 @@ class _TimelinePanelState extends State<TimelinePanel> {
   Widget _buildGroupedList(List<ApiTraceRecord> records) {
     final groups = _groupRecords(records, widget.config.flowGroupGap);
     final children = <Widget>[];
+    final scopeEntry = widget.scopeEntry;
     for (var i = 0; i < groups.length; i++) {
       final g = groups[i];
       final expanded = !_collapsed.contains(i);
@@ -404,6 +453,10 @@ class _TimelinePanelState extends State<TimelinePanel> {
           children.add(TimelineRow(
             record: r,
             onTap: () => widget.onTap(r),
+            relativeTimestamp: scopeEntry != null
+                ? _formatRelativeTime(
+                    r.startedAt.difference(scopeEntry.enteredAt))
+                : null,
           ));
         }
       }
