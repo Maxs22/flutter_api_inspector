@@ -53,6 +53,10 @@ Future<void> _pumpAppWithOverlay(
       home: child ?? const Scaffold(body: Text('app body')),
     ),
   ));
+  // First-frame deferred overlay needs an extra pump to
+  // appear (the post-frame callback sets _ready and
+  // schedules the second frame).
+  await tester.pump();
 }
 
 void main() {
@@ -1519,7 +1523,8 @@ void main() {
       expect(find.text('!1'), findsOneWidget);
     });
 
-    testWidgets('TRIANGULATE: an empty RouteScope shows a friendly '
+    testWidgets(
+        'TRIANGULATE: an empty RouteScope shows a friendly '
         'empty state', (tester) async {
       await tester.pumpWidget(host(RouteTreeTab(
         records: const <ApiTraceRecord>[],
@@ -1641,8 +1646,7 @@ void main() {
 
     testWidgets(
         'absolute timestamp remains when scopeEntry is null '
-        '(spec scenario: Absolute timestamp when unfiltered)',
-        (tester) async {
+        '(spec scenario: Absolute timestamp when unfiltered)', (tester) async {
       final records = <ApiTraceRecord>[
         scopedRecord(name: 'r1', routeScopeId: null),
       ];

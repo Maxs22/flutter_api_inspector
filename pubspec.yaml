@@ -3,7 +3,7 @@ description: >-
   Debug-only in-app HTTP inspector for Flutter. Live timeline with
   status codes, durations, and response bodies. Guarded by
   kDebugMode, tree-shaken from release builds.
-version: 0.3.0
+version: 0.3.1
 repository: https://github.com/Maxs22/flutter_api_inspector
 
 # Color.withValues and the ColorScheme surfaceContainer* roles the

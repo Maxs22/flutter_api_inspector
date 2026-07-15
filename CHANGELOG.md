@@ -4,6 +4,20 @@ All notable changes to `flutter_api_inspector` are documented in this
 file. The format follows [Keep a Changelog](https://keepachangelog.com/)
 and the project adheres to [Semantic Versioning](https://semver.org/).
 
+## 0.3.1 — 2026-07-14
+
+### Fixed
+
+- **README**: the 0.3.0 README shipped without documenting the
+  Route-Scoped Network Inspector feature at all, still pointed the
+  Quickstart snippet at `^0.2.0`, and had a markdown indentation bug
+  that made the entire "Release-mode testing" section render as raw
+  text/code on pub.dev instead of a proper section. Added a full
+  "Route-Scoped Network Inspector" section (Routes tab, `RouteScope`,
+  `MaterialApp.router` wiring, manual-instrumentation tagging pattern),
+  bumped the Quickstart version, fixed the indentation, and corrected
+  the "no cURL export" limitation bullet (per-route export exists).
+
 ## 0.3.0 — 2026-07-14
 
 ### Added

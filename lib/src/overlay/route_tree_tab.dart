@@ -157,11 +157,10 @@ class _RouteTreeTabState extends State<RouteTreeTab> {
   ) {
     final widgets = <Widget>[];
     final currentScopeId = RouteScope.current?.scopeId;
-    for (final entry in entries) {
+    for (int i = 0; i < entries.length; i++) {
+      final entry = entries[i];
+      final isLast = i == entries.length - 1;
       final isSelected = widget.selectedScopeId == entry.scopeId;
-      // The live route the app is currently on (REQ-RS-005 "Active
-      // route is highlighted"), independent of any tap-to-filter
-      // selection above.
       final isActive = currentScopeId == entry.scopeId;
       final children = childrenOf[entry.scopeId] ?? <RouteScopeEntry>[];
       final hasChildren = children.isNotEmpty;
@@ -176,6 +175,7 @@ class _RouteTreeTabState extends State<RouteTreeTab> {
         isActive: isActive,
         isExpanded: isExpanded,
         hasChildren: hasChildren,
+        isLastChild: isLast,
         totalCalls: stats.total,
         errorCount: stats.errors,
         onTap: () => widget.onScopeSelected(
@@ -235,6 +235,7 @@ class _RouteTreeRow extends StatelessWidget {
     required this.isActive,
     required this.isExpanded,
     required this.hasChildren,
+    required this.isLastChild,
     required this.totalCalls,
     required this.errorCount,
     required this.onTap,
@@ -252,6 +253,7 @@ class _RouteTreeRow extends StatelessWidget {
   final bool isActive;
   final bool isExpanded;
   final bool hasChildren;
+  final bool isLastChild;
   final int totalCalls;
   final int errorCount;
   final VoidCallback onTap;

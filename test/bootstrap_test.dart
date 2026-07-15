@@ -70,6 +70,8 @@ void main() {
       await tester.pumpWidget(ApiTraceBootstrap(
         child: wrap(const Scaffold(body: Text('child'))),
       ));
+      // First-frame deferred overlay needs an extra pump.
+      await tester.pump();
       expect(find.byType(ApiTraceOverlay), findsOneWidget);
       // The child is still visible.
       expect(find.text('child'), findsOneWidget);
@@ -84,6 +86,8 @@ void main() {
       await tester.pumpWidget(ApiTraceBootstrap(
         child: wrap(const Scaffold(body: Text('child'))),
       ));
+      // First-frame deferred overlay needs an extra pump.
+      await tester.pump();
       // The overlay is the topmost widget in the tree; the
       // child's Scaffold body is still rendered below.
       final scaffoldFinder = find.byType(Scaffold);
@@ -383,6 +387,8 @@ void main() {
       // must be present — composition, not replacement.
       expect(find.byKey(const Key('developer-builder')), findsOneWidget);
       expect(find.text('home-marker'), findsOneWidget);
+      // First-frame deferred overlay needs an extra pump.
+      await tester.pump();
       expect(find.byType(ApiTraceOverlay), findsOneWidget);
     });
   });

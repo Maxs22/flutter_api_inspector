@@ -184,8 +184,12 @@ class TimelineRow extends StatelessWidget {
 
   /// Formats a `DateTime` as a relative "X ago" label.
   /// Examples: `3s ago`, `1m ago`, `2h ago`, `3d ago`.
+  /// Falls back to `"just now"` when [t] is in the future
+  /// relative to [now] (negative difference — clock skew / NTP
+  /// correction on devices and emulators).
   static String _timeAgo(DateTime t, DateTime now) {
     final diff = now.difference(t);
+    if (diff.isNegative) return 'just now';
     if (diff.inSeconds < 60) return '${diff.inSeconds}s ago';
     if (diff.inMinutes < 60) return '${diff.inMinutes}m ago';
     if (diff.inHours < 24) return '${diff.inHours}h ago';

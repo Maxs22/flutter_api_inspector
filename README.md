@@ -36,7 +36,7 @@ Add the dependency:
 
 ```yaml
 dependencies:
-  flutter_api_inspector: ^0.2.0
+  flutter_api_inspector: ^0.3.0
 ```
 
 ### Option A — Automatic capture (recommended)
@@ -114,6 +114,70 @@ interceptor records those requests itself.
 > `dio`, import directly from
 > `package:flutter_api_inspector/interceptor/http_overrides.dart`.
 
+## Route-Scoped Network Inspector
+
+_New in 0.3.0._ The overlay correlates every HTTP call with the
+Flutter screen (route) that was active when it was dispatched, so
+instead of a flat chronological timeline you get: "CheckoutScreen →
+POST /orders (500) → GET /payment-methods (timeout)".
+
+`ApiTrace.runApp` auto-injects a `RouteScopeObserver` into your
+`MaterialApp`'s `navigatorObservers` (debug-only, no setup required).
+`TracedHttpOverrides` and `TracedDioInterceptor` automatically tag
+every request with the active route's `scopeId` and name.
+
+Open the overlay panel and switch to the **Routes** tab to:
+
+- Browse a hierarchical tree of every screen visited this session
+  (indented by navigation depth, with call/error counts per screen).
+- Tap a screen to filter the Timeline tab down to just its calls,
+  with timestamps shown relative to screen entry (`+230ms`, `+1.4s`).
+- Export just that screen's calls as cURL (`Copy as cURL` includes a
+  `// Route: <name> (scopeId: <id>)` header).
+
+### `MaterialApp.router` users
+
+The auto-injection only wires into `BootstrapMaterialAppHarness`'s
+own `MaterialApp`. If your app uses `MaterialApp.router` (go_router,
+auto_route, etc.), add `RouteScopeObserver` to your router's
+`observers` list yourself:
+
+```dart
+GoRouter(
+  observers: [RouteScopeObserver()],
+  routes: ...,
+);
+```
+
+### Manual instrumentation + route scoping
+
+If you call `ApiTrace.call(...)` directly instead of using an
+automatic interceptor, tag it yourself by reading `RouteScope.current`
+and forwarding it through `extra` — the same convention the built-in
+interceptors use internally:
+
+```dart
+final scope = RouteScope.current;
+await ApiTrace.call(
+  'orders.create',
+  method: 'POST',
+  url: Uri.parse('$baseUrl/orders'),
+  extra: <String, Object?>{
+    if (scope != null) 'routeScopeId': scope.scopeId,
+    if (scope != null) 'routeName': scope.routeName,
+  },
+  execute: () async => ApiTraceResponse(statusCode: 201),
+);
+```
+
+Read the scope data back off any record via the `ApiTraceRecordScope`
+extension: `record.routeScopeId` / `record.routeName` (both `null` for
+calls made before route tracking was active, or for legacy records).
+
+Route names come from `Route.settings.name`, falling back to
+`route.runtimeType.toString()` for unnamed routes — name your routes
+for readable labels in the Routes tab.
+
 ## Public API surface
 
 ```dart
@@ -134,6 +198,13 @@ Future<String?> ApiTrace.call(
 
 // One-line bootstrap.
 ApiTrace.runApp(Widget app);
+
+// Route-scoping (see "Route-Scoped Network Inspector" above).
+RouteScope.current;          // RouteScopeEntry? — the active screen's scope
+RouteScope.entries;          // List<RouteScopeEntry> — full session history
+RouteScopeObserver();        // NavigatorObserver, for MaterialApp.router
+record.routeScopeId;         // int? — via the ApiTraceRecordScope extension
+record.routeName;            // String?
 ```
 
 ## Configuration
@@ -171,31 +242,31 @@ ApiTrace.config = const ApiTraceConfig(
   // Ring buffer capacity (oldest record evicted when full).
   timelineCapacity: 200,
 );
-    ```
+```
 
-    ## Release-mode testing (force enable)
+## Release-mode testing (force enable)
 
-    By default the overlay is guarded by `kDebugMode` and tree-shaken
-    from release builds. When you need to test the overlay in a release
-    build — e.g. for QA, a tester flavor, or a feature-flag-gated
-    development module — set `ApiTrace.forceEnabled = true` **before**
-    calling `ApiTrace.runApp()`:
+By default the overlay is guarded by `kDebugMode` and tree-shaken
+from release builds. When you need to test the overlay in a release
+build — e.g. for QA, a tester flavor, or a feature-flag-gated
+development module — set `ApiTrace.forceEnabled = true` **before**
+calling `ApiTrace.runApp()`:
 
-    ```dart
-    void main() {
-      if (moduloDesarrollo.isHabilitado) {
-        ApiTrace.forceEnabled = true;
-      }
-      HttpOverrides.global = TracedHttpOverrides();
-      ApiTrace.runApp(const MyApp());
-    }
-    ```
+```dart
+void main() {
+  if (moduloDesarrollo.isHabilitado) {
+    ApiTrace.forceEnabled = true;
+  }
+  HttpOverrides.global = TracedHttpOverrides();
+  ApiTrace.runApp(const MyApp());
+}
+```
 
-    The effective value of `ApiTrace.enabled` is `_enabled || forceEnabled`.
-    To temporarily disable the overlay on a force-enabled build, set both
-    `forceEnabled = false` and `enabled = false`.
+The effective value of `ApiTrace.enabled` is `_enabled || forceEnabled`.
+To temporarily disable the overlay on a force-enabled build, set both
+`forceEnabled = false` and `enabled = false`.
 
-    ### Detail levels
+### Detail levels
 
 | Value | Captures |
 |-------|----------|
@@ -245,7 +316,10 @@ difference in the response they receive.
   is false (the default in release).
 - **In-memory only.** The ring buffer resets on every app restart.
   No disk persistence, no file export in v1.
-- **Read-only detail view.** No cURL export, no re-run, no replay in v1.
+- **Read-only detail view.** No re-run, no replay. cURL export exists
+  only when filtered to a specific route in the Routes tab (see
+  "Route-Scoped Network Inspector" above) — there is no export for
+  the full, unfiltered timeline in v1.
 - **No Flutter Web support.** Web is intentionally out of scope: the
   browser's DevTools Network tab already covers it. This package
   exists for mobile / desktop, where there is no console. The

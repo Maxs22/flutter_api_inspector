@@ -411,14 +411,7 @@ class _PackageNavigatorState extends State<_PackageNavigator> {
     return Column(
       children: <Widget>[
         Container(
-          decoration: BoxDecoration(
-            border: Border(
-              bottom: BorderSide(
-                color: theme.dividerColor,
-                width: 0.5,
-              ),
-            ),
-          ),
+          color: inspectorGroupHeaderBackground(context),
           child: Row(
             children: <Widget>[
               _buildTabButton(
@@ -472,26 +465,29 @@ class _PackageNavigatorState extends State<_PackageNavigator> {
           ),
         ),
         Expanded(
-          child: _activeTab == 0
-              ? TimelinePanel(
-                  key: const ValueKey('inspectorPanel'),
-                  records: widget.records,
-                  config: widget.config,
-                  onTap: _pushDetail,
-                  onClear: widget.onClear,
-                  onClose: widget.onClose,
-                  onExport: widget.onExport,
-                  scopeFilter: widget.selectedScopeId != null
-                      ? (ApiTraceRecord r) =>
-                          r.routeScopeId == widget.selectedScopeId
-                      : null,
-                  scopeEntry: widget.scopeEntry,
-                )
-              : RouteTreeTab(
-                  records: widget.records,
-                  onScopeSelected: widget.onScopeSelected,
-                  selectedScopeId: widget.selectedScopeId,
-                ),
+          child: Material(
+            color: inspectorPanelBackground(context),
+            child: _activeTab == 0
+                ? TimelinePanel(
+                    key: const ValueKey('inspectorPanel'),
+                    records: widget.records,
+                    config: widget.config,
+                    onTap: _pushDetail,
+                    onClear: widget.onClear,
+                    onClose: widget.onClose,
+                    onExport: widget.onExport,
+                    scopeFilter: widget.selectedScopeId != null
+                        ? (ApiTraceRecord r) =>
+                            r.routeScopeId == widget.selectedScopeId
+                        : null,
+                    scopeEntry: widget.scopeEntry,
+                  )
+                : RouteTreeTab(
+                    records: widget.records,
+                    onScopeSelected: widget.onScopeSelected,
+                    selectedScopeId: widget.selectedScopeId,
+                  ),
+          ),
         ),
       ],
     );
@@ -506,29 +502,33 @@ class _PackageNavigatorState extends State<_PackageNavigator> {
     required VoidCallback onTap,
   }) {
     final color = selected ? activeColor : inactiveColor;
-    return Material(
-      color: selected
-          ? activeColor.withValues(alpha: 0.12)
-          : Colors.transparent,
-      child: InkWell(
-        onTap: onTap,
-        child: Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-          child: Row(
-            mainAxisSize: MainAxisSize.min,
-            children: <Widget>[
-              Icon(icon, size: 16, color: color),
-              const SizedBox(width: 4),
-              Text(
-                label,
-                style: TextStyle(
-                  fontSize: 12,
-                  fontWeight: selected ? FontWeight.w700 : FontWeight.w500,
-                  color: color,
-                ),
-              ),
-            ],
+    return GestureDetector(
+      onTap: onTap,
+      behavior: HitTestBehavior.opaque,
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+        decoration: BoxDecoration(
+          border: Border(
+            bottom: BorderSide(
+              color: selected ? activeColor : Colors.transparent,
+              width: 2.5,
+            ),
           ),
+        ),
+        child: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: <Widget>[
+            Icon(icon, size: 16, color: color),
+            const SizedBox(width: 6),
+            Text(
+              label,
+              style: TextStyle(
+                fontSize: 12,
+                fontWeight: selected ? FontWeight.w700 : FontWeight.w500,
+                color: color,
+              ),
+            ),
+          ],
         ),
       ),
     );

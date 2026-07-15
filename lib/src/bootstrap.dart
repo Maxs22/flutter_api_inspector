@@ -24,6 +24,50 @@ import 'package:flutter_api_inspector/src/api_trace.dart';
 import 'package:flutter_api_inspector/src/overlay/api_trace_overlay.dart';
 import 'package:flutter_api_inspector/src/route_scope_observer.dart';
 
+/// Wraps [child] so it only becomes interactive after the first
+/// frame has completed layout. Prevents
+/// "Cannot hit test a render box that has never been laid out"
+/// when the user taps before the initial frame is rendered
+/// (common on emulators with slow first-frame composition).
+///
+/// Before the first frame, returns [SizedBox.shrink()] (a
+/// zero-size box that is trivially laid out). After the first
+/// frame, transitions to [child] with normal hit-testing.
+class _FirstFrameDeferred extends StatefulWidget {
+  const _FirstFrameDeferred({required this.child});
+
+  final Widget child;
+
+  @override
+  State<_FirstFrameDeferred> createState() => _FirstFrameDeferredState();
+}
+
+class _FirstFrameDeferredState extends State<_FirstFrameDeferred> {
+  bool _ready = false;
+
+  @override
+  void initState() {
+    super.initState();
+    // Schedule a post-frame callback. After the first frame
+    // completes layout, switch to the real child.
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (mounted) {
+        setState(() => _ready = true);
+      }
+    });
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    // Before the first frame: return a trivial SizedBox that is
+    // guaranteed to be laid out in the first pass. The child is
+    // not built at all, so its RenderBox (which would be
+    // NEEDS-LAYOUT) never participates in the hit test.
+    if (!_ready) return const SizedBox.shrink();
+    return widget.child;
+  }
+}
+
 /// Wraps the developer's [child] in the debug-only overlay.
 class ApiTraceBootstrap extends StatelessWidget {
   /// Creates the bootstrap.
@@ -114,6 +158,13 @@ class ApiTraceBootstrap extends StatelessWidget {
     // developer's own MaterialApp (e.g. `GetMaterialApp`
     // inside `MyApp.build`) is `home`'s descendant and
     // provides its own `Navigator` and theme.
+    //
+    // NOTE: This creates a nested Navigator. For full route-
+    // scope tracking (the Routes tab), pass the MaterialApp
+    // DIRECTLY to ApiTrace.runApp:
+    //   ApiTrace.runApp(MaterialApp(home: MyApp()));
+    // instead of:
+    //   ApiTrace.runApp(MyApp()); // MyApp builds MaterialApp
     return BootstrapMaterialAppHarness(
       materialApp: MaterialApp(home: child),
       enabled: ApiTrace.enabled,
@@ -158,10 +209,12 @@ class BootstrapMaterialAppHarness extends StatelessWidget {
               if (!ApiTrace.enabled) {
                 return const SizedBox.shrink();
               }
-              return ApiTraceOverlay(
-                config: ApiTrace.config,
-                records: ApiTrace.timeline.records,
-                navigatorKey: ApiTrace.navigatorKey,
+              return _FirstFrameDeferred(
+                child: ApiTraceOverlay(
+                  config: ApiTrace.config,
+                  records: ApiTrace.timeline.records,
+                  navigatorKey: ApiTrace.navigatorKey,
+                ),
               );
             },
           ),
