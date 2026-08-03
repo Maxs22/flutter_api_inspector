@@ -23,9 +23,10 @@ import 'package:flutter/foundation.dart';
 import 'package:flutter/widgets.dart';
 
 /// Metadata for a single route-scope entry. Created when a route
-/// is pushed onto the stack. Entries are immutable and live in
-/// the `RouteScope.entries` list for the entire session (they are
-/// never removed — only the stack position changes on pop).
+/// is pushed onto the stack. Entries are immutable. They remain in
+/// `RouteScope.entries` while their navigation flow is active; when
+/// navigation returns to the root route, historical child entries are
+/// cleared while the root entry is preserved for the next flow.
 class RouteScopeEntry {
   /// Creates a route-scope entry.
   const RouteScopeEntry({
@@ -67,8 +68,8 @@ class RouteScope {
   final List<RouteScopeEntry> _stack = <RouteScopeEntry>[];
 
   /// All scope entries created this session, in creation order.
-  /// Never shrinks — entries from popped routes remain available
-  /// for the Route Tree UI.
+  /// Cleared when navigation returns to the root ("Reset al volver a home"
+  /// — REQ-RS-012), so the route tree doesn't accumulate flows forever.
   final List<RouteScopeEntry> _entries = <RouteScopeEntry>[];
 
   /// Monotonically increasing counter for [RouteScopeEntry.scopeId].
@@ -85,8 +86,11 @@ class RouteScope {
   /// been pushed yet.
   static RouteScopeEntry? get current => _instance?._stack.lastOrNull;
 
-  /// All scope entries tracked this session, in creation order
-  /// (oldest first). Never shrinks — popped routes are retained.
+  /// Scope entries for the current route flow, in creation order
+  /// (oldest first). Popped child routes are retained while the user
+  /// remains away from root. Returning to root clears historical child
+  /// entries but preserves the root entry for request tagging and tree
+  /// reconstruction.
   static List<RouteScopeEntry> get entries => _instance != null
       ? List<RouteScopeEntry>.unmodifiable(_instance!._entries)
       : const <RouteScopeEntry>[];
@@ -111,11 +115,27 @@ class RouteScope {
   }
 
   /// Called by [RouteScopeObserver.didPop].
+  /// When the stack is reduced to 0 or 1 entries (returned to root
+  /// / home), clears historical child entries so a new navigation
+  /// flow starts fresh while preserving the root entry — "Reset al
+  /// volver a home" (REQ-RS-012).
   static void onPop(Route<dynamic> route) {
     final instance = _instance;
     if (instance == null) return;
     if (instance._stack.isNotEmpty) {
       instance._stack.removeLast();
+    }
+    // Reset when we've returned to root: wipe historical entries
+    // so the next flow starts clean (REQ-RS-012 — "Reset al volver
+    // a home"). The root entry (Home) is preserved in entries so
+    // the route tree can build a proper hierarchy; only historical
+    // children are removed.
+    if (instance._stack.length <= 1) {
+      final root = instance._stack.isNotEmpty ? instance._stack.first : null;
+      instance._entries.clear();
+      if (root != null) {
+        instance._entries.add(root);
+      }
     }
   }
 

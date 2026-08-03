@@ -33,6 +33,7 @@ import 'package:flutter_api_inspector/src/model/api_trace_record.dart';
 import 'package:flutter_api_inspector/src/outcome.dart';
 import 'package:flutter_api_inspector/src/overlay/detail_screen.dart';
 import 'package:flutter_api_inspector/src/overlay/fab.dart';
+import 'package:flutter_api_inspector/src/overlay/route_endpoint_panel.dart';
 import 'package:flutter_api_inspector/src/overlay/route_tree_tab.dart';
 import 'package:flutter_api_inspector/src/overlay/theme.dart';
 import 'package:flutter_api_inspector/src/overlay/timeline_panel.dart';
@@ -486,6 +487,17 @@ class _PackageNavigatorState extends State<_PackageNavigator> {
                     records: widget.records,
                     onScopeSelected: widget.onScopeSelected,
                     selectedScopeId: widget.selectedScopeId,
+                    onShowEndpoints:
+                        (RouteScopeEntry entry, List<ApiTraceRecord> records) {
+                      _navKey.currentState?.push(
+                        MaterialPageRoute<void>(
+                          builder: (_) => RouteEndpointPanel(
+                            records: records,
+                            routeName: entry.routeName,
+                          ),
+                        ),
+                      );
+                    },
                   ),
           ),
         ),

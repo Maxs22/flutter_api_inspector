@@ -125,7 +125,8 @@ Color inspectorMethodColor(BuildContext context, String method) {
   final Color base = switch (method.toUpperCase()) {
     'GET' => dark ? const Color(0xFF60A5FA) : const Color(0xFF2563EB),
     'POST' => dark ? const Color(0xFF4ADE80) : const Color(0xFF16A34A),
-    'PUT' || 'PATCH' =>
+    'PUT' ||
+    'PATCH' =>
       dark ? const Color(0xFFFB923C) : const Color(0xFFEA580C),
     'DELETE' => dark ? const Color(0xFFF87171) : const Color(0xFFDC2626),
     _ => Theme.of(context).colorScheme.onSurfaceVariant,

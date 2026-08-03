@@ -19,6 +19,7 @@ import 'package:flutter_api_inspector/flutter_api_inspector.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:flutter_api_inspector/src/overlay/colors.dart';
 import 'package:flutter_api_inspector/src/overlay/fab_position.dart';
+import 'package:flutter_api_inspector/src/overlay/route_endpoint_panel.dart';
 import 'package:flutter_api_inspector/src/overlay/route_tree_tab.dart';
 import 'package:flutter_api_inspector/src/overlay/theme.dart';
 import 'package:flutter_api_inspector/src/overlay/timeline_row.dart';
@@ -1147,6 +1148,75 @@ void main() {
     });
 
     testWidgets(
+        'Routes tab list icon opens RouteEndpointPanel with exact-scope records '
+        '(REQ-RS-009)', (tester) async {
+      ApiTrace.enabled = true;
+      RouteScope.dispose();
+      RouteScope.init();
+      RouteScope.onPush(MaterialPageRoute<void>(
+        builder: (_) => const SizedBox.shrink(),
+        settings: const RouteSettings(name: 'A'),
+      ));
+      final scopeAId = RouteScope.current!.scopeId;
+      RouteScope.onPush(MaterialPageRoute<void>(
+        builder: (_) => const SizedBox.shrink(),
+        settings: const RouteSettings(name: 'B'),
+      ));
+      final scopeBId = RouteScope.current!.scopeId;
+      final startedAt = DateTime(2026, 1, 1);
+      final records = <ApiTraceRecord>[
+        ApiTraceRecord(
+          id: 'id-a-call',
+          name: 'a-call',
+          startedAt: startedAt,
+          completedAt: startedAt.add(const Duration(milliseconds: 10)),
+          method: 'GET',
+          url: Uri.parse('https://api.example.com/a-call'),
+          statusCode: 200,
+          duration: const Duration(milliseconds: 10),
+          outcome: ApiTraceOutcome.success,
+          capturedDetails: const <ApiTraceDetail>{ApiTraceDetail.minimal},
+          request: null,
+          response: null,
+          error: null,
+          extra: <String, Object?>{'routeScopeId': scopeAId},
+        ),
+        ApiTraceRecord(
+          id: 'id-b-call',
+          name: 'b-call',
+          startedAt: startedAt,
+          completedAt: startedAt.add(const Duration(milliseconds: 20)),
+          method: 'GET',
+          url: Uri.parse('https://api.example.com/b-call'),
+          statusCode: 200,
+          duration: const Duration(milliseconds: 20),
+          outcome: ApiTraceOutcome.success,
+          capturedDetails: const <ApiTraceDetail>{ApiTraceDetail.minimal},
+          request: null,
+          response: null,
+          error: null,
+          extra: <String, Object?>{'routeScopeId': scopeBId},
+        ),
+      ];
+
+      await tester.pumpWidget(overlayHost(records: records));
+      await tester.tap(find.byType(FloatingActionButton));
+      await tester.pumpAndSettle();
+      await tester.tap(find.text('Routes'));
+      await tester.pumpAndSettle();
+
+      await tester.tap(find.byTooltip('View endpoints').first);
+      await tester.pumpAndSettle();
+
+      expect(find.byType(RouteEndpointPanel), findsOneWidget);
+      expect(find.text('A Endpoints'), findsOneWidget);
+      expect(find.text('a-call'), findsOneWidget);
+      expect(find.text('b-call'), findsNothing);
+
+      RouteScope.dispose();
+    });
+
+    testWidgets(
         'TRIANGULATE: overlay passes the config to the FAB (REQ-UI-003)',
         (tester) async {
       // REQ-UI-003: the overlay honours the config and renders the
@@ -1383,21 +1453,35 @@ void main() {
       required String name,
       required int? routeScopeId,
       ApiTraceOutcome outcome = ApiTraceOutcome.success,
+      String method = 'GET',
+      int? statusCode,
+      Duration duration = const Duration(milliseconds: 10),
+      String? responseBody,
     }) {
       final start = DateTime(2026, 1, 1, 0, 0, 0);
+      final resolvedStatusCode =
+          statusCode ?? (outcome == ApiTraceOutcome.error ? 500 : 200);
       return ApiTraceRecord(
         id: 'id-$name',
         name: name,
         startedAt: start,
-        completedAt: start.add(const Duration(milliseconds: 10)),
-        method: 'GET',
+        completedAt: start.add(duration),
+        method: method,
         url: Uri.parse('https://api.example.com/$name'),
-        statusCode: outcome == ApiTraceOutcome.error ? 500 : 200,
-        duration: const Duration(milliseconds: 10),
+        statusCode: resolvedStatusCode,
+        duration: duration,
         outcome: outcome,
-        capturedDetails: const <ApiTraceDetail>{ApiTraceDetail.minimal},
+        capturedDetails: const <ApiTraceDetail>{
+          ApiTraceDetail.minimal,
+          ApiTraceDetail.response,
+        },
         request: null,
-        response: null,
+        response: responseBody != null
+            ? ApiTraceResponse(
+                statusCode: resolvedStatusCode,
+                responseBody: responseBody,
+              )
+            : null,
         error: null,
         extra: <String, Object?>{
           if (routeScopeId != null) 'routeScopeId': routeScopeId,
@@ -1474,6 +1558,129 @@ void main() {
       await tester.pumpAndSettle();
 
       expect(calledWithNull, isTrue);
+    });
+
+    testWidgets(
+        'list-icon fires onShowEndpoints with the route entry '
+        'and scoped records (REQ-RS-009, REQ-RS-011)', (tester) async {
+      // RED: verify the list icon triggers onShowEndpoints.
+      pushRoute('A');
+      final scopeId = RouteScope.current!.scopeId;
+      final records = <ApiTraceRecord>[
+        scopedRecord(name: 'r1', routeScopeId: scopeId),
+      ];
+
+      RouteScopeEntry? capturedEntry;
+      List<ApiTraceRecord>? capturedRecords;
+      await tester.pumpWidget(host(RouteTreeTab(
+        records: records,
+        onScopeSelected: (_) {},
+        onShowEndpoints: (RouteScopeEntry entry, List<ApiTraceRecord> recs) {
+          capturedEntry = entry;
+          capturedRecords = recs;
+        },
+      )));
+
+      // The list icon should be visible.
+      expect(find.byIcon(Icons.list_alt_rounded), findsOneWidget);
+
+      await tester.tap(find.byIcon(Icons.list_alt_rounded));
+      await tester.pumpAndSettle();
+
+      expect(capturedEntry, isNotNull);
+      expect(capturedEntry!.routeName, equals('A'));
+      expect(capturedRecords, hasLength(1));
+      expect(capturedRecords![0].name, equals('r1'));
+    });
+
+    testWidgets(
+        'list-icon exposes the View endpoints tooltip '
+        '(REQ-RS-011)', (tester) async {
+      pushRoute('A');
+
+      await tester.pumpWidget(host(RouteTreeTab(
+        records: const <ApiTraceRecord>[],
+        onScopeSelected: (_) {},
+        onShowEndpoints: (_, __) {},
+      )));
+
+      expect(
+        find.widgetWithIcon(Tooltip, Icons.list_alt_rounded),
+        findsOneWidget,
+      );
+      final tooltip = tester.widget<Tooltip>(
+        find.widgetWithIcon(Tooltip, Icons.list_alt_rounded),
+      );
+      expect(tooltip.message, equals('View endpoints'));
+    });
+
+    testWidgets(
+        'RouteEndpointPanel shows endpoint fields and empty state '
+        '(REQ-RS-009, REQ-RS-010)', (tester) async {
+      final record = scopedRecord(
+        name: 'orders.create',
+        routeScopeId: 1,
+        method: 'POST',
+        statusCode: 201,
+        duration: const Duration(milliseconds: 230),
+      );
+
+      await tester.pumpWidget(host(RouteEndpointPanel(
+        routeName: 'Checkout',
+        records: <ApiTraceRecord>[record],
+      )));
+
+      expect(find.text('Checkout Endpoints'), findsOneWidget);
+      expect(find.text('orders.create'), findsOneWidget);
+      expect(find.text('POST · 201'), findsOneWidget);
+      expect(find.text('230ms'), findsOneWidget);
+
+      await tester.pumpWidget(host(RouteEndpointPanel(
+        key: UniqueKey(),
+        routeName: 'EmptyRoute',
+        records: const <ApiTraceRecord>[],
+      )));
+
+      expect(find.byIcon(Icons.inbox_rounded), findsOneWidget);
+      expect(
+          find.text('No endpoints recorded for this route.'), findsOneWidget);
+      expect(find.text('Route: EmptyRoute'), findsOneWidget);
+    });
+
+    testWidgets(
+        'RouteEndpointPanel opens detail screen and keeps an open-time '
+        'snapshot (REQ-RS-009)', (tester) async {
+      final records = <ApiTraceRecord>[
+        scopedRecord(
+          name: 'orders.create',
+          routeScopeId: 1,
+          method: 'POST',
+          statusCode: 201,
+          duration: const Duration(milliseconds: 230),
+          responseBody: '{"ok":true}',
+        ),
+      ];
+
+      await tester.pumpWidget(host(RouteEndpointPanel(
+        routeName: 'Checkout',
+        records: records,
+      )));
+
+      records.add(scopedRecord(name: 'orders.late', routeScopeId: 1));
+      await tester.pump();
+
+      expect(find.text('orders.create'), findsOneWidget);
+      expect(find.text('orders.late'), findsNothing);
+
+      await tester.tap(find.text('orders.create'));
+      await tester.pumpAndSettle();
+
+      expect(find.text('orders.create'), findsOneWidget);
+      expect(find.text('POST'), findsWidgets);
+      expect(
+          find.text('https://api.example.com/orders.create'), findsOneWidget);
+      expect(find.text('201'), findsWidgets);
+      expect(find.text('{"ok":true}'), findsOneWidget);
     });
 
     testWidgets(

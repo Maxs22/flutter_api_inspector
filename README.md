@@ -11,13 +11,15 @@
   <em>FAB → Timeline → Request detail — all inside your running debug app.</em>
 </p>
 
-Debug-only in-app overlay that intercepts HTTP traffic and shows a
+Debug-first in-app overlay that intercepts HTTP traffic and shows a
 live timeline with status codes, durations, and response bodies —
 without leaving the app, without proxy certificates, and without
 modifying a single API call.
 
-The overlay is guarded by `kDebugMode` and tree-shaken from
-`flutter build --release` binaries automatically.
+By default, the overlay is guarded by `kDebugMode` and omitted from
+normal release usage. You can opt into controlled QA builds with
+`ApiTrace.forceEnabled`; route-scoped tracking and route endpoint panels
+remain debug-only in the current implementation.
 
 ## Why
 
@@ -36,7 +38,7 @@ Add the dependency:
 
 ```yaml
 dependencies:
-  flutter_api_inspector: ^0.3.0
+  flutter_api_inspector: ^0.3.1
 ```
 
 ### Option A — Automatic capture (recommended)
@@ -132,6 +134,9 @@ Open the overlay panel and switch to the **Routes** tab to:
   (indented by navigation depth, with call/error counts per screen).
 - Tap a screen to filter the Timeline tab down to just its calls,
   with timestamps shown relative to screen entry (`+230ms`, `+1.4s`).
+- Open a route's endpoint list from the `list_alt` / **View endpoints**
+  action; the `<routeName> Endpoints` panel lists each endpoint, and
+  tapping one opens its `ApiTraceDetailScreen`.
 - Export just that screen's calls as cURL (`Copy as cURL` includes a
   `// Route: <name> (scopeId: <id>)` header).
 
@@ -201,7 +206,7 @@ ApiTrace.runApp(Widget app);
 
 // Route-scoping (see "Route-Scoped Network Inspector" above).
 RouteScope.current;          // RouteScopeEntry? — the active screen's scope
-RouteScope.entries;          // List<RouteScopeEntry> — full session history
+RouteScope.entries;          // List<RouteScopeEntry> — current route-flow history
 RouteScopeObserver();        // NavigatorObserver, for MaterialApp.router
 record.routeScopeId;         // int? — via the ApiTraceRecordScope extension
 record.routeName;            // String?
@@ -234,7 +239,7 @@ ApiTrace.config = const ApiTraceConfig(
 
   // Timeline panel height range (logical pixels).
   panelMaxHeight: 600,
-  panelMinHeight: 120,
+  panelMinHeight: 360,
 
   // Max bytes stored per response body (truncated beyond this).
   maxResponseBodyBytes: 4096,
@@ -246,11 +251,10 @@ ApiTrace.config = const ApiTraceConfig(
 
 ## Release-mode testing (force enable)
 
-By default the overlay is guarded by `kDebugMode` and tree-shaken
-from release builds. When you need to test the overlay in a release
-build — e.g. for QA, a tester flavor, or a feature-flag-gated
-development module — set `ApiTrace.forceEnabled = true` **before**
-calling `ApiTrace.runApp()`:
+By default the overlay is guarded by `kDebugMode` for normal release
+builds. When you need controlled QA coverage in a release build — e.g.
+for a tester flavor or a feature-flag-gated development module — set
+`ApiTrace.forceEnabled = true` **before** calling `ApiTrace.runApp()`:
 
 ```dart
 void main() {
@@ -265,6 +269,11 @@ void main() {
 The effective value of `ApiTrace.enabled` is `_enabled || forceEnabled`.
 To temporarily disable the overlay on a force-enabled build, set both
 `forceEnabled = false` and `enabled = false`.
+
+`forceEnabled` constructs the `ApiTrace.runApp` bootstrap and overlay for
+QA builds. Route-scoped tracking (`RouteScope.init()`) and the route
+endpoint panel are still guarded by `kDebugMode`, so release-mode QA
+builds should not rely on Routes tab endpoint drill-downs.
 
 ### Detail levels
 
@@ -311,9 +320,14 @@ difference in the response they receive.
 
 ## Limitations
 
-- **Debug-only.** The overlay is tree-shaken from release builds.
-  `ApiTrace.call` in release mode is a no-op when `ApiTrace.enabled`
-  is false (the default in release).
+- **Debug-first.** Normal release builds leave tracing disabled, and
+  `ApiTrace.call` is a no-op when `ApiTrace.enabled` is false (the
+  default in release). `ApiTrace.forceEnabled` is intended for controlled
+  QA builds, not production diagnostics.
+- **Route tooling is debug-only today.** Route-scoped tracking and the
+  route endpoint panel are guarded by `kDebugMode`; force-enabled release
+  builds can show the overlay, but should not depend on Routes tab
+  endpoint drill-downs.
 - **In-memory only.** The ring buffer resets on every app restart.
   No disk persistence, no file export in v1.
 - **Read-only detail view.** No re-run, no replay. cURL export exists

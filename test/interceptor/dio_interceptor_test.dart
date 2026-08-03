@@ -377,8 +377,7 @@ void main() {
 
     test(
         'TRIANGULATE: after popping back to A, the request is tagged '
-        'with scopeId 1 / "A" (spec scenario: tagged after pop)',
-        () async {
+        'with scopeId 1 / "A" (spec scenario: tagged after pop)', () async {
       final routeA = MaterialPageRoute<void>(
         builder: (_) => const SizedBox.shrink(),
         settings: const RouteSettings(name: 'A'),

@@ -66,10 +66,12 @@ void main() {
       // Default captures status/duration/url plus the response body
       // so developers can see why a call failed without extra config.
       const c = ApiTraceConfig();
-      expect(c.details, equals(<ApiTraceDetail>{
-        ApiTraceDetail.minimal,
-        ApiTraceDetail.response,
-      }));
+      expect(
+          c.details,
+          equals(<ApiTraceDetail>{
+            ApiTraceDetail.minimal,
+            ApiTraceDetail.response,
+          }));
     });
 
     test('default timelineCapacity is 200', () {

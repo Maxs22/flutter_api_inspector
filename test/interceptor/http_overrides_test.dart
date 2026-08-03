@@ -266,8 +266,7 @@ void main() {
       expect(r.response?.requestBody, equals('{"qty":3}'));
     });
 
-    test('request body is NOT captured under the default detail set',
-        () async {
+    test('request body is NOT captured under the default detail set', () async {
       // Default config: {minimal, response} — request stays opt-in.
       final _ServerHandle h = await _startServer();
       addTearDown(h.shutdown);
@@ -304,8 +303,7 @@ void main() {
     });
   });
 
-  group(
-      'TracedHttpOverrides — route-scope tagging (REQ-RS-003, TASK-RS-004)',
+  group('TracedHttpOverrides — route-scope tagging (REQ-RS-003, TASK-RS-004)',
       () {
     setUp(() {
       RouteScope.dispose();

@@ -4,6 +4,15 @@ All notable changes to `flutter_api_inspector` are documented in this
 file. The format follows [Keep a Changelog](https://keepachangelog.com/)
 and the project adheres to [Semantic Versioning](https://semver.org/).
 
+## Unreleased
+
+### Fixed
+
+- **pub.dev docs**: updated README examples and limitations to match
+  version `0.3.1`, the current `panelMinHeight` default, route endpoint
+  drill-down behavior, and the debug-only status of route tooling in
+  force-enabled QA builds.
+
 ## 0.3.1 — 2026-07-14
 
 ### Fixed

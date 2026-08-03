@@ -70,20 +70,27 @@ void main() {
   });
 
   group('RouteScope.onPop (REQ-RS-001)', () {
-    test('pop restores the parent scope', () {
+    test('pop restores the parent scope when not returning to root', () {
       RouteScope.onPush(_route('A'));
       RouteScope.onPush(_route('B'));
-      RouteScope.onPop(_route('B'));
-      expect(RouteScope.current!.scopeId, equals(1));
-      expect(RouteScope.current!.routeName, equals('A'));
+      RouteScope.onPush(_route('C'));
+      RouteScope.onPop(_route('C'));
+      expect(RouteScope.current!.scopeId, equals(2));
+      expect(RouteScope.current!.routeName, equals('B'));
     });
 
-    test('TRIANGULATE: pop-to-root leaves current == null', () {
+    test(
+        'TRIANGULATE: pop-to-root clears historical children but keeps root '
+        '(REQ-RS-012)', () {
       RouteScope.onPush(_route('A'));
       RouteScope.onPush(_route('B'));
       RouteScope.onPop(_route('B'));
-      RouteScope.onPop(_route('A'));
-      expect(RouteScope.current, isNull);
+      // Stack preserved for HTTP tagging.
+      expect(RouteScope.current, isNotNull);
+      expect(RouteScope.current!.routeName, equals('A'));
+      // Historical child entries are cleared, but the root entry remains
+      // so the route tree can build the next flow under home.
+      expect(RouteScope.entries.map((e) => e.routeName), equals(<String>['A']));
     });
 
     test('pop on an empty stack does not crash (edge case)', () {
@@ -116,14 +123,18 @@ void main() {
   });
 
   group('RouteScope.entries (REQ-RS-001)', () {
-    test('entries never shrinks: popped scopes remain in history', () {
+    test(
+        'entries never shrinks while mid-stack: popped scopes remain '
+        'available until returning to root', () {
       RouteScope.onPush(_route('A'));
       RouteScope.onPush(_route('B'));
-      RouteScope.onPop(_route('B'));
-      expect(RouteScope.entries.length, equals(2));
+      RouteScope.onPush(_route('C'));
+      RouteScope.onPop(_route('C'));
+      // C is popped but entries should still have 3 entries
+      expect(RouteScope.entries.length, equals(3));
       expect(
         RouteScope.entries.map((e) => e.routeName),
-        equals(<String>['A', 'B']),
+        equals(<String>['A', 'B', 'C']),
       );
     });
 
@@ -132,14 +143,16 @@ void main() {
       expect(RouteScope.current, isNull);
     });
 
-    test('scope IDs are monotonically increasing across 5 transitions', () {
-      RouteScope.onPush(_route('A')); // id 1
-      RouteScope.onPush(_route('B')); // id 2
-      RouteScope.onPop(_route('B')); // no new id
-      RouteScope.onReplace(_route('A2')); // id 3
-      RouteScope.onPush(_route('D')); // id 4
+    test(
+        'scope IDs remain monotonically increasing after pop-to-root reset '
+        '(root entry is preserved)', () {
+      RouteScope.onPush(_route('A')); // id 1, entries=[A]
+      RouteScope.onPush(_route('B')); // id 2, entries=[A,B]
+      RouteScope.onPop(_route('B')); // stack=[A] → entries=[A]
+      RouteScope.onReplace(_route('A2')); // id 3, entries=[A,A2]
+      RouteScope.onPush(_route('D')); // id 4, entries=[A,A2,D]
       final ids = RouteScope.entries.map((e) => e.scopeId).toList();
-      expect(ids, equals(<int>[1, 2, 3, 4]));
+      expect(ids, equals(<int>[1, 3, 4]));
       for (var i = 1; i < ids.length; i++) {
         expect(ids[i], greaterThan(ids[i - 1]));
       }
@@ -152,7 +165,8 @@ void main() {
       // case for a `MaterialPageRoute` pushed without a name).
       final route = _route(null);
       RouteScope.onPush(route);
-      expect(RouteScope.current!.routeName, equals(route.runtimeType.toString()));
+      expect(
+          RouteScope.current!.routeName, equals(route.runtimeType.toString()));
       // Locks the concrete fallback shape so a future refactor
       // that stops falling back to runtimeType is caught.
       expect(RouteScope.current!.routeName, contains('MaterialPageRoute'));

@@ -15,6 +15,14 @@ import 'package:flutter_api_inspector/src/route_scope.dart';
 /// [RouteScopeEntry] is the selected scope, or `null` to clear the filter.
 typedef ScopeSelectionCallback = void Function(RouteScopeEntry? entry);
 
+/// Callback fired when the user taps the list-icon to open the endpoint
+/// detail panel for a route scope.
+/// [entry] is the selected [RouteScopeEntry].
+/// [records] is the pre-filtered list of [ApiTraceRecord]s whose
+/// [routeScopeId] matches [entry.scopeId].
+typedef EndpointPanelCallback = void Function(
+    RouteScopeEntry entry, List<ApiTraceRecord> records);
+
 /// Tab widget that shows the hierarchical route tree.
 ///
 /// Builds the tree from [RouteScope.entries], computes per-scope
@@ -34,6 +42,7 @@ class RouteTreeTab extends StatefulWidget {
     required this.records,
     required this.onScopeSelected,
     this.selectedScopeId,
+    this.onShowEndpoints,
   });
 
   /// All records from the timeline.
@@ -44,6 +53,10 @@ class RouteTreeTab extends StatefulWidget {
 
   /// Currently selected scope ID (null = no filter).
   final int? selectedScopeId;
+
+  /// Called when the user taps the list-icon to open the endpoint
+  /// detail panel for a route.
+  final EndpointPanelCallback? onShowEndpoints;
 
   @override
   State<RouteTreeTab> createState() => _RouteTreeTabState();
@@ -181,6 +194,14 @@ class _RouteTreeTabState extends State<RouteTreeTab> {
         onTap: () => widget.onScopeSelected(
           isSelected ? null : entry,
         ),
+        onShowEndpoints: widget.onShowEndpoints != null
+            ? () {
+                final filtered = widget.records
+                    .where((r) => r.routeScopeId == entry.scopeId)
+                    .toList();
+                widget.onShowEndpoints!(entry, filtered);
+              }
+            : null,
         onToggle: hasChildren
             ? () {
                 setState(() {
@@ -239,6 +260,7 @@ class _RouteTreeRow extends StatelessWidget {
     required this.totalCalls,
     required this.errorCount,
     required this.onTap,
+    this.onShowEndpoints,
     this.onToggle,
   });
 
@@ -257,6 +279,7 @@ class _RouteTreeRow extends StatelessWidget {
   final int totalCalls;
   final int errorCount;
   final VoidCallback onTap;
+  final VoidCallback? onShowEndpoints;
   final VoidCallback? onToggle;
 
   @override
@@ -275,7 +298,7 @@ class _RouteTreeRow extends StatelessWidget {
         onTap: onTap,
         child: Padding(
           padding: EdgeInsets.only(
-            left: 16.0 + depth * 20.0,
+            left: 16.0 + depth * 3.0,
             right: 16,
             top: 8,
             bottom: 8,
@@ -344,6 +367,17 @@ class _RouteTreeRow extends StatelessWidget {
                       color: inspectorMuted(context),
                     ),
                   ),
+                ),
+              // List-icon button for endpoint detail panel
+              if (onShowEndpoints != null)
+                IconButton(
+                  icon: const Icon(Icons.list_alt_rounded, size: 16),
+                  tooltip: 'View endpoints',
+                  onPressed: onShowEndpoints,
+                  padding: EdgeInsets.zero,
+                  constraints:
+                      const BoxConstraints(minWidth: 24, minHeight: 24),
+                  splashRadius: 14,
                 ),
               // Error badge
               if (errorCount > 0) ...[

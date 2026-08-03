@@ -32,6 +32,7 @@ coverage/
 
 # Pi / gentle-pi harness artifacts (do not commit)
 .pi/
+.pi-subagents/
 .atl/
 
 # Misc

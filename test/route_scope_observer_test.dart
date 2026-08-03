@@ -45,8 +45,7 @@ void main() {
       expect(RouteScope.current!.scopeId, equals(1));
     });
 
-    testWidgets(
-        'pushing a named route tags RouteScope.current with that name',
+    testWidgets('pushing a named route tags RouteScope.current with that name',
         (tester) async {
       final navKey = GlobalKey<NavigatorState>();
       await tester.pumpWidget(harness(navKey));
@@ -64,23 +63,93 @@ void main() {
   });
 
   group('RouteScopeObserver.didPop (REQ-RS-002)', () {
-    testWidgets('popping a route restores the previous scope',
-        (tester) async {
+    testWidgets('popping a route restores the previous scope', (tester) async {
       final navKey = GlobalKey<NavigatorState>();
       await tester.pumpWidget(harness(navKey));
-      final initialScopeId = RouteScope.current!.scopeId;
+      // Stack: [Home]
+      final rootScopeId = RouteScope.current!.scopeId;
 
+      unawaited(navKey.currentState!.push(MaterialPageRoute<void>(
+        settings: const RouteSettings(name: 'A'),
+        builder: (_) => const Scaffold(body: Text('a')),
+      )));
+      await tester.pumpAndSettle();
+      // Stack: [Home, A]
+      final scopeAId = RouteScope.current!.scopeId;
+
+      unawaited(navKey.currentState!.push(MaterialPageRoute<void>(
+        settings: const RouteSettings(name: 'B'),
+        builder: (_) => const Scaffold(body: Text('b')),
+      )));
+      await tester.pumpAndSettle();
+      expect(RouteScope.current!.routeName, equals('B'));
+
+      // Pop B → back to A (stack size 2, no reset)
+      navKey.currentState!.pop();
+      await tester.pumpAndSettle();
+      expect(RouteScope.current!.scopeId, equals(scopeAId));
+
+      // Pop A → back to root → triggers reset (REQ-RS-012)
+      navKey.currentState!.pop();
+      await tester.pumpAndSettle();
+      // Stack preserved for HTTP tagging
+      expect(RouteScope.current, isNotNull,
+          reason: 'root entry preserved after reset');
+      expect(RouteScope.current!.scopeId, equals(rootScopeId));
+      // Historical entries cleared (only root remains)
+      expect(RouteScope.entries.length, equals(1));
+    });
+
+    testWidgets(
+        'REQ-RS-012: popping back to root clears historical entries '
+        '(Reset al volver a home)', (tester) async {
+      RouteScope.dispose();
+      RouteScope.init();
+      final navKey = GlobalKey<NavigatorState>();
+      await tester.pumpWidget(harness(navKey));
+      // After initial push: entries = [Home], stack = [Home]
+      expect(RouteScope.entries.length, equals(1));
+      expect(RouteScope.current, isNotNull);
+
+      // Push Detail: entries = [Home, Detail], stack = [Home, Detail]
       unawaited(navKey.currentState!.push(MaterialPageRoute<void>(
         settings: const RouteSettings(name: 'Detail'),
         builder: (_) => const Scaffold(body: Text('detail')),
       )));
       await tester.pumpAndSettle();
-      expect(RouteScope.current!.routeName, equals('Detail'));
+      expect(RouteScope.entries.length, equals(2));
 
+      // Push Another: entries = [Home, Detail, Another]
+      unawaited(navKey.currentState!.push(MaterialPageRoute<void>(
+        settings: const RouteSettings(name: 'Another'),
+        builder: (_) => const Scaffold(body: Text('another')),
+      )));
+      await tester.pumpAndSettle();
+      expect(RouteScope.entries.length, equals(3));
+
+      // Pop Another → stack = [Home, Detail], entries still 3
       navKey.currentState!.pop();
       await tester.pumpAndSettle();
+      expect(RouteScope.entries.length, equals(3));
 
-      expect(RouteScope.current!.scopeId, equals(initialScopeId));
+      // Pop Detail → stack = [Home] (size 1) → RESET
+      navKey.currentState!.pop();
+      await tester.pumpAndSettle();
+      // Stack preserved: current is still the root route
+      expect(RouteScope.current, isNotNull,
+          reason: 'root stack entry preserved for HTTP tagging');
+      expect(RouteScope.entries.length, equals(1),
+          reason:
+              'historical child entries are cleared after returning to root');
+
+      // New push is a child of the root (fresh flow)
+      unawaited(navKey.currentState!.push(MaterialPageRoute<void>(
+        settings: const RouteSettings(name: 'NewScreen'),
+        builder: (_) => const Scaffold(body: Text('new')),
+      )));
+      await tester.pumpAndSettle();
+      expect(RouteScope.entries.length, equals(2));
+      // The root entry (preserved from before reset) + NewScreen
     });
   });
 

@@ -110,8 +110,7 @@ final class _TimelineView extends ListBase<ApiTraceRecord> {
   @override
   ApiTraceRecord operator [](int index) {
     RangeError.checkValidIndex(index, this, 'index', _timeline._size);
-    return _timeline
-        ._buffer[(_timeline._head + index) % _timeline.capacity]!;
+    return _timeline._buffer[(_timeline._head + index) % _timeline.capacity]!;
   }
 
   @override
