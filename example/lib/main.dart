@@ -31,31 +31,26 @@ import 'package:flutter/foundation.dart' show kDebugMode;
 import 'package:flutter/material.dart';
 import 'package:flutter_api_inspector/flutter_api_inspector.dart';
 
-void main() => ApiTrace.runApp(const ExampleApp());
+void main() => ApiTrace.runApp(_buildExampleApp());
 
-/// The root [MaterialApp] of the example.
+/// Builds the root [MaterialApp] of the example.
 ///
-/// Uses named routes (`/home`, `/detail`) so [RouteScope.current.routeName]
-/// resolves to a readable label instead of falling back to
-/// `route.runtimeType.toString()`.
-class ExampleApp extends StatelessWidget {
-  const ExampleApp({super.key});
-
-  @override
-  Widget build(BuildContext context) {
-    return MaterialApp(
-      title: 'flutter_api_inspector example',
-      theme: ThemeData(
-        colorSchemeSeed: Colors.indigo,
-        useMaterial3: true,
-      ),
-      initialRoute: '/home',
-      routes: <String, WidgetBuilder>{
-        '/home': (_) => const _HomeScreen(),
-        '/detail': (_) => const _DetailScreen(),
-      },
-    );
-  }
+/// Pass the [MaterialApp] directly to [ApiTrace.runApp] so the package can
+/// inject [RouteScopeObserver] into this app's navigator and show named route
+/// groups (`/home`, `/detail`) in the overlay's Routes tab.
+MaterialApp _buildExampleApp() {
+  return MaterialApp(
+    title: 'flutter_api_inspector example',
+    theme: ThemeData(
+      colorSchemeSeed: Colors.indigo,
+      useMaterial3: true,
+    ),
+    initialRoute: '/home',
+    routes: <String, WidgetBuilder>{
+      '/home': (_) => const _HomeScreen(),
+      '/detail': (_) => const _DetailScreen(),
+    },
+  );
 }
 
 /// Builds the `extra` map that tags an `ApiTrace.call` with the route

@@ -4,11 +4,11 @@
 [![Dart](https://img.shields.io/badge/Dart-%3E%3D3.6.0-blue.svg)](https://dart.dev)
 
 <p align="center">
-  <img src="https://raw.githubusercontent.com/Maxs22/flutter_api_inspector/main/assets/demo.gif"
+  <img src="https://raw.githubusercontent.com/Maxs22/flutter_api_inspector/v0.3.2/assets/demo.gif"
        alt="flutter_api_inspector demo"
        width="360">
   <br>
-  <em>FAB → Timeline → Request detail — all inside your running debug app.</em>
+  <em>FAB → Timeline → Routes → Endpoint panel — all inside your running debug app.</em>
 </p>
 
 Debug-first in-app overlay that intercepts HTTP traffic and shows a
@@ -38,7 +38,7 @@ Add the dependency:
 
 ```yaml
 dependencies:
-  flutter_api_inspector: ^0.3.1
+  flutter_api_inspector: ^0.3.2
 ```
 
 ### Option A — Automatic capture (recommended)

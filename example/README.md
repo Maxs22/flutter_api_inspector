@@ -1,10 +1,7 @@
 # flutter_api_inspector example
 
-Example app demonstrating all three integration options:
-
-- **Option A** — Automatic capture via `TracedHttpOverrides`
-- **Option B** — Manual instrumentation via `ApiTrace.call()`
-- **Option C** — Dio interceptor via `TracedDioInterceptor`
+Example app demonstrating manual instrumentation via `ApiTrace.call()`
+and route-scoped grouping in the inspector overlay.
 
 ## Run
 

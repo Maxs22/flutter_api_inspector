@@ -6,12 +6,23 @@ and the project adheres to [Semantic Versioning](https://semver.org/).
 
 ## Unreleased
 
+## 0.3.2 — 2026-08-04
+
+### Added
+
+- **Demo GIF**: added a real `assets/demo.gif` recorded from the example
+  app, showing Home/Detail calls, the FAB, Timeline, Routes, and the route
+  endpoint panel.
+
 ### Fixed
 
 - **pub.dev docs**: updated README examples and limitations to match
-  version `0.3.1`, the current `panelMinHeight` default, route endpoint
+  version `0.3.2`, the current `panelMinHeight` default, route endpoint
   drill-down behavior, and the debug-only status of route tooling in
   force-enabled QA builds.
+- **Example route scopes**: pass the example `MaterialApp` directly to
+  `ApiTrace.runApp` so the Routes tab displays named `/home` and `/detail`
+  groups in the visual demo.
 
 ## 0.3.1 — 2026-07-14
 
