@@ -6,6 +6,16 @@ and the project adheres to [Semantic Versioning](https://semver.org/).
 
 ## Unreleased
 
+## 0.3.4 — 2026-08-06
+
+### Fixed
+
+- **Inspector modal isolation**: opening the overlay now clears any active
+  host-app `SnackBar` so app notifications do not visually overlap the
+  inspector panel.
+- **Demo evidence**: regenerated the demo GIF/screenshots after the
+  SnackBar overlap fix.
+
 ## 0.3.3 — 2026-08-06
 
 ### Changed

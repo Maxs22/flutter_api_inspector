@@ -3,7 +3,7 @@ description: >-
   Debug-first in-app HTTP inspector for Flutter mobile/desktop. Live
   timeline, route grouping, details, and QA force-enable support without
   proxy setup.
-version: 0.3.3
+version: 0.3.4
 repository: https://github.com/Maxs22/flutter_api_inspector
 
 # Color.withValues and the ColorScheme surfaceContainer* roles the

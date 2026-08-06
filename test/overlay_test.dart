@@ -1406,6 +1406,35 @@ void main() {
       expect(errorDot(), findsNothing);
     });
 
+    testWidgets('opening the panel clears host app SnackBars', (tester) async {
+      await _pumpAppWithOverlay(
+        tester,
+        child: Builder(
+          builder: (BuildContext context) => Scaffold(
+            body: Center(
+              child: ElevatedButton(
+                onPressed: () {
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    const SnackBar(content: Text('host snackbar')),
+                  );
+                },
+                child: const Text('Show snackbar'),
+              ),
+            ),
+          ),
+        ),
+      );
+
+      await tester.tap(find.text('Show snackbar'));
+      await tester.pump();
+      expect(find.text('host snackbar'), findsOneWidget);
+
+      await tester.tap(find.byType(FloatingActionButton));
+      await tester.pumpAndSettle();
+      expect(find.byKey(const ValueKey('inspectorPanel')), findsOneWidget);
+      expect(find.text('host snackbar'), findsNothing);
+    });
+
     testWidgets('tapping outside the panel closes it (scrim)', (tester) async {
       await _pumpAppWithOverlay(tester);
       await tester.tap(find.byType(FloatingActionButton));

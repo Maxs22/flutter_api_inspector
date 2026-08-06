@@ -4,7 +4,7 @@
 [![Dart](https://img.shields.io/badge/Dart-%3E%3D3.6.0-blue.svg)](https://dart.dev)
 
 <p align="center">
-  <img src="https://raw.githubusercontent.com/Maxs22/flutter_api_inspector/v0.3.3/assets/demo.gif"
+  <img src="https://raw.githubusercontent.com/Maxs22/flutter_api_inspector/v0.3.4/assets/demo.gif"
        alt="flutter_api_inspector demo"
        width="360">
   <br>
@@ -12,13 +12,13 @@
 </p>
 
 <p align="center">
-  <img src="https://raw.githubusercontent.com/Maxs22/flutter_api_inspector/v0.3.3/assets/demo-timeline.png"
+  <img src="https://raw.githubusercontent.com/Maxs22/flutter_api_inspector/v0.3.4/assets/demo-timeline.png"
        alt="Timeline tab screenshot"
        width="220">
-  <img src="https://raw.githubusercontent.com/Maxs22/flutter_api_inspector/v0.3.3/assets/demo-routes.png"
+  <img src="https://raw.githubusercontent.com/Maxs22/flutter_api_inspector/v0.3.4/assets/demo-routes.png"
        alt="Routes tab screenshot"
        width="220">
-  <img src="https://raw.githubusercontent.com/Maxs22/flutter_api_inspector/v0.3.3/assets/demo-endpoints.png"
+  <img src="https://raw.githubusercontent.com/Maxs22/flutter_api_inspector/v0.3.4/assets/demo-endpoints.png"
        alt="Route endpoints screenshot"
        width="220">
 </p>
@@ -50,7 +50,7 @@ Add the dependency:
 
 ```yaml
 dependencies:
-  flutter_api_inspector: ^0.3.3
+  flutter_api_inspector: ^0.3.4
 ```
 
 ### Option A — Automatic capture (recommended)
