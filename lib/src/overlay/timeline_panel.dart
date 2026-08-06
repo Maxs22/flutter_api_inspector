@@ -138,36 +138,22 @@ class _TimelinePanelState extends State<TimelinePanel> {
   Widget build(BuildContext context) {
     final filtered = _applyFilters(widget.records);
 
-    // The panel is wrapped in a `LayoutBuilder` so we can
-    // compute the available height and pass it explicitly to
-    // the inner `Material`. Without this, the `Material`
-    // collapses to its child's intrinsic size, the
-    // `Expanded(ListView)` inside the `Column` gets zero
-    // height, and the panel ends up showing only the header
-    // and filter row with no scroll area for the records.
     return LayoutBuilder(
       builder: (BuildContext context, BoxConstraints constraints) {
-        return Material(
-          color: inspectorPanelBackground(context),
-          elevation: 12,
-          shadowColor: Colors.black.withValues(alpha: 0.18),
-          borderRadius: BorderRadius.circular(12),
-          clipBehavior: Clip.antiAlias,
-          child: SizedBox(
-            width: constraints.maxWidth,
-            height: constraints.maxHeight,
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.stretch,
-              children: <Widget>[
-                _buildHeader(context, filtered.length),
-                _buildFilterRow(context),
-                Expanded(
-                  child: filtered.isEmpty
-                      ? _buildEmptyState(context)
-                      : _buildGroupedList(filtered),
-                ),
-              ],
-            ),
+        return SizedBox(
+          width: constraints.maxWidth,
+          height: constraints.maxHeight,
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: <Widget>[
+              _buildHeader(context, filtered.length),
+              _buildFilterRow(context),
+              Expanded(
+                child: filtered.isEmpty
+                    ? _buildEmptyState(context)
+                    : _buildGroupedList(filtered),
+              ),
+            ],
           ),
         );
       },
@@ -178,38 +164,42 @@ class _TimelinePanelState extends State<TimelinePanel> {
   /// the outcome filter and the name query are applied — the badge
   /// must reflect what the list shows, not the timeline total.
   Widget _buildHeader(BuildContext context, int shownCount) {
-    return Container(
-      padding: const EdgeInsets.fromLTRB(16, 4, 4, 4),
-      decoration: BoxDecoration(
-        border: Border(
-          bottom: BorderSide(
-            color: Theme.of(context).dividerColor,
-            width: 0.5,
-          ),
-        ),
-      ),
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(14, 8, 6, 6),
       child: Row(
         children: <Widget>[
-          Icon(
-            Icons.bolt_rounded,
-            size: 18,
-            color: inspectorAccent(context),
+          Container(
+            width: 26,
+            height: 26,
+            decoration: BoxDecoration(
+              color: inspectorAccent(context).withValues(alpha: 0.12),
+              borderRadius: BorderRadius.circular(10),
+            ),
+            child: Icon(
+              Icons.bolt_rounded,
+              size: 16,
+              color: inspectorAccent(context),
+            ),
           ),
-          const SizedBox(width: 8),
+          const SizedBox(width: 10),
           Text(
             'API calls',
             style: TextStyle(
               fontSize: 15,
-              fontWeight: FontWeight.w700,
+              fontWeight: FontWeight.w800,
+              letterSpacing: -0.2,
               color: Theme.of(context).textTheme.titleMedium?.color,
             ),
           ),
           const SizedBox(width: 6),
           Container(
-            padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
             decoration: BoxDecoration(
               color: inspectorAccent(context).withValues(alpha: 0.12),
-              borderRadius: BorderRadius.circular(8),
+              borderRadius: BorderRadius.circular(999),
+              border: Border.all(
+                color: inspectorAccent(context).withValues(alpha: 0.18),
+              ),
             ),
             child: Text(
               '$shownCount',
@@ -259,7 +249,7 @@ class _TimelinePanelState extends State<TimelinePanel> {
 
   Widget _buildFilterRow(BuildContext context) {
     return Padding(
-      padding: const EdgeInsets.fromLTRB(12, 6, 12, 6),
+      padding: const EdgeInsets.fromLTRB(12, 8, 12, 6),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         mainAxisSize: MainAxisSize.min,
@@ -278,12 +268,21 @@ class _TimelinePanelState extends State<TimelinePanel> {
                 color: inspectorMuted(context),
               ),
               contentPadding:
-                  const EdgeInsets.symmetric(horizontal: 8, vertical: 6),
+                  const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
               filled: true,
-              fillColor: inspectorFieldFill(context),
+              fillColor: inspectorPanelBackground(context),
               border: OutlineInputBorder(
-                borderRadius: BorderRadius.circular(8),
-                borderSide: BorderSide.none,
+                borderRadius: BorderRadius.circular(14),
+                borderSide: BorderSide(color: inspectorOutline(context)),
+              ),
+              enabledBorder: OutlineInputBorder(
+                borderRadius: BorderRadius.circular(14),
+                borderSide: BorderSide(color: inspectorOutline(context)),
+              ),
+              focusedBorder: OutlineInputBorder(
+                borderRadius: BorderRadius.circular(14),
+                borderSide:
+                    BorderSide(color: inspectorAccent(context), width: 1.2),
               ),
             ),
             style: const TextStyle(fontSize: 12),
@@ -295,7 +294,8 @@ class _TimelinePanelState extends State<TimelinePanel> {
           ),
           const SizedBox(height: 6),
           Wrap(
-            spacing: 6,
+            spacing: 8,
+            runSpacing: 8,
             children: <Widget>[
               _filterChip(
                 context,
@@ -349,15 +349,19 @@ class _TimelinePanelState extends State<TimelinePanel> {
       selected: selected,
       showCheckmark: false,
       selectedColor: tint.withValues(alpha: 0.12),
-      backgroundColor: inspectorFieldFill(context),
+      backgroundColor: inspectorTintedSurface(context, alpha: 0.04),
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(999)),
       side: BorderSide(
-        color: selected ? tint.withValues(alpha: 0.4) : Colors.transparent,
+        color:
+            selected ? tint.withValues(alpha: 0.42) : inspectorOutline(context),
       ),
       labelStyle: TextStyle(
         fontSize: 12,
         fontWeight: selected ? FontWeight.w700 : FontWeight.w500,
         color: selected ? tint : Theme.of(context).textTheme.bodyMedium?.color,
       ),
+      visualDensity: VisualDensity.compact,
+      materialTapTargetSize: MaterialTapTargetSize.shrinkWrap,
       onSelected: (bool _) {
         setState(() {
           _filter = value;
@@ -461,7 +465,10 @@ class _TimelinePanelState extends State<TimelinePanel> {
         }
       }
     }
-    return ListView(children: children);
+    return ListView(
+      padding: const EdgeInsets.only(bottom: 8),
+      children: children,
+    );
   }
 
   /// Splits [records] into a list of [TimelineGroup]s. Two

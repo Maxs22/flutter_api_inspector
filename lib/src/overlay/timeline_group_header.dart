@@ -58,13 +58,13 @@ class _TimelineGroupHeaderState extends State<TimelineGroupHeader> {
         : (anyError ? inspectorError(context) : inspectorMuted(context));
 
     return Material(
-      color: inspectorGroupHeaderBackground(context),
+      color: Colors.transparent,
       child: InkWell(
         onTap: widget.onToggle,
-        splashColor: tint.withValues(alpha: 0.08),
-        highlightColor: tint.withValues(alpha: 0.04),
+        splashColor: tint.withValues(alpha: 0.06),
+        highlightColor: tint.withValues(alpha: 0.03),
         child: Padding(
-          padding: const EdgeInsets.fromLTRB(16, 8, 16, 8),
+          padding: const EdgeInsets.fromLTRB(16, 6, 16, 6),
           child: Row(
             children: <Widget>[
               AnimatedRotation(

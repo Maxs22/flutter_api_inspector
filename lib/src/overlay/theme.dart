@@ -23,10 +23,25 @@ import 'package:flutter/material.dart';
 const Color _inspectorAccent = Color(0xFF6750A4);
 
 /// Radius for cards / chips / containers in the overlay.
-const double inspectorRadius = 10.0;
+const double inspectorRadius = 16.0;
+
+/// Larger radius for the floating inspector shell.
+const double inspectorShellRadius = 22.0;
 
 /// Spacing unit. All paddings and gaps are multiples of this.
 const double inspectorSpacing = 8.0;
+
+/// Subtle outline used on modern floating surfaces.
+Color inspectorOutline(BuildContext context) =>
+    Theme.of(context).colorScheme.outlineVariant.withValues(
+        alpha: Theme.of(context).brightness == Brightness.dark ? 0.34 : 0.55);
+
+/// Soft app-tinted surface used for selected controls and cards.
+Color inspectorTintedSurface(BuildContext context, {double alpha = 0.08}) =>
+    Color.alphaBlend(
+      Theme.of(context).colorScheme.primary.withValues(alpha: alpha),
+      inspectorPanelBackground(context),
+    );
 
 /// WCAG contrast ratio between [a] and [b] (1.0 – 21.0).
 double _contrastRatio(Color a, Color b) {

@@ -59,8 +59,16 @@ class _RouteEndpointPanelState extends State<RouteEndpointPanel> {
     }
 
     return Scaffold(
+      backgroundColor: inspectorPanelBackground(context),
       appBar: AppBar(
         title: Text('${widget.routeName} Endpoints'),
+        backgroundColor: inspectorPanelBackground(context),
+        elevation: 0,
+        scrolledUnderElevation: 0,
+        bottom: PreferredSize(
+          preferredSize: const Size.fromHeight(1),
+          child: Container(height: 1, color: inspectorOutline(context)),
+        ),
       ),
       body: _records.isEmpty ? _buildEmptyState(context) : _buildList(context),
     );
@@ -95,30 +103,99 @@ class _RouteEndpointPanelState extends State<RouteEndpointPanel> {
 
   Widget _buildList(BuildContext context) {
     return ListView.builder(
+      padding: const EdgeInsets.fromLTRB(12, 12, 12, 24),
       itemCount: _records.length,
       itemBuilder: (context, index) {
         final record = _records[index];
-        return ListTile(
-          title: Text(record.name, style: const TextStyle(fontSize: 13)),
-          subtitle: Text(
-            '${record.method} \u00b7 ${record.statusCode ?? '???'}',
-            style: TextStyle(
-              fontSize: 12,
-              color: outcomeColor(record.outcome),
+        final tint = outcomeColor(record.outcome);
+        return Padding(
+          padding: const EdgeInsets.only(bottom: 8),
+          child: Material(
+            color: inspectorTintedSurface(context, alpha: 0.035),
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(14),
+              side: BorderSide(color: inspectorOutline(context), width: 0.7),
+            ),
+            clipBehavior: Clip.antiAlias,
+            child: InkWell(
+              onTap: () {
+                Navigator.push(
+                  context,
+                  MaterialPageRoute<void>(
+                    builder: (_) => ApiTraceDetailScreen(record: record),
+                  ),
+                );
+              },
+              child: Padding(
+                padding: const EdgeInsets.fromLTRB(14, 12, 14, 12),
+                child: Row(
+                  children: <Widget>[
+                    Container(
+                      width: 34,
+                      height: 34,
+                      decoration: BoxDecoration(
+                        color: tint.withValues(alpha: 0.12),
+                        borderRadius: BorderRadius.circular(11),
+                      ),
+                      alignment: Alignment.center,
+                      child: Text(
+                        record.method,
+                        style: TextStyle(
+                          color: tint,
+                          fontSize: 10,
+                          fontWeight: FontWeight.w800,
+                          fontFamily: 'monospace',
+                        ),
+                      ),
+                    ),
+                    const SizedBox(width: 12),
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: <Widget>[
+                          Text(
+                            record.name,
+                            style: const TextStyle(
+                              fontSize: 13,
+                              fontWeight: FontWeight.w700,
+                            ),
+                            overflow: TextOverflow.ellipsis,
+                          ),
+                          const SizedBox(height: 3),
+                          Text(
+                            '${record.method} · ${record.statusCode ?? '???'}',
+                            style: TextStyle(fontSize: 12, color: tint),
+                            overflow: TextOverflow.ellipsis,
+                          ),
+                          const SizedBox(height: 2),
+                          Text(
+                            record.url.path,
+                            style: TextStyle(
+                              fontSize: 11,
+                              color: inspectorMuted(context),
+                              fontFamily: 'monospace',
+                            ),
+                            overflow: TextOverflow.ellipsis,
+                          ),
+                        ],
+                      ),
+                    ),
+                    const SizedBox(width: 8),
+                    Text(
+                      _formatDuration(record.duration),
+                      style: TextStyle(
+                        fontSize: 12,
+                        color: inspectorMuted(context),
+                        fontFeatures: const <FontFeature>[
+                          FontFeature.tabularFigures(),
+                        ],
+                      ),
+                    ),
+                  ],
+                ),
+              ),
             ),
           ),
-          trailing: Text(
-            _formatDuration(record.duration),
-            style: const TextStyle(fontSize: 12),
-          ),
-          onTap: () {
-            Navigator.push(
-              context,
-              MaterialPageRoute<void>(
-                builder: (_) => ApiTraceDetailScreen(record: record),
-              ),
-            );
-          },
         );
       },
     );

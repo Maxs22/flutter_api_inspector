@@ -68,94 +68,111 @@ class TimelineRow extends StatelessWidget {
       ApiTraceOutcome.cancelled => Icons.cancel_rounded,
     };
 
-    return Material(
-      color: inspectorRowBackground(context),
-      child: InkWell(
-        onTap: onTap,
-        onHover: null,
-        splashColor: tint.withValues(alpha: 0.08),
-        highlightColor: tint.withValues(alpha: 0.04),
-        child: Padding(
-          padding: const EdgeInsets.fromLTRB(16, 10, 16, 10),
-          child: Row(
-            crossAxisAlignment: CrossAxisAlignment.center,
-            children: <Widget>[
-              Icon(iconData, color: tint, size: 18),
-              const SizedBox(width: 10),
-              _MethodChip(method: record.method),
-              const SizedBox(width: 10),
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: <Widget>[
-                    Text(
-                      record.name,
-                      style: TextStyle(
-                        fontSize: 13,
-                        fontWeight: FontWeight.w600,
-                        color: Theme.of(context).textTheme.bodyLarge?.color,
-                        height: 1.2,
-                      ),
-                      overflow: TextOverflow.ellipsis,
-                      maxLines: 1,
-                    ),
-                    const SizedBox(height: 2),
-                    Text(
-                      _pathOf(record.url),
-                      style: TextStyle(
-                        fontSize: 11,
-                        color: inspectorMuted(context),
-                        fontFamily: 'monospace',
-                        height: 1.2,
-                      ),
-                      overflow: TextOverflow.ellipsis,
-                      maxLines: 1,
-                    ),
-                  ],
-                ),
-              ),
-              const SizedBox(width: 8),
-              if (record.statusCode != null)
-                _StatusBadge(statusCode: record.statusCode!, tint: tint)
-              else
-                Text(
-                  '—',
-                  style: TextStyle(
-                    color: inspectorMuted(context),
-                    fontSize: 11,
-                    fontWeight: FontWeight.w700,
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(12, 3, 12, 3),
+      child: Material(
+        color: inspectorTintedSurface(context, alpha: 0.035),
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(14),
+          side: BorderSide(color: inspectorOutline(context), width: 0.7),
+        ),
+        clipBehavior: Clip.antiAlias,
+        child: InkWell(
+          onTap: onTap,
+          onHover: null,
+          splashColor: tint.withValues(alpha: 0.08),
+          highlightColor: tint.withValues(alpha: 0.04),
+          child: Padding(
+            padding: const EdgeInsets.fromLTRB(12, 8, 12, 8),
+            child: Row(
+              crossAxisAlignment: CrossAxisAlignment.center,
+              children: <Widget>[
+                Container(
+                  width: 28,
+                  height: 28,
+                  decoration: BoxDecoration(
+                    color: tint.withValues(alpha: 0.12),
+                    borderRadius: BorderRadius.circular(9),
                   ),
+                  child: Icon(iconData, color: tint, size: 17),
                 ),
-              const SizedBox(width: 10),
-              SizedBox(
-                width: 56,
-                child: Text(
-                  _formatDuration(record.duration),
-                  textAlign: TextAlign.right,
-                  style: TextStyle(
-                    fontSize: 12,
-                    fontFeatures: const <FontFeature>[
-                      FontFeature.tabularFigures()
+                const SizedBox(width: 10),
+                _MethodChip(method: record.method),
+                const SizedBox(width: 10),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: <Widget>[
+                      Text(
+                        record.name,
+                        style: TextStyle(
+                          fontSize: 13,
+                          fontWeight: FontWeight.w600,
+                          color: Theme.of(context).textTheme.bodyLarge?.color,
+                          height: 1.2,
+                        ),
+                        overflow: TextOverflow.ellipsis,
+                        maxLines: 1,
+                      ),
+                      const SizedBox(height: 2),
+                      Text(
+                        _pathOf(record.url),
+                        style: TextStyle(
+                          fontSize: 11,
+                          color: inspectorMuted(context),
+                          fontFamily: 'monospace',
+                          height: 1.2,
+                        ),
+                        overflow: TextOverflow.ellipsis,
+                        maxLines: 1,
+                      ),
                     ],
-                    color: Theme.of(context).textTheme.bodyMedium?.color,
                   ),
                 ),
-              ),
-              const SizedBox(width: 6),
-              SizedBox(
-                width: 52,
-                child: Text(
-                  relativeTimestamp ??
-                      _timeAgo(record.completedAt, now ?? DateTime.now()),
-                  textAlign: TextAlign.right,
-                  style: TextStyle(
-                    fontSize: 10,
-                    color: inspectorMuted(context),
-                    fontFamily: relativeTimestamp != null ? 'monospace' : null,
+                const SizedBox(width: 8),
+                if (record.statusCode != null)
+                  _StatusBadge(statusCode: record.statusCode!, tint: tint)
+                else
+                  Text(
+                    '—',
+                    style: TextStyle(
+                      color: inspectorMuted(context),
+                      fontSize: 11,
+                      fontWeight: FontWeight.w700,
+                    ),
+                  ),
+                const SizedBox(width: 10),
+                SizedBox(
+                  width: 56,
+                  child: Text(
+                    _formatDuration(record.duration),
+                    textAlign: TextAlign.right,
+                    style: TextStyle(
+                      fontSize: 12,
+                      fontFeatures: const <FontFeature>[
+                        FontFeature.tabularFigures()
+                      ],
+                      color: Theme.of(context).textTheme.bodyMedium?.color,
+                    ),
                   ),
                 ),
-              ),
-            ],
+                const SizedBox(width: 6),
+                SizedBox(
+                  width: 52,
+                  child: Text(
+                    relativeTimestamp ??
+                        _timeAgo(record.completedAt, now ?? DateTime.now()),
+                    textAlign: TextAlign.right,
+                    style: TextStyle(
+                      fontSize: 10,
+                      color: inspectorMuted(context),
+                      fontFamily:
+                          relativeTimestamp != null ? 'monospace' : null,
+                    ),
+                  ),
+                ),
+              ],
+            ),
           ),
         ),
       ),
@@ -211,7 +228,8 @@ class _MethodChip extends StatelessWidget {
       padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
       decoration: BoxDecoration(
         color: color.withValues(alpha: 0.12),
-        borderRadius: BorderRadius.circular(6),
+        borderRadius: BorderRadius.circular(999),
+        border: Border.all(color: color.withValues(alpha: 0.18)),
       ),
       child: Text(
         method,
@@ -242,7 +260,8 @@ class _StatusBadge extends StatelessWidget {
       padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 3),
       decoration: BoxDecoration(
         color: color.withValues(alpha: 0.12),
-        borderRadius: BorderRadius.circular(6),
+        borderRadius: BorderRadius.circular(999),
+        border: Border.all(color: color.withValues(alpha: 0.18)),
       ),
       child: Text(
         '$statusCode',

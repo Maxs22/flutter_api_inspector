@@ -155,43 +155,53 @@ class _ApiTraceOverlayState extends State<ApiTraceOverlay> {
             left: 12,
             right: 12,
             height: _panelHeight!,
-            child: Column(
-              children: <Widget>[
-                Expanded(
-                  child: _PackageNavigator(
-                    records: widget.records,
-                    config: widget.config,
-                    onRecordTap: widget.onRecordTap,
-                    onClear: ApiTrace.timeline.clear,
-                    onClose: () {
-                      setState(() {
-                        _open = false;
-                      });
-                    },
-                    selectedScopeId: _selectedScopeId,
-                    scopeEntry: _scopeEntry,
-                    onScopeSelected: (RouteScopeEntry? entry) {
-                      setState(() {
-                        _selectedScopeId = entry?.scopeId;
-                        _scopeEntry = entry;
-                      });
-                    },
-                    onExport: _selectedScopeId != null
-                        ? (records) => _exportFilteredRecords(records)
-                        : null,
+            child: Material(
+              color: inspectorPanelBackground(context),
+              elevation: 20,
+              shadowColor: Colors.black.withValues(alpha: 0.20),
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(inspectorShellRadius),
+                side: BorderSide(color: inspectorOutline(context), width: 0.8),
+              ),
+              clipBehavior: Clip.antiAlias,
+              child: Column(
+                children: <Widget>[
+                  Expanded(
+                    child: _PackageNavigator(
+                      records: widget.records,
+                      config: widget.config,
+                      onRecordTap: widget.onRecordTap,
+                      onClear: ApiTrace.timeline.clear,
+                      onClose: () {
+                        setState(() {
+                          _open = false;
+                        });
+                      },
+                      selectedScopeId: _selectedScopeId,
+                      scopeEntry: _scopeEntry,
+                      onScopeSelected: (RouteScopeEntry? entry) {
+                        setState(() {
+                          _selectedScopeId = entry?.scopeId;
+                          _scopeEntry = entry;
+                        });
+                      },
+                      onExport: _selectedScopeId != null
+                          ? (records) => _exportFilteredRecords(records)
+                          : null,
+                    ),
                   ),
-                ),
-                _PanelResizeHandle(
-                  onDrag: (double delta) {
-                    setState(() {
-                      _panelHeight = (_panelHeight! + delta).clamp(
-                        widget.config.panelMinHeight,
-                        widget.config.panelMaxHeight,
-                      );
-                    });
-                  },
-                ),
-              ],
+                  _PanelResizeHandle(
+                    onDrag: (double delta) {
+                      setState(() {
+                        _panelHeight = (_panelHeight! + delta).clamp(
+                          widget.config.panelMinHeight,
+                          widget.config.panelMaxHeight,
+                        );
+                      });
+                    },
+                  ),
+                ],
+              ),
             ),
           ),
         // FAB rendered via LayoutBuilder + Positioned so the
@@ -411,8 +421,8 @@ class _PackageNavigatorState extends State<_PackageNavigator> {
 
     return Column(
       children: <Widget>[
-        Container(
-          color: inspectorGroupHeaderBackground(context),
+        Padding(
+          padding: const EdgeInsets.fromLTRB(14, 12, 14, 8),
           child: Row(
             children: <Widget>[
               _buildTabButton(
@@ -466,40 +476,37 @@ class _PackageNavigatorState extends State<_PackageNavigator> {
           ),
         ),
         Expanded(
-          child: Material(
-            color: inspectorPanelBackground(context),
-            child: _activeTab == 0
-                ? TimelinePanel(
-                    key: const ValueKey('inspectorPanel'),
-                    records: widget.records,
-                    config: widget.config,
-                    onTap: _pushDetail,
-                    onClear: widget.onClear,
-                    onClose: widget.onClose,
-                    onExport: widget.onExport,
-                    scopeFilter: widget.selectedScopeId != null
-                        ? (ApiTraceRecord r) =>
-                            r.routeScopeId == widget.selectedScopeId
-                        : null,
-                    scopeEntry: widget.scopeEntry,
-                  )
-                : RouteTreeTab(
-                    records: widget.records,
-                    onScopeSelected: widget.onScopeSelected,
-                    selectedScopeId: widget.selectedScopeId,
-                    onShowEndpoints:
-                        (RouteScopeEntry entry, List<ApiTraceRecord> records) {
-                      _navKey.currentState?.push(
-                        MaterialPageRoute<void>(
-                          builder: (_) => RouteEndpointPanel(
-                            records: records,
-                            routeName: entry.routeName,
-                          ),
+          child: _activeTab == 0
+              ? TimelinePanel(
+                  key: const ValueKey('inspectorPanel'),
+                  records: widget.records,
+                  config: widget.config,
+                  onTap: _pushDetail,
+                  onClear: widget.onClear,
+                  onClose: widget.onClose,
+                  onExport: widget.onExport,
+                  scopeFilter: widget.selectedScopeId != null
+                      ? (ApiTraceRecord r) =>
+                          r.routeScopeId == widget.selectedScopeId
+                      : null,
+                  scopeEntry: widget.scopeEntry,
+                )
+              : RouteTreeTab(
+                  records: widget.records,
+                  onScopeSelected: widget.onScopeSelected,
+                  selectedScopeId: widget.selectedScopeId,
+                  onShowEndpoints:
+                      (RouteScopeEntry entry, List<ApiTraceRecord> records) {
+                    _navKey.currentState?.push(
+                      MaterialPageRoute<void>(
+                        builder: (_) => RouteEndpointPanel(
+                          records: records,
+                          routeName: entry.routeName,
                         ),
-                      );
-                    },
-                  ),
-          ),
+                      ),
+                    );
+                  },
+                ),
         ),
       ],
     );
@@ -517,14 +524,19 @@ class _PackageNavigatorState extends State<_PackageNavigator> {
     return GestureDetector(
       onTap: onTap,
       behavior: HitTestBehavior.opaque,
-      child: Container(
-        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+      child: AnimatedContainer(
+        duration: const Duration(milliseconds: 160),
+        curve: Curves.easeOut,
+        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
         decoration: BoxDecoration(
-          border: Border(
-            bottom: BorderSide(
-              color: selected ? activeColor : Colors.transparent,
-              width: 2.5,
-            ),
+          color: selected
+              ? activeColor.withValues(alpha: 0.10)
+              : Colors.transparent,
+          borderRadius: BorderRadius.circular(999),
+          border: Border.all(
+            color: selected
+                ? activeColor.withValues(alpha: 0.24)
+                : Colors.transparent,
           ),
         ),
         child: Row(
@@ -571,19 +583,13 @@ class _PanelResizeHandle extends StatelessWidget {
         alignment: Alignment.center,
         decoration: BoxDecoration(
           color: inspectorPanelBackground(context),
-          border: Border(
-            top: BorderSide(
-              color: Theme.of(context).dividerColor,
-              width: 0.5,
-            ),
-          ),
         ),
         child: Container(
-          width: 36,
-          height: 4,
+          width: 46,
+          height: 5,
           decoration: BoxDecoration(
-            color: inspectorMuted(context),
-            borderRadius: BorderRadius.circular(2),
+            color: inspectorMuted(context).withValues(alpha: 0.55),
+            borderRadius: BorderRadius.circular(999),
           ),
         ),
       ),

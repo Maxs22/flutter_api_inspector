@@ -6,6 +6,18 @@ and the project adheres to [Semantic Versioning](https://semver.org/).
 
 ## Unreleased
 
+## 0.3.3 — 2026-08-06
+
+### Changed
+
+- **Overlay visual refresh**: modernized the inspector with a single
+  rounded floating surface, softer shadows, pill tabs, compact timeline
+  controls, and cleaner route/endpoint cards that avoid visible nested
+  background layers.
+- **Demo evidence**: refreshed the recorded demo GIF and added current
+  Timeline, Routes, and Endpoint panel screenshots from the real example
+  Android app.
+
 ## 0.3.2 — 2026-08-04
 
 ### Added

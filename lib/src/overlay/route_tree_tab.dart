@@ -134,14 +134,15 @@ class _RouteTreeTabState extends State<RouteTreeTab> {
   Widget _buildHeader(BuildContext context) {
     final hasFilter = widget.selectedScopeId != null;
     return Padding(
-      padding: const EdgeInsets.fromLTRB(16, 4, 8, 4),
+      padding: const EdgeInsets.fromLTRB(16, 12, 12, 8),
       child: Row(
         children: <Widget>[
           Text(
             'Routes',
             style: TextStyle(
               fontSize: 13,
-              fontWeight: FontWeight.w600,
+              fontWeight: FontWeight.w800,
+              letterSpacing: -0.1,
               color: Theme.of(context).textTheme.bodyLarge?.color,
             ),
           ),
@@ -290,116 +291,135 @@ class _RouteTreeRow extends StatelessWidget {
     // tint stays reserved for the tap-to-filter selection only.
     final highlighted = isSelected || isActive;
 
-    return Material(
-      color: isSelected
-          ? theme.colorScheme.primaryContainer.withValues(alpha: 0.3)
-          : Colors.transparent,
-      child: InkWell(
-        onTap: onTap,
-        child: Padding(
-          padding: EdgeInsets.only(
-            left: 16.0 + depth * 3.0,
-            right: 16,
-            top: 8,
-            bottom: 8,
+    return Padding(
+      padding: EdgeInsets.fromLTRB(12.0 + depth * 8.0, 4, 12, 4),
+      child: Material(
+        color: isSelected
+            ? inspectorTintedSurface(context, alpha: 0.12)
+            : inspectorTintedSurface(
+                context,
+                alpha: highlighted ? 0.06 : 0.025,
+              ),
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(14),
+          side: BorderSide(
+            color: isSelected
+                ? theme.colorScheme.primary.withValues(alpha: 0.30)
+                : inspectorOutline(context),
+            width: 0.7,
           ),
-          child: Row(
-            children: <Widget>[
-              // Expand/collapse chevron for parents
-              if (hasChildren)
-                GestureDetector(
-                  onTap: onToggle,
-                  child: Padding(
-                    padding: const EdgeInsets.only(right: 4),
-                    child: Icon(
-                      isExpanded
-                          ? Icons.expand_more_rounded
-                          : Icons.chevron_right_rounded,
-                      size: 18,
-                      color: inspectorMuted(context),
+        ),
+        clipBehavior: Clip.antiAlias,
+        child: InkWell(
+          onTap: onTap,
+          child: Padding(
+            padding: const EdgeInsets.fromLTRB(10, 9, 10, 9),
+            child: Row(
+              children: <Widget>[
+                if (hasChildren)
+                  GestureDetector(
+                    onTap: onToggle,
+                    child: Padding(
+                      padding: const EdgeInsets.only(right: 4),
+                      child: Icon(
+                        isExpanded
+                            ? Icons.expand_more_rounded
+                            : Icons.chevron_right_rounded,
+                        size: 18,
+                        color: inspectorMuted(context),
+                      ),
                     ),
-                  ),
-                )
-              else
-                const SizedBox(width: 22),
-              const SizedBox(width: 4),
-              // Route icon
-              Icon(
-                highlighted
-                    ? Icons.screen_search_desktop_rounded
-                    : Icons.screen_rotation_alt_rounded,
-                size: 16,
-                color: highlighted
-                    ? theme.colorScheme.primary
-                    : inspectorMuted(context),
-              ),
-              const SizedBox(width: 8),
-              // Route name
-              Expanded(
-                child: Text(
-                  entry.routeName,
-                  style: TextStyle(
-                    fontSize: 13,
-                    fontWeight: highlighted ? FontWeight.w700 : FontWeight.w500,
-                    color: highlighted
-                        ? theme.colorScheme.primary
-                        : theme.textTheme.bodyLarge?.color,
-                  ),
-                  overflow: TextOverflow.ellipsis,
-                  maxLines: 1,
-                ),
-              ),
-              const SizedBox(width: 6),
-              // Call count badge
-              if (totalCalls > 0)
-                Container(
-                  padding:
-                      const EdgeInsets.symmetric(horizontal: 6, vertical: 1),
-                  decoration: BoxDecoration(
-                    color: inspectorMuted(context).withValues(alpha: 0.15),
-                    borderRadius: BorderRadius.circular(8),
-                  ),
-                  child: Text(
-                    '$totalCalls',
-                    style: TextStyle(
-                      fontSize: 11,
-                      fontWeight: FontWeight.w600,
-                      color: inspectorMuted(context),
-                    ),
-                  ),
-                ),
-              // List-icon button for endpoint detail panel
-              if (onShowEndpoints != null)
-                IconButton(
-                  icon: const Icon(Icons.list_alt_rounded, size: 16),
-                  tooltip: 'View endpoints',
-                  onPressed: onShowEndpoints,
-                  padding: EdgeInsets.zero,
-                  constraints:
-                      const BoxConstraints(minWidth: 24, minHeight: 24),
-                  splashRadius: 14,
-                ),
-              // Error badge
-              if (errorCount > 0) ...[
+                  )
+                else
+                  const SizedBox(width: 22),
                 const SizedBox(width: 4),
-                Container(
-                  padding:
-                      const EdgeInsets.symmetric(horizontal: 6, vertical: 1),
-                  decoration: BoxDecoration(
-                    color: inspectorError(context).withValues(alpha: 0.15),
-                    borderRadius: BorderRadius.circular(8),
-                  ),
+                Icon(
+                  highlighted
+                      ? Icons.screen_search_desktop_rounded
+                      : Icons.screen_rotation_alt_rounded,
+                  size: 16,
+                  color: highlighted
+                      ? theme.colorScheme.primary
+                      : inspectorMuted(context),
+                ),
+                const SizedBox(width: 8),
+                Expanded(
                   child: Text(
-                    '!$errorCount',
+                    entry.routeName,
                     style: TextStyle(
-                      fontSize: 11,
-                      fontWeight: FontWeight.w700,
-                      color: inspectorError(context),
+                      fontSize: 13,
+                      fontWeight:
+                          highlighted ? FontWeight.w700 : FontWeight.w500,
+                      color: highlighted
+                          ? theme.colorScheme.primary
+                          : theme.textTheme.bodyLarge?.color,
                     ),
+                    overflow: TextOverflow.ellipsis,
+                    maxLines: 1,
                   ),
                 ),
+                const SizedBox(width: 6),
+                if (totalCalls > 0)
+                  Container(
+                    padding:
+                        const EdgeInsets.symmetric(horizontal: 6, vertical: 1),
+                    decoration: BoxDecoration(
+                      color: inspectorMuted(context).withValues(alpha: 0.12),
+                      borderRadius: BorderRadius.circular(999),
+                      border: Border.all(
+                        color: inspectorMuted(context).withValues(alpha: 0.16),
+                      ),
+                    ),
+                    child: Text(
+                      '$totalCalls',
+                      style: TextStyle(
+                        fontSize: 11,
+                        fontWeight: FontWeight.w600,
+                        color: inspectorMuted(context),
+                      ),
+                    ),
+                  ),
+                if (onShowEndpoints != null)
+                  Tooltip(
+                    message: 'View endpoints',
+                    child: GestureDetector(
+                      behavior: HitTestBehavior.opaque,
+                      onTap: onShowEndpoints,
+                      child: SizedBox(
+                        width: 32,
+                        height: 32,
+                        child: Icon(
+                          Icons.list_alt_rounded,
+                          size: 16,
+                          color: inspectorMuted(context),
+                        ),
+                      ),
+                    ),
+                  ),
+                if (errorCount > 0) ...[
+                  const SizedBox(width: 4),
+                  Container(
+                    padding:
+                        const EdgeInsets.symmetric(horizontal: 6, vertical: 1),
+                    decoration: BoxDecoration(
+                      color: inspectorError(context).withValues(alpha: 0.15),
+                      borderRadius: BorderRadius.circular(999),
+                      border: Border.all(
+                        color: inspectorError(context).withValues(alpha: 0.18),
+                      ),
+                    ),
+                    child: Text(
+                      '!$errorCount',
+                      style: TextStyle(
+                        fontSize: 11,
+                        fontWeight: FontWeight.w700,
+                        color: inspectorError(context),
+                      ),
+                    ),
+                  ),
+                ],
               ],
-            ],
+            ),
           ),
         ),
       ),
