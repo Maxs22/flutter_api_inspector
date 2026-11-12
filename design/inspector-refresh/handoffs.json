@@ -1,0 +1,14 @@
+{
+  "version": 1,
+  "chosen": "02-grouped-cards.html",
+  "handoffs": {
+    "02-grouped-cards.html": {
+      "status": "in_progress",
+      "queued": false,
+      "sentAt": "2026-11-12T18:15:11.078Z",
+      "startedAt": "2026-11-12T18:16:15.087Z",
+      "implementedAt": null,
+      "note": "Implementing the selected visual direction in Flutter, preserving capture behavior, navigation and host-theme adaptation."
+    }
+  }
+}

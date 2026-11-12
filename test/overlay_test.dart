@@ -531,9 +531,12 @@ void main() {
           onTap: () {},
         ),
       ));
-      // 2xx -> green-600.
+      // Status-class hues remain green/red, but small text now uses
+      // contrast-adjusted shades against its actual badge fill.
       final badge200 = tester.widget<Text>(find.text('200'));
-      expect(badge200.style?.color, equals(const Color(0xFF16A34A)));
+      final green = badge200.style!.color!;
+      expect(green.g, greaterThan(green.r));
+      expect(green.g, greaterThan(green.b));
 
       await tester.pumpWidget(rowHost(
         TimelineRow(
@@ -546,9 +549,10 @@ void main() {
           onTap: () {},
         ),
       ));
-      // 5xx -> red-600.
       final badge500 = tester.widget<Text>(find.text('500'));
-      expect(badge500.style?.color, equals(const Color(0xFFDC2626)));
+      final red = badge500.style!.color!;
+      expect(red.r, greaterThan(red.g));
+      expect(red.r, greaterThan(red.b));
     });
   });
 
@@ -1139,8 +1143,14 @@ void main() {
       await tester.pumpAndSettle();
       // Tap the row.
       final rowFinder = find.byType(TimelineRow);
+      await tester.scrollUntilVisible(rowFinder, 120,
+          scrollable: find
+              .descendant(
+                  of: find.byType(TimelinePanel),
+                  matching: find.byType(Scrollable))
+              .first);
       expect(rowFinder, findsOneWidget);
-      await tester.tapAt(tester.getCenter(rowFinder));
+      await tester.tap(find.text('getUser'));
       await tester.pumpAndSettle();
       // The row tap reaches the overlay's onRecordTap.
       expect(tappedRecord, isNotNull);
@@ -1276,8 +1286,11 @@ void main() {
       // The panel is shown.
       expect(find.byType(TimelinePanel), findsOneWidget);
 
-      // 4. The developer taps the row.
-      await tester.tap(find.byType(TimelineRow));
+      // 4. Scroll the roomier card into view, then open its details.
+      await tester.drag(find.byType(CustomScrollView), const Offset(0, -180));
+      await tester.pumpAndSettle();
+      expect(find.text('getUser').hitTestable(), findsOneWidget);
+      await tester.tap(find.text('getUser'));
       await tester.pumpAndSettle();
       // The detail screen is on top.
       expect(find.byType(ApiTraceDetailScreen), findsOneWidget);
@@ -1835,10 +1848,16 @@ void main() {
       ));
 
       for (var i = 0; i < 4; i++) {
+        await tester.scrollUntilVisible(find.text('a$i'), 120,
+            scrollable: find
+                .descendant(
+                    of: find.byType(TimelinePanel),
+                    matching: find.byType(Scrollable))
+                .first);
         expect(find.text('a$i'), findsOneWidget);
-      }
-      for (var i = 0; i < 6; i++) {
-        expect(find.text('b$i'), findsNothing);
+        for (var j = 0; j < 6; j++) {
+          expect(find.text('b$j'), findsNothing);
+        }
       }
     });
 

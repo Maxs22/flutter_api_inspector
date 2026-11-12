@@ -138,25 +138,21 @@ class _TimelinePanelState extends State<TimelinePanel> {
   Widget build(BuildContext context) {
     final filtered = _applyFilters(widget.records);
 
-    return LayoutBuilder(
-      builder: (BuildContext context, BoxConstraints constraints) {
-        return SizedBox(
-          width: constraints.maxWidth,
-          height: constraints.maxHeight,
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.stretch,
-            children: <Widget>[
-              _buildHeader(context, filtered.length),
-              _buildFilterRow(context),
-              Expanded(
-                child: filtered.isEmpty
-                    ? _buildEmptyState(context)
-                    : _buildGroupedList(filtered),
-              ),
-            ],
-          ),
-        );
-      },
+    // Controls and records share a viewport: even a short panel or a
+    // wrapped filter row leaves every action and request reachable.
+    return CustomScrollView(
+      slivers: <Widget>[
+        SliverToBoxAdapter(child: _buildHeader(context, filtered.length)),
+        SliverToBoxAdapter(child: _buildFilterRow(context)),
+        if (filtered.isEmpty)
+          SliverFillRemaining(
+            hasScrollBody: false,
+            child: _buildEmptyState(context),
+          )
+        else
+          SliverList.list(children: _buildGroupedList(filtered)),
+        const SliverPadding(padding: EdgeInsets.only(bottom: 8)),
+      ],
     );
   }
 
@@ -165,7 +161,7 @@ class _TimelinePanelState extends State<TimelinePanel> {
   /// must reflect what the list shows, not the timeline total.
   Widget _buildHeader(BuildContext context, int shownCount) {
     return Padding(
-      padding: const EdgeInsets.fromLTRB(14, 8, 6, 6),
+      padding: const EdgeInsets.fromLTRB(16, 12, 8, 8),
       child: Row(
         children: <Widget>[
           Container(
@@ -182,15 +178,16 @@ class _TimelinePanelState extends State<TimelinePanel> {
             ),
           ),
           const SizedBox(width: 10),
-          Text(
+          Flexible(
+              child: Text(
             'API calls',
             style: TextStyle(
-              fontSize: 15,
-              fontWeight: FontWeight.w800,
+              fontSize: 18,
+              fontWeight: FontWeight.w600,
               letterSpacing: -0.2,
               color: Theme.of(context).textTheme.titleMedium?.color,
             ),
-          ),
+          )),
           const SizedBox(width: 6),
           Container(
             padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
@@ -206,7 +203,7 @@ class _TimelinePanelState extends State<TimelinePanel> {
               style: TextStyle(
                 fontSize: 11,
                 fontWeight: FontWeight.w700,
-                color: inspectorAccent(context),
+                color: inspectorBadgeText(context, inspectorAccent(context)),
                 fontFeatures: const <FontFeature>[FontFeature.tabularFigures()],
               ),
             ),
@@ -218,7 +215,7 @@ class _TimelinePanelState extends State<TimelinePanel> {
               icon: const Icon(Icons.file_download_rounded),
               iconSize: 18,
               padding: EdgeInsets.zero,
-              constraints: const BoxConstraints(minWidth: 36, minHeight: 36),
+              constraints: const BoxConstraints(minWidth: 44, minHeight: 44),
               tooltip: 'Export as cURL',
               color: inspectorMuted(context),
             ),
@@ -228,7 +225,7 @@ class _TimelinePanelState extends State<TimelinePanel> {
               icon: const Icon(Icons.delete_sweep_rounded),
               iconSize: 18,
               padding: EdgeInsets.zero,
-              constraints: const BoxConstraints(minWidth: 36, minHeight: 36),
+              constraints: const BoxConstraints(minWidth: 44, minHeight: 44),
               tooltip: 'Clear timeline',
               color: inspectorMuted(context),
             ),
@@ -238,7 +235,7 @@ class _TimelinePanelState extends State<TimelinePanel> {
               icon: const Icon(Icons.close_rounded),
               iconSize: 18,
               padding: EdgeInsets.zero,
-              constraints: const BoxConstraints(minWidth: 36, minHeight: 36),
+              constraints: const BoxConstraints(minWidth: 44, minHeight: 44),
               tooltip: 'Close panel',
               color: inspectorMuted(context),
             ),
@@ -249,7 +246,7 @@ class _TimelinePanelState extends State<TimelinePanel> {
 
   Widget _buildFilterRow(BuildContext context) {
     return Padding(
-      padding: const EdgeInsets.fromLTRB(12, 8, 12, 6),
+      padding: const EdgeInsets.fromLTRB(16, 8, 16, 12),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         mainAxisSize: MainAxisSize.min,
@@ -268,7 +265,7 @@ class _TimelinePanelState extends State<TimelinePanel> {
                 color: inspectorMuted(context),
               ),
               contentPadding:
-                  const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+                  const EdgeInsets.symmetric(horizontal: 14, vertical: 14),
               filled: true,
               fillColor: inspectorPanelBackground(context),
               border: OutlineInputBorder(
@@ -292,7 +289,7 @@ class _TimelinePanelState extends State<TimelinePanel> {
               });
             },
           ),
-          const SizedBox(height: 6),
+          const SizedBox(height: 12),
           Wrap(
             spacing: 8,
             runSpacing: 8,
@@ -333,6 +330,7 @@ class _TimelinePanelState extends State<TimelinePanel> {
   }) {
     final selected = _filter == value;
     final tint = color ?? inspectorAccent(context);
+    final labelColor = inspectorBadgeText(context, tint);
     return FilterChip(
       label: Row(
         mainAxisSize: MainAxisSize.min,
@@ -340,7 +338,7 @@ class _TimelinePanelState extends State<TimelinePanel> {
           Icon(
             icon,
             size: 14,
-            color: selected ? tint : inspectorMuted(context),
+            color: selected ? labelColor : inspectorMuted(context),
           ),
           const SizedBox(width: 4),
           Text(label),
@@ -348,9 +346,10 @@ class _TimelinePanelState extends State<TimelinePanel> {
       ),
       selected: selected,
       showCheckmark: false,
-      selectedColor: tint.withValues(alpha: 0.12),
+      selectedColor: Color.alphaBlend(
+          tint.withValues(alpha: 0.12), inspectorPanelBackground(context)),
       backgroundColor: inspectorTintedSurface(context, alpha: 0.04),
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(999)),
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
       side: BorderSide(
         color:
             selected ? tint.withValues(alpha: 0.42) : inspectorOutline(context),
@@ -358,10 +357,13 @@ class _TimelinePanelState extends State<TimelinePanel> {
       labelStyle: TextStyle(
         fontSize: 12,
         fontWeight: selected ? FontWeight.w700 : FontWeight.w500,
-        color: selected ? tint : Theme.of(context).textTheme.bodyMedium?.color,
+        color: selected
+            ? labelColor
+            : Theme.of(context).textTheme.bodyMedium?.color,
       ),
-      visualDensity: VisualDensity.compact,
-      materialTapTargetSize: MaterialTapTargetSize.shrinkWrap,
+      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 8),
+      visualDensity: VisualDensity.standard,
+      materialTapTargetSize: MaterialTapTargetSize.padded,
       onSelected: (bool _) {
         setState(() {
           _filter = value;
@@ -432,7 +434,7 @@ class _TimelinePanelState extends State<TimelinePanel> {
   /// threshold starts a new group). Each group renders a
   /// [TimelineGroupHeader] followed by the rows. Rows are
   /// hidden when the user collapses a group.
-  Widget _buildGroupedList(List<ApiTraceRecord> records) {
+  List<Widget> _buildGroupedList(List<ApiTraceRecord> records) {
     final groups = _groupRecords(records, widget.config.flowGroupGap);
     final children = <Widget>[];
     final scopeEntry = widget.scopeEntry;
@@ -465,10 +467,7 @@ class _TimelinePanelState extends State<TimelinePanel> {
         }
       }
     }
-    return ListView(
-      padding: const EdgeInsets.only(bottom: 8),
-      children: children,
-    );
+    return children;
   }
 
   /// Splits [records] into a list of [TimelineGroup]s. Two

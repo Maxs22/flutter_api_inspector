@@ -451,13 +451,17 @@ class _PackageNavigatorState extends State<_PackageNavigator> {
   Widget _buildTabbedContent() {
     final theme = Theme.of(context);
     final tabColor = theme.textTheme.bodySmall?.color ?? Colors.grey;
-    final activeColor = theme.colorScheme.primary;
+    final activeColor =
+        inspectorBadgeText(context, inspectorAccent(context), alpha: 0.10);
 
     return Column(
       children: <Widget>[
         Padding(
-          padding: const EdgeInsets.fromLTRB(14, 12, 14, 8),
-          child: Row(
+          padding: const EdgeInsets.fromLTRB(16, 16, 16, 8),
+          child: Wrap(
+            spacing: 6,
+            runSpacing: 8,
+            crossAxisAlignment: WrapCrossAlignment.center,
             children: <Widget>[
               _buildTabButton(
                 label: 'Timeline',
@@ -475,7 +479,6 @@ class _PackageNavigatorState extends State<_PackageNavigator> {
                 inactiveColor: tabColor,
                 onTap: () => setState(() => _activeTab = 1),
               ),
-              const Spacer(),
               if (widget.selectedScopeId != null)
                 IconButton(
                   icon: const Icon(Icons.filter_alt_off_rounded, size: 18),
@@ -561,12 +564,12 @@ class _PackageNavigatorState extends State<_PackageNavigator> {
       child: AnimatedContainer(
         duration: const Duration(milliseconds: 160),
         curve: Curves.easeOut,
-        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
         decoration: BoxDecoration(
           color: selected
               ? activeColor.withValues(alpha: 0.10)
               : Colors.transparent,
-          borderRadius: BorderRadius.circular(999),
+          borderRadius: BorderRadius.circular(12),
           border: Border.all(
             color: selected
                 ? activeColor.withValues(alpha: 0.24)

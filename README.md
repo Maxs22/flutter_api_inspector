@@ -43,6 +43,9 @@ I care about."
 
 `flutter_api_inspector` fills that gap with a floating action button
 that opens a timeline panel inside your running debug app.
+The Breathing Room layout uses spacious request cards, rounded controls,
+and softer surfaces inherited from your app's light or dark `ColorScheme`.
+The demo images above show the previous released layout.
 
 ## Quickstart
 

@@ -6,6 +6,12 @@ and the project adheres to [Semantic Versioning](https://semver.org/).
 
 ## Unreleased
 
+### Changed
+
+- **Breathing Room inspector**: roomier request and route cards, rounded
+  touch controls, calmer detail sections, and readable semantic badges in
+  light and dark host themes. Capture, configuration, and navigation are unchanged.
+
 ## 0.3.4 — 2026-08-06
 
 ### Fixed

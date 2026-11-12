@@ -64,8 +64,11 @@ class _TimelineGroupHeaderState extends State<TimelineGroupHeader> {
         splashColor: tint.withValues(alpha: 0.06),
         highlightColor: tint.withValues(alpha: 0.03),
         child: Padding(
-          padding: const EdgeInsets.fromLTRB(16, 6, 16, 6),
-          child: Row(
+          padding: const EdgeInsets.fromLTRB(16, 12, 16, 8),
+          child: Wrap(
+            spacing: 6,
+            runSpacing: 8,
+            crossAxisAlignment: WrapCrossAlignment.center,
             children: <Widget>[
               AnimatedRotation(
                 turns: widget.expanded ? 0 : -0.25,
@@ -101,7 +104,7 @@ class _TimelineGroupHeaderState extends State<TimelineGroupHeader> {
                 text: _formatDuration(g.totalDuration),
                 color: inspectorMuted(context),
               ),
-              const Spacer(),
+              const SizedBox(width: 8),
               _stat(
                 context,
                 icon: Icons.access_time_rounded,

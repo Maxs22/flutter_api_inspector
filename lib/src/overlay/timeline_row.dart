@@ -1,19 +1,14 @@
-// One row in the timeline list (REQ-UI-005, REQ-UI-008).
+// One request card in the timeline list (REQ-UI-005, REQ-UI-008).
 //
 // `TimelineRow` is a `StatelessWidget` that renders a single
-// `ApiTraceRecord` as a tappable list row. Visual layout
-// (left-to-right):
+// `ApiTraceRecord` as a tappable card. The name and method lead,
+// followed by the URL path and a wrapping line of status / timing
+// metadata so narrow panels do not squeeze the request name away.
 //
-//   [icon] [METHOD] Name                                [STATUS]  450ms
-//          /url-path                                                 3s ago
-//
-// The whole row is tappable; tapping it fires the `onTap`
+// The whole card is tappable; tapping it fires the `onTap`
 // callback (typically: open the read-only detail screen).
-//
-// The row is a thin presentation widget; the grouping and
-// newest-first ordering are the panel's responsibility, not
-// this row's.
-
+// Grouping and newest-first ordering are the panel's responsibility,
+// not this row's.
 import 'package:flutter/material.dart';
 
 import 'package:flutter_api_inspector/src/model/api_trace_record.dart';
@@ -25,12 +20,11 @@ class TimelineRow extends StatelessWidget {
   /// Creates a `TimelineRow`.
   ///
   /// [record] is the captured `ApiTraceRecord` to render.
-  /// [onTap] is the callback fired when the row is tapped.
+  /// [onTap] opens the read-only detail screen.
   /// [now] is the reference time used to compute the
   /// "time-ago" label; if null, the row uses `DateTime.now()`.
   /// [relativeTimestamp] overrides the trailing timestamp with a
-  /// relative offset (e.g. `+500ms`) when the timeline is filtered
-  /// to a specific route scope.
+  /// relative offset (e.g. `+500ms`) when filtering by route scope.
   const TimelineRow({
     super.key,
     required this.record,
@@ -39,8 +33,7 @@ class TimelineRow extends StatelessWidget {
     this.relativeTimestamp,
   });
 
-  /// The record to render. Read-only; the row does not mutate
-  /// the record.
+  /// The record to render. Read-only; the row does not mutate it.
   final ApiTraceRecord record;
 
   /// Fired when the row is tapped.
@@ -61,7 +54,6 @@ class TimelineRow extends StatelessWidget {
       ApiTraceOutcome.error => inspectorError(context),
       ApiTraceOutcome.cancelled => inspectorMuted(context),
     };
-
     final iconData = switch (record.outcome) {
       ApiTraceOutcome.success => Icons.check_circle_rounded,
       ApiTraceOutcome.error => Icons.error_rounded,
@@ -69,107 +61,85 @@ class TimelineRow extends StatelessWidget {
     };
 
     return Padding(
-      padding: const EdgeInsets.fromLTRB(12, 3, 12, 3),
+      padding: const EdgeInsets.fromLTRB(16, 6, 16, 6),
       child: Material(
-        color: inspectorTintedSurface(context, alpha: 0.035),
+        color: inspectorRowBackground(context),
         shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(14),
+          borderRadius: BorderRadius.circular(inspectorRadius),
           side: BorderSide(color: inspectorOutline(context), width: 0.7),
         ),
         clipBehavior: Clip.antiAlias,
         child: InkWell(
           onTap: onTap,
-          onHover: null,
           splashColor: tint.withValues(alpha: 0.08),
           highlightColor: tint.withValues(alpha: 0.04),
           child: Padding(
-            padding: const EdgeInsets.fromLTRB(12, 8, 12, 8),
-            child: Row(
-              crossAxisAlignment: CrossAxisAlignment.center,
+            padding: const EdgeInsets.all(16),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.stretch,
               children: <Widget>[
-                Container(
-                  width: 28,
-                  height: 28,
-                  decoration: BoxDecoration(
-                    color: tint.withValues(alpha: 0.12),
-                    borderRadius: BorderRadius.circular(9),
-                  ),
-                  child: Icon(iconData, color: tint, size: 17),
-                ),
-                const SizedBox(width: 10),
-                _MethodChip(method: record.method),
-                const SizedBox(width: 10),
-                Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: <Widget>[
-                      Text(
+                Row(
+                  children: <Widget>[
+                    Expanded(
+                      child: Text(
                         record.name,
-                        style: TextStyle(
-                          fontSize: 13,
-                          fontWeight: FontWeight.w600,
-                          color: Theme.of(context).textTheme.bodyLarge?.color,
-                          height: 1.2,
-                        ),
+                        style: Theme.of(context).textTheme.titleSmall?.copyWith(
+                            fontSize: 15, fontWeight: FontWeight.w600),
+                        maxLines: 2,
                         overflow: TextOverflow.ellipsis,
-                        maxLines: 1,
                       ),
-                      const SizedBox(height: 2),
-                      Text(
-                        _pathOf(record.url),
-                        style: TextStyle(
-                          fontSize: 11,
-                          color: inspectorMuted(context),
-                          fontFamily: 'monospace',
-                          height: 1.2,
-                        ),
-                        overflow: TextOverflow.ellipsis,
-                        maxLines: 1,
-                      ),
-                    ],
-                  ),
-                ),
-                const SizedBox(width: 8),
-                if (record.statusCode != null)
-                  _StatusBadge(statusCode: record.statusCode!, tint: tint)
-                else
-                  Text(
-                    '—',
-                    style: TextStyle(
-                      color: inspectorMuted(context),
-                      fontSize: 11,
-                      fontWeight: FontWeight.w700,
                     ),
-                  ),
-                const SizedBox(width: 10),
-                SizedBox(
-                  width: 56,
-                  child: Text(
-                    _formatDuration(record.duration),
-                    textAlign: TextAlign.right,
-                    style: TextStyle(
+                    const SizedBox(width: 12),
+                    _MethodChip(method: record.method),
+                  ],
+                ),
+                const SizedBox(height: 8),
+                Text(
+                  _pathOf(record.url),
+                  style: TextStyle(
                       fontSize: 12,
-                      fontFeatures: const <FontFeature>[
-                        FontFeature.tabularFigures()
-                      ],
-                      color: Theme.of(context).textTheme.bodyMedium?.color,
-                    ),
-                  ),
-                ),
-                const SizedBox(width: 6),
-                SizedBox(
-                  width: 52,
-                  child: Text(
-                    relativeTimestamp ??
-                        _timeAgo(record.completedAt, now ?? DateTime.now()),
-                    textAlign: TextAlign.right,
-                    style: TextStyle(
-                      fontSize: 10,
                       color: inspectorMuted(context),
-                      fontFamily:
-                          relativeTimestamp != null ? 'monospace' : null,
+                      fontFamily: 'monospace',
+                      height: 1.5),
+                  maxLines: 2,
+                  overflow: TextOverflow.ellipsis,
+                ),
+                const SizedBox(height: 16),
+                Wrap(
+                  spacing: 12,
+                  runSpacing: 8,
+                  crossAxisAlignment: WrapCrossAlignment.center,
+                  children: <Widget>[
+                    Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: <Widget>[
+                        Icon(iconData, color: tint, size: 18),
+                        const SizedBox(width: 6),
+                        if (record.statusCode != null)
+                          _StatusBadge(
+                              statusCode: record.statusCode!, tint: tint)
+                        else
+                          Text('—',
+                              style: TextStyle(color: inspectorMuted(context))),
+                      ],
                     ),
-                  ),
+                    Text(_formatDuration(record.duration),
+                        style: TextStyle(
+                            fontSize: 12,
+                            color: inspectorMuted(context),
+                            fontFeatures: const [
+                              FontFeature.tabularFigures()
+                            ])),
+                    Text(
+                        relativeTimestamp ??
+                            _timeAgo(record.completedAt, now ?? DateTime.now()),
+                        style: TextStyle(
+                            fontSize: 12,
+                            color: inspectorMuted(context),
+                            fontFamily: relativeTimestamp != null
+                                ? 'monospace'
+                                : null)),
+                  ],
                 ),
               ],
             ),
@@ -180,17 +150,15 @@ class TimelineRow extends StatelessWidget {
   }
 
   /// Extracts the path (and query) from a URL. Returns the
-  /// full URL string as a fallback if the input is not a
-  /// well-formed URI.
+  /// full URL string as a fallback if the path is empty.
   static String _pathOf(Uri url) {
     final path = url.path.isEmpty ? url.toString() : url.path;
     if (url.hasQuery) return '$path?${url.query}';
     return path;
   }
 
-  /// Formats a `Duration` for the row's trailing column.
-  /// Examples: `50ms`, `1.2s`, `3.45s`. Trailing "ms"/"s" is
-  /// kept short to maximize column density.
+  /// Formats a `Duration` for the card's metadata line.
+  /// Examples: `50ms`, `1.20s`, `3.45s`.
   static String _formatDuration(Duration d) {
     if (d.inMilliseconds < 1000) {
       return '${d.inMilliseconds}ms';
@@ -218,60 +186,59 @@ class TimelineRow extends StatelessWidget {
 /// Color-coded for quick visual scanning of the timeline.
 class _MethodChip extends StatelessWidget {
   const _MethodChip({required this.method});
-
   final String method;
 
   @override
   Widget build(BuildContext context) {
-    final color = inspectorMethodColor(context, method);
+    final base = inspectorMethodColor(context, method);
+    final fill = Color.alphaBlend(
+        base.withValues(alpha: 0.12), inspectorRowBackground(context));
+    final color = inspectorEnsureContrast(base, fill, minRatio: 4.5);
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
       decoration: BoxDecoration(
-        color: color.withValues(alpha: 0.12),
+        color: fill,
         borderRadius: BorderRadius.circular(999),
         border: Border.all(color: color.withValues(alpha: 0.18)),
       ),
-      child: Text(
-        method,
-        style: TextStyle(
-          color: color,
-          fontSize: 10,
-          fontWeight: FontWeight.w700,
-          fontFamily: 'monospace',
-          letterSpacing: 0.3,
-        ),
-      ),
+      child: Text(method,
+          style: TextStyle(
+              color: color,
+              fontSize: 10,
+              fontWeight: FontWeight.w700,
+              fontFamily: 'monospace',
+              letterSpacing: 0.3)),
     );
   }
 }
 
 /// Small badge showing the HTTP status code, color-coded by
 /// status class (2xx green, 3xx blue, 4xx orange, 5xx red).
+/// Small text is contrast-adjusted against the actual tinted fill.
 class _StatusBadge extends StatelessWidget {
   const _StatusBadge({required this.statusCode, required this.tint});
-
   final int statusCode;
   final Color tint;
 
   @override
   Widget build(BuildContext context) {
-    final color = _statusColor(statusCode, tint);
+    final base = _statusColor(statusCode, tint);
+    final fill = Color.alphaBlend(
+        base.withValues(alpha: 0.12), inspectorRowBackground(context));
+    final color = inspectorEnsureContrast(base, fill, minRatio: 4.5);
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 3),
       decoration: BoxDecoration(
-        color: color.withValues(alpha: 0.12),
+        color: fill,
         borderRadius: BorderRadius.circular(999),
         border: Border.all(color: color.withValues(alpha: 0.18)),
       ),
-      child: Text(
-        '$statusCode',
-        style: TextStyle(
-          color: color,
-          fontSize: 11,
-          fontWeight: FontWeight.w700,
-          fontFeatures: const <FontFeature>[FontFeature.tabularFigures()],
-        ),
-      ),
+      child: Text('$statusCode',
+          style: TextStyle(
+              color: color,
+              fontSize: 11,
+              fontWeight: FontWeight.w700,
+              fontFeatures: const <FontFeature>[FontFeature.tabularFigures()])),
     );
   }
 
