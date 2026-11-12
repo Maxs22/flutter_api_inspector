@@ -3,12 +3,12 @@
   "chosen": "02-grouped-cards.html",
   "handoffs": {
     "02-grouped-cards.html": {
-      "status": "in_progress",
+      "status": "implemented",
       "queued": false,
       "sentAt": "2026-11-12T18:15:11.078Z",
       "startedAt": "2026-11-12T18:16:15.087Z",
-      "implementedAt": null,
-      "note": "Implementing the selected visual direction in Flutter, preserving capture behavior, navigation and host-theme adaptation."
+      "implementedAt": "2026-11-12T18:43:47.407Z",
+      "note": "Implemented in Flutter: spacious cards, comfortable controls, adaptive light/dark surfaces and detail sections. Parent full suite: 249 passed; analyze clean. Real Flutter render previews in build/ui-preview/. No running app preview URL; captures are widget-render evidence, not device proof."
     }
   }
 }
