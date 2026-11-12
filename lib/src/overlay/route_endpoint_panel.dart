@@ -13,7 +13,7 @@ import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 
 import 'package:flutter_api_inspector/src/model/api_trace_record.dart';
-import 'package:flutter_api_inspector/src/overlay/colors.dart';
+import 'package:flutter_api_inspector/src/outcome.dart';
 import 'package:flutter_api_inspector/src/overlay/detail_screen.dart';
 import 'package:flutter_api_inspector/src/overlay/theme.dart';
 
@@ -103,17 +103,21 @@ class _RouteEndpointPanelState extends State<RouteEndpointPanel> {
 
   Widget _buildList(BuildContext context) {
     return ListView.builder(
-      padding: const EdgeInsets.fromLTRB(12, 12, 12, 24),
+      padding: const EdgeInsets.fromLTRB(16, 16, 16, 24),
       itemCount: _records.length,
       itemBuilder: (context, index) {
         final record = _records[index];
-        final tint = outcomeColor(record.outcome);
+        final tint = switch (record.outcome) {
+          ApiTraceOutcome.success => inspectorSuccess(context),
+          ApiTraceOutcome.error => inspectorError(context),
+          ApiTraceOutcome.cancelled => inspectorMuted(context),
+        };
         return Padding(
-          padding: const EdgeInsets.only(bottom: 8),
+          padding: const EdgeInsets.only(bottom: 12),
           child: Material(
-            color: inspectorTintedSurface(context, alpha: 0.035),
+            color: inspectorRowBackground(context),
             shape: RoundedRectangleBorder(
-              borderRadius: BorderRadius.circular(14),
+              borderRadius: BorderRadius.circular(inspectorRadius),
               side: BorderSide(color: inspectorOutline(context), width: 0.7),
             ),
             clipBehavior: Clip.antiAlias,
@@ -127,7 +131,7 @@ class _RouteEndpointPanelState extends State<RouteEndpointPanel> {
                 );
               },
               child: Padding(
-                padding: const EdgeInsets.fromLTRB(14, 12, 14, 12),
+                padding: const EdgeInsets.all(18),
                 child: Row(
                   children: <Widget>[
                     Container(
@@ -141,7 +145,8 @@ class _RouteEndpointPanelState extends State<RouteEndpointPanel> {
                       child: Text(
                         record.method,
                         style: TextStyle(
-                          color: tint,
+                          color: inspectorBadgeText(context, tint,
+                              background: inspectorRowBackground(context)),
                           fontSize: 10,
                           fontWeight: FontWeight.w800,
                           fontFamily: 'monospace',
@@ -164,7 +169,11 @@ class _RouteEndpointPanelState extends State<RouteEndpointPanel> {
                           const SizedBox(height: 3),
                           Text(
                             '${record.method} · ${record.statusCode ?? '???'}',
-                            style: TextStyle(fontSize: 12, color: tint),
+                            style: TextStyle(
+                                fontSize: 12,
+                                color: inspectorEnsureContrast(
+                                    tint, inspectorRowBackground(context),
+                                    minRatio: 4.5)),
                             overflow: TextOverflow.ellipsis,
                           ),
                           const SizedBox(height: 2),

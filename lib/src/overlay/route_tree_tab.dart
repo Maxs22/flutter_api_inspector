@@ -150,12 +150,11 @@ class _RouteTreeTabState extends State<RouteTreeTab> {
           if (hasFilter)
             TextButton.icon(
               onPressed: () => widget.onScopeSelected(null),
-              icon: const Icon(Icons.clear_all, size: 16),
+              icon: const Icon(Icons.clear_all_rounded, size: 18),
               label: const Text('Clear', style: TextStyle(fontSize: 12)),
               style: TextButton.styleFrom(
                 padding: const EdgeInsets.symmetric(horizontal: 8),
-                minimumSize: Size.zero,
-                tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                minimumSize: const Size(44, 44),
               ),
             ),
         ],
@@ -292,28 +291,28 @@ class _RouteTreeRow extends StatelessWidget {
     final highlighted = isSelected || isActive;
 
     return Padding(
-      padding: EdgeInsets.fromLTRB(12.0 + depth * 8.0, 4, 12, 4),
+      padding: EdgeInsets.fromLTRB(16.0 + depth * 8.0, 6, 16, 6),
       child: Material(
         color: isSelected
             ? inspectorTintedSurface(context, alpha: 0.12)
             : inspectorTintedSurface(
                 context,
-                alpha: highlighted ? 0.06 : 0.025,
+                alpha: highlighted ? 0.06 : 0.0,
               ),
         shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(14),
+          borderRadius: BorderRadius.circular(inspectorRadius),
           side: BorderSide(
             color: isSelected
-                ? theme.colorScheme.primary.withValues(alpha: 0.30)
+                ? inspectorAccent(context)
                 : inspectorOutline(context),
-            width: 0.7,
+            width: isSelected ? 1.5 : 0.7,
           ),
         ),
         clipBehavior: Clip.antiAlias,
         child: InkWell(
           onTap: onTap,
           child: Padding(
-            padding: const EdgeInsets.fromLTRB(10, 9, 10, 9),
+            padding: const EdgeInsets.fromLTRB(12, 16, 12, 16),
             child: Row(
               children: <Widget>[
                 if (hasChildren)
@@ -339,7 +338,7 @@ class _RouteTreeRow extends StatelessWidget {
                       : Icons.screen_rotation_alt_rounded,
                   size: 16,
                   color: highlighted
-                      ? theme.colorScheme.primary
+                      ? inspectorAccent(context)
                       : inspectorMuted(context),
                 ),
                 const SizedBox(width: 8),
@@ -351,7 +350,8 @@ class _RouteTreeRow extends StatelessWidget {
                       fontWeight:
                           highlighted ? FontWeight.w700 : FontWeight.w500,
                       color: highlighted
-                          ? theme.colorScheme.primary
+                          ? inspectorBadgeText(
+                              context, inspectorAccent(context))
                           : theme.textTheme.bodyLarge?.color,
                     ),
                     overflow: TextOverflow.ellipsis,
@@ -386,8 +386,8 @@ class _RouteTreeRow extends StatelessWidget {
                       behavior: HitTestBehavior.opaque,
                       onTap: onShowEndpoints,
                       child: SizedBox(
-                        width: 32,
-                        height: 32,
+                        width: 44,
+                        height: 44,
                         child: Icon(
                           Icons.list_alt_rounded,
                           size: 16,
@@ -413,7 +413,9 @@ class _RouteTreeRow extends StatelessWidget {
                       style: TextStyle(
                         fontSize: 11,
                         fontWeight: FontWeight.w700,
-                        color: inspectorError(context),
+                        color: inspectorBadgeText(
+                            context, inspectorError(context),
+                            alpha: 0.15),
                       ),
                     ),
                   ),

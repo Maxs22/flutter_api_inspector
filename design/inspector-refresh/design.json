@@ -1,0 +1,28 @@
+{
+  "title": "API Inspector · Visual Refresh",
+  "feature": "odd/tasks/breathing-room-ui.md",
+  "brief": "Three proposed visual directions for a Flutter HTTP inspector overlay. Modernize colors, inline icons, the floating launcher, timeline, routes, and request/response details without changing capture logic. Interactive sample data only; proposed palettes are not extracted project tokens. Panels remain at most 600 CSS pixels wide. Select a direction before any Flutter implementation.",
+  "artboards": [
+    {
+      "file": "01-compact-devtools.html",
+      "title": "01 · Compact DevTools (recommended)",
+      "tradeoff": "Crisp, dense rows and monospace metadata support frequent developer inspection; compact targets are less touch-oriented. Blue/indigo accents with a working light/dark preview.",
+      "width": 1280,
+      "height": 900
+    },
+    {
+      "file": "02-grouped-cards.html",
+      "title": "02 · Breathing Room",
+      "tradeoff": "Spacious grouped request cards and larger controls favor touch and relaxed reading; fewer requests fit at once. Soft neutral/teal palette with a working light/dark preview.",
+      "width": 1280,
+      "height": 900
+    },
+    {
+      "file": "03-contrast-first.html",
+      "title": "03 · Signal / Contrast First",
+      "tradeoff": "Dark graphite, a timestamp rail, bright semantic labels, and separate request/response views maximize contrast with minimal chrome; less visually neutral inside a light host app.",
+      "width": 1280,
+      "height": 900
+    }
+  ]
+}

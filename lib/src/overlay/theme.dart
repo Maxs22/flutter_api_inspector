@@ -26,7 +26,7 @@ const Color _inspectorAccent = Color(0xFF6750A4);
 const double inspectorRadius = 16.0;
 
 /// Larger radius for the floating inspector shell.
-const double inspectorShellRadius = 22.0;
+const double inspectorShellRadius = 24.0;
 
 /// Spacing unit. All paddings and gaps are multiples of this.
 const double inspectorSpacing = 8.0;
@@ -113,7 +113,7 @@ Color inspectorGroupHeaderBackground(BuildContext context) =>
     Theme.of(context).colorScheme.surfaceContainerHighest;
 
 Color inspectorRowBackground(BuildContext context) =>
-    Theme.of(context).colorScheme.surfaceContainerHigh;
+    Theme.of(context).colorScheme.surface;
 
 Color inspectorRowHoverBackground(BuildContext context) =>
     Theme.of(context).colorScheme.surfaceContainerHighest;
@@ -148,6 +148,16 @@ Color inspectorMethodColor(BuildContext context, String method) {
   };
   return inspectorEnsureContrast(base, inspectorRowBackground(context));
 }
+
+/// Small semantic text on a tinted badge, measured against its actual fill.
+Color inspectorBadgeText(BuildContext context, Color tint,
+        {double alpha = 0.12, Color? background}) =>
+    inspectorEnsureContrast(
+      tint,
+      Color.alphaBlend(tint.withValues(alpha: alpha),
+          background ?? inspectorPanelBackground(context)),
+      minRatio: 4.5,
+    );
 
 /// Default accent for places where the theme isn't available
 /// (e.g. tests that render widgets in isolation).

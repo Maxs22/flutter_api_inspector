@@ -14,7 +14,7 @@
 // - The label text is hidden when `recordCount == 0` (per the
 //   design's resolved Q4: the FAB is always visible, but the
 //   count chip is hidden on an empty timeline).
-// - Sizes the FAB to 40-px circular (per design.md Q1).
+// - Uses a rounded 56-px launcher for a comfortable touch target.
 // - Uses the developer's `Theme.of(context).colorScheme.primary`
 //   for the foreground / background (per design.md resolved Q5).
 //
@@ -70,13 +70,6 @@ class ApiTraceFab extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    // The chip label (icon + "API N") is too wide for a 40-px
-    // mini FAB. We use the regular (non-mini) FAB for the chip
-    // label so the text fits; we use the mini FAB for the icon
-    // and badge labels so the visual weight stays small.
-    final isChip =
-        config.overlayLabel == ApiTraceOverlayLabel.chip && recordCount > 0;
-
     // Explicit container pair from the host scheme: the two
     // roles are a contrast-guaranteed pair by definition, so the
     // FAB adopts the app's colors and stays legible on any theme.
@@ -112,7 +105,8 @@ class ApiTraceFab extends StatelessWidget {
     return FloatingActionButton(
       onPressed: onPressed,
       heroTag: 'flutter_api_inspector.fab',
-      mini: !isChip,
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+      elevation: 3,
       backgroundColor: scheme.primaryContainer,
       foregroundColor: scheme.onPrimaryContainer,
       child: child,

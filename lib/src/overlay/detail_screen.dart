@@ -24,7 +24,6 @@ import 'package:flutter/services.dart';
 
 import 'package:flutter_api_inspector/src/model/api_trace_record.dart';
 import 'package:flutter_api_inspector/src/outcome.dart';
-import 'package:flutter_api_inspector/src/overlay/colors.dart';
 import 'package:flutter_api_inspector/src/overlay/theme.dart';
 
 /// The read-only detail screen for a single `ApiTraceRecord`.
@@ -44,7 +43,11 @@ class ApiTraceDetailScreen extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final tint = outcomeColor(record.outcome);
+    final tint = switch (record.outcome) {
+      ApiTraceOutcome.success => inspectorSuccess(context),
+      ApiTraceOutcome.error => inspectorError(context),
+      ApiTraceOutcome.cancelled => inspectorMuted(context),
+    };
     final bodyColor = Theme.of(context).textTheme.bodyLarge?.color;
     return Scaffold(
       backgroundColor: inspectorPanelBackground(context),
@@ -76,7 +79,7 @@ class ApiTraceDetailScreen extends StatelessWidget {
           inspectorPanelBackground(context),
         ),
         foregroundColor: bodyColor,
-        toolbarHeight: 52,
+        toolbarHeight: 64,
         elevation: 0,
         scrolledUnderElevation: 0,
         bottom: PreferredSize(
@@ -88,7 +91,7 @@ class ApiTraceDetailScreen extends StatelessWidget {
         ),
       ),
       body: ListView(
-        padding: const EdgeInsets.fromLTRB(16, 8, 16, 24),
+        padding: const EdgeInsets.fromLTRB(20, 16, 20, 24),
         children: <Widget>[
           // Status badge at the top, prominent.
           _StatusBadge(outcome: record.outcome, tint: tint),
@@ -211,14 +214,13 @@ class _Section extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Padding(
-      padding: const EdgeInsets.only(top: 12, bottom: 6),
+      padding: const EdgeInsets.only(top: 24, bottom: 12),
       child: Text(
-        title.toUpperCase(),
+        title,
         style: TextStyle(
-          fontSize: 10,
-          fontWeight: FontWeight.w700,
-          letterSpacing: 1.0,
-          color: inspectorAccent(context),
+          fontSize: 14,
+          fontWeight: FontWeight.w600,
+          color: Theme.of(context).colorScheme.onSurface,
         ),
       ),
     );
@@ -234,7 +236,7 @@ class _Field extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Padding(
-      padding: const EdgeInsets.symmetric(vertical: 2),
+      padding: const EdgeInsets.symmetric(vertical: 6),
       child: Row(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: <Widget>[
@@ -284,9 +286,9 @@ class _CopyableText extends StatelessWidget {
           );
         }
       },
-      borderRadius: BorderRadius.circular(4),
+      borderRadius: BorderRadius.circular(12),
       child: Padding(
-        padding: const EdgeInsets.symmetric(vertical: 4, horizontal: 4),
+        padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 4),
         child: Row(
           children: <Widget>[
             Expanded(
@@ -323,11 +325,8 @@ class _ParametersTable extends StatelessWidget {
     return Container(
       decoration: BoxDecoration(
         color: inspectorCodeBlockBackground(context),
-        borderRadius: BorderRadius.circular(6),
-        border: Border.all(
-          color: Theme.of(context).dividerColor,
-          width: 0.5,
-        ),
+        borderRadius: BorderRadius.circular(14),
+        border: Border.all(color: inspectorOutline(context)),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -411,11 +410,8 @@ class _HeadersTable extends StatelessWidget {
     return Container(
       decoration: BoxDecoration(
         color: inspectorCodeBlockBackground(context),
-        borderRadius: BorderRadius.circular(6),
-        border: Border.all(
-          color: Theme.of(context).dividerColor,
-          width: 0.5,
-        ),
+        borderRadius: BorderRadius.circular(14),
+        border: Border.all(color: inspectorOutline(context)),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -490,10 +486,10 @@ class _CodeBlock extends StatelessWidget {
   Widget build(BuildContext context) {
     return Container(
       width: double.infinity,
-      padding: const EdgeInsets.all(10),
+      padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
         color: inspectorCodeBlockBackground(context),
-        borderRadius: BorderRadius.circular(6),
+        borderRadius: BorderRadius.circular(14),
         border: Border.all(
           color: Theme.of(context).dividerColor,
           width: 0.5,
@@ -505,7 +501,7 @@ class _CodeBlock extends StatelessWidget {
           fontSize: 11,
           color: Theme.of(context).textTheme.bodyLarge?.color,
           fontFamily: 'monospace',
-          height: 1.4,
+          height: 1.8,
         ),
       ),
     );
@@ -527,15 +523,18 @@ class _MethodChip extends StatelessWidget {
       padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 3),
       decoration: BoxDecoration(
         color: tint.withValues(alpha: 0.16),
-        borderRadius: BorderRadius.circular(4),
-        border: Border.all(color: tint.withValues(alpha: 0.45), width: 0.75),
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(color: tint.withValues(alpha: 0.25), width: 0.75),
       ),
       child: Text(
         method,
         style: TextStyle(
           fontSize: 10,
           fontWeight: FontWeight.w800,
-          color: tint,
+          color: inspectorBadgeText(context, tint,
+              alpha: 0.16,
+              background: Color.alphaBlend(tint.withValues(alpha: 0.14),
+                  inspectorPanelBackground(context))),
           letterSpacing: 0.6,
         ),
       ),
@@ -564,10 +563,10 @@ class _StatusBadge extends StatelessWidget {
       ApiTraceOutcome.cancelled => Icons.cancel_rounded,
     };
     return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
       decoration: BoxDecoration(
         color: tint.withValues(alpha: 0.12),
-        borderRadius: BorderRadius.circular(8),
+        borderRadius: BorderRadius.circular(inspectorRadius),
         border: Border.all(color: tint.withValues(alpha: 0.3)),
       ),
       child: Row(
@@ -578,8 +577,8 @@ class _StatusBadge extends StatelessWidget {
           Text(
             label,
             style: TextStyle(
-              color: tint,
-              fontWeight: FontWeight.w800,
+              color: inspectorBadgeText(context, tint),
+              fontWeight: FontWeight.w700,
               fontSize: 13,
               letterSpacing: 0.8,
             ),
