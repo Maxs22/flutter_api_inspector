@@ -78,8 +78,10 @@ interceptors. The package targets mobile / desktop, where there is
 no browser console; on Flutter Web use the browser's own DevTools
 Network tab instead.
 
-That's it. Every HTTP call your app makes will appear in the overlay
-with its URL, method, status code, duration, and response body.
+Every HTTP call your app makes will appear in the overlay with its URL,
+method, status code, duration, and response body. For a wrapped `MyApp`
+that builds its own `MaterialApp`/`GetMaterialApp`, use the explicit
+[host integration](#host-popup-priority) below so inner popups take priority.
 
 ### Option B — Manual instrumentation
 
@@ -131,6 +133,106 @@ interceptor records those requests itself.
 > `dio`, import directly from
 > `package:flutter_api_inspector/interceptor/http_overrides.dart`.
 
+## Host popup priority
+
+The inspector is **nonmodal**: touches outside its panel/FAB reach your
+app and leave the panel open. Close it with **X** or the **FAB**. Opening
+it never clears active or queued host SnackBars.
+
+Dialogs, popup menus/dropdowns and modal bottom sheets temporarily hide
+and disable the whole inspector, including keyboard focus, until their
+exit transitions finish. The open panel, filters, tab, detail navigation,
+launcher position and panel height survive; capture continues meanwhile.
+
+| App structure | Integration |
+|---|---|
+| `ApiTrace.runApp(MaterialApp(...))` | Automatic popup observer and host; existing builder and observers are preserved. |
+| `ApiTrace.runApp(MyApp())` with an inner app | Still supported, but cannot observe the inner Navigator automatically. Use the explicit integration below instead for inner popup priority. |
+| `MaterialApp.router` or router-owned Navigators | Explicit host plus observer on the actual Navigator; the bootstrap cannot inject observers into a router. |
+
+### Wrapped MyApp / GetMaterialApp
+
+Keep startup, capture, services, authentication and QA flags unchanged.
+Replace only the launch call:
+
+```dart
+// Before: ApiTrace.runApp(MyApp(initialWidget: fastInitialWidget));
+runApp(MyApp(initialWidget: fastInitialWidget)); // Flutter's ordinary runApp
+```
+
+Own one stable popup observer in your existing `_MyAppState`. Keep the
+existing `MultiProvider`/`LoginProvider` wrappers around `GetMaterialApp`.
+Add the observer to the existing list, and wrap the **existing builder
+result** rather than replacing it:
+
+```dart
+// In _MyAppState (not inside build):
+final _inspectorObserver = ApiTraceNavigatorObserver();
+
+@override
+void dispose() {
+  _inspectorObserver.dispose();
+  super.dispose();
+}
+
+// Inside your existing GetMaterialApp constructor:
+navigatorObservers: [
+  RouteStackObserver(),
+  loginRouteObserver,
+  _inspectorObserver,
+],
+builder: (context, child) => ApiTraceHost(
+  observer: _inspectorObserver,
+  child: EnvironmentBanner(
+    child: Stack(
+      children: [
+        child!,
+        const AppLoadingOverlay(),
+      ],
+    ),
+  ),
+),
+```
+
+Merge disposal with any existing `dispose` cleanup. Do not create the
+observer in `build`, dispose it from the host, mutate an existing observer
+list, or also wrap this explicit integration in `ApiTrace.runApp` (that
+would mount two inspectors). The popup observer does not replace capture's
+`RouteScopeObserver`; if you already use one, keep that same instance.
+For route-scoped capture with explicit integration, add one stable
+`RouteScopeObserver` to the actual Navigator if none is installed.
+
+This recipe mirrors the supplied appcomercios builder/observer excerpts;
+equivalent wrapped Flutter Navigators are widget-tested here. The actual
+appcomercios/Get runtime is **not tested**: its source and Get dependency
+are not part of this package.
+
+### Router-owned Navigator
+
+Use ordinary Flutter `runApp`, own/dispose the same stable observer as
+above, and connect both ends explicitly:
+
+```dart
+// In your RouterDelegate.build (or the router's observer configuration):
+Navigator(
+  key: navigatorKey,
+  observers: [existingObserver, inspectorObserver],
+  pages: pages,
+  onDidRemovePage: onDidRemovePage,
+);
+
+// In the actual MaterialApp.router:
+builder: (context, child) => ApiTraceHost(
+  observer: inspectorObserver,
+  child: existingBuilder(context, child), // retain existing wrappers
+),
+```
+
+The observer must belong to the Navigator that pushes the host popups.
+For nested Navigators, wire the host to the popup-owning Navigator; an
+outer bootstrap does not discover inner routes. No host route is popped,
+removed or replaced by the inspector.
+
 ## Route-Scoped Network Inspector
 
 _New in 0.3.0._ The overlay correlates every HTTP call with the
@@ -138,8 +240,9 @@ Flutter screen (route) that was active when it was dispatched, so
 instead of a flat chronological timeline you get: "CheckoutScreen →
 POST /orders (500) → GET /payment-methods (timeout)".
 
-`ApiTrace.runApp` auto-injects a `RouteScopeObserver` into your
-`MaterialApp`'s `navigatorObservers` (debug-only, no setup required).
+When passed a direct `MaterialApp`, `ApiTrace.runApp` auto-injects a
+`RouteScopeObserver` into its `navigatorObservers` (debug-only, no setup
+required). Wrapped and router-owned Navigators need explicit wiring.
 `TracedHttpOverrides` and `TracedDioInterceptor` automatically tag
 every request with the active route's `scopeId` and name.
 
@@ -218,6 +321,10 @@ Future<String?> ApiTrace.call(
 
 // One-line bootstrap.
 ApiTrace.runApp(Widget app);
+
+// Explicit actual-Navigator integration (see "Host popup priority").
+ApiTraceNavigatorObserver(); // stable popup observer, caller owns disposal
+ApiTraceHost(observer: observer, child: existingBuilderResult);
 
 // Route-scoping (see "Route-Scoped Network Inspector" above).
 RouteScope.current;          // RouteScopeEntry? — the active screen's scope

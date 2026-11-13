@@ -11,6 +11,16 @@ and the project adheres to [Semantic Versioning](https://semver.org/).
 - **Nonmodal inspector**: outside touches reach the app without closing the
   panel; close with X/FAB. Active and queued host SnackBars are preserved,
   superseding the 0.3.4 notification-clearing behavior.
+- **Host popup priority**: dialogs, menus/dropdowns and modal bottom sheets
+  suspend inspector painting, pointers and keyboard focus until exit
+  transitions finish, retaining panel state and nested detail navigation.
+
+### Added
+
+- `ApiTraceHost` and `ApiTraceNavigatorObserver` for explicit integration
+  inside wrapped MaterialApp/GetMaterialApp builders and router-owned
+  Navigators. Direct MaterialApp bootstrap integration is automatic;
+  wrapped/router popup interception requires the documented inner hookup.
 
 ### Changed
 

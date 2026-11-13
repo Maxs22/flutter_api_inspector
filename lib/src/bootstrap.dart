@@ -21,52 +21,9 @@ import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 
 import 'package:flutter_api_inspector/src/api_trace.dart';
-import 'package:flutter_api_inspector/src/overlay/api_trace_overlay.dart';
+import 'package:flutter_api_inspector/src/api_trace_host.dart';
+import 'package:flutter_api_inspector/src/api_trace_navigator_observer.dart';
 import 'package:flutter_api_inspector/src/route_scope_observer.dart';
-
-/// Wraps [child] so it only becomes interactive after the first
-/// frame has completed layout. Prevents
-/// "Cannot hit test a render box that has never been laid out"
-/// when the user taps before the initial frame is rendered
-/// (common on emulators with slow first-frame composition).
-///
-/// Before the first frame, returns [SizedBox.shrink()] (a
-/// zero-size box that is trivially laid out). After the first
-/// frame, transitions to [child] with normal hit-testing.
-class _FirstFrameDeferred extends StatefulWidget {
-  const _FirstFrameDeferred({required this.child});
-
-  final Widget child;
-
-  @override
-  State<_FirstFrameDeferred> createState() => _FirstFrameDeferredState();
-}
-
-class _FirstFrameDeferredState extends State<_FirstFrameDeferred> {
-  bool _ready = false;
-
-  @override
-  void initState() {
-    super.initState();
-    // Schedule a post-frame callback. After the first frame
-    // completes layout, switch to the real child.
-    WidgetsBinding.instance.addPostFrameCallback((_) {
-      if (mounted) {
-        setState(() => _ready = true);
-      }
-    });
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    // Before the first frame: return a trivial SizedBox that is
-    // guaranteed to be laid out in the first pass. The child is
-    // not built at all, so its RenderBox (which would be
-    // NEEDS-LAYOUT) never participates in the hit test.
-    if (!_ready) return const SizedBox.shrink();
-    return widget.child;
-  }
-}
 
 /// Wraps the developer's [child] in the debug-only overlay.
 class ApiTraceBootstrap extends StatelessWidget {
@@ -103,14 +60,10 @@ class ApiTraceBootstrap extends StatelessWidget {
     //    overlay's `Navigator.push` calls find the
     //    MaterialApp's root Navigator.
     //
-    // 2. Any other widget: wrap in a `Directionality` +
-    //    `Stack`, with the overlay as a sibling of the
-    //    child. The overlay subtree is wrapped in a
-    //    `_OverlayHarness` that provides a
-    //    `MaterialLocalizations` ancestor. The overlay
-    //    cannot push detail screens in this case (there is
-    //    no Navigator), so the developer should pass
-    //    `onRecordTap` to override the default behaviour.
+    // 2. Any other widget: retain the legacy outer MaterialApp harness.
+    //    It cannot observe popups on an inner Navigator. For wrapped apps,
+    //    mount ApiTraceHost in the actual app builder and install its
+    //    ApiTraceNavigatorObserver on that Navigator instead.
 
     // The bootstrap is designed to be mounted INSIDE the
     // developer's `MaterialApp` (either as the root via
@@ -173,7 +126,7 @@ class ApiTraceBootstrap extends StatelessWidget {
 }
 
 /// Internal: a copy of the developer's `MaterialApp` with a
-/// `builder` that injects the `ApiTraceOverlay` into the
+/// `builder` that injects the inspector host into the
 /// MaterialApp's Navigator subtree. This is the standard
 /// pattern from Flutter's own `WidgetsApp.builder`.
 ///
@@ -181,7 +134,7 @@ class ApiTraceBootstrap extends StatelessWidget {
 /// construct a new one with the same fields plus the
 /// `builder`. The `key` of the original MaterialApp is
 /// preserved.
-class BootstrapMaterialAppHarness extends StatelessWidget {
+class BootstrapMaterialAppHarness extends StatefulWidget {
   const BootstrapMaterialAppHarness({
     super.key,
     required this.materialApp,
@@ -191,34 +144,37 @@ class BootstrapMaterialAppHarness extends StatelessWidget {
   final MaterialApp materialApp;
   final bool enabled;
 
+  @override
+  State<BootstrapMaterialAppHarness> createState() =>
+      _BootstrapMaterialAppHarnessState();
+}
+
+class _BootstrapMaterialAppHarnessState
+    extends State<BootstrapMaterialAppHarness> {
+  final _popupObserver = ApiTraceNavigatorObserver();
+  final _scopeObserver = RouteScopeObserver();
+
+  MaterialApp get materialApp => widget.materialApp;
+  bool get enabled => widget.enabled;
+
+  @override
+  void dispose() {
+    _popupObserver.dispose();
+    super.dispose();
+  }
+
   /// Wraps the developer's own `builder` (if any) and stacks the
-  /// [ApiTraceOverlay] on top of its result. The overlay is INSIDE
+  /// inspector on top of its result. The overlay is INSIDE
   /// the MaterialApp's subtree, so its Material widgets find the
   /// localizations / theme ancestors they need.
   Widget _overlayBuilder(BuildContext context, Widget? child) {
     final Widget? inner = materialApp.builder == null
         ? child
         : materialApp.builder!(context, child);
-    return Stack(
-      children: <Widget>[
-        if (inner != null) inner,
-        if (enabled)
-          ValueListenableBuilder<String?>(
-            valueListenable: ApiTrace.timeline.latest,
-            builder: (BuildContext context, String? _, Widget? __) {
-              if (!ApiTrace.enabled) {
-                return const SizedBox.shrink();
-              }
-              return _FirstFrameDeferred(
-                child: ApiTraceOverlay(
-                  config: ApiTrace.config,
-                  records: ApiTrace.timeline.records,
-                  navigatorKey: ApiTrace.navigatorKey,
-                ),
-              );
-            },
-          ),
-      ],
+    return ApiTraceHost(
+      observer: _popupObserver,
+      enabled: enabled,
+      child: inner ?? const SizedBox.shrink(),
     );
   }
 
@@ -291,13 +247,14 @@ class BootstrapMaterialAppHarness extends StatelessWidget {
       onNavigationNotification: materialApp.onNavigationNotification,
       navigatorObservers: [
         ...switch (materialApp.navigatorObservers) {
-          null || const [] => [if (enabled) RouteScopeObserver()],
+          null || const [] => [if (enabled) _scopeObserver],
           final list => [
               ...list,
               if (enabled && !list.any((o) => o is RouteScopeObserver))
-                RouteScopeObserver(),
+                _scopeObserver,
             ],
         },
+        if (enabled) _popupObserver,
       ],
       builder: _overlayBuilder,
       title: materialApp.title,
