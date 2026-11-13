@@ -6,6 +6,12 @@ and the project adheres to [Semantic Versioning](https://semver.org/).
 
 ## Unreleased
 
+### Fixed
+
+- **Nonmodal inspector**: outside touches reach the app without closing the
+  panel; close with X/FAB. Active and queued host SnackBars are preserved,
+  superseding the 0.3.4 notification-clearing behavior.
+
 ### Changed
 
 - **Breathing Room inspector**: roomier request and route cards, rounded

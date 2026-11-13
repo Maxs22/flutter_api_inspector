@@ -1419,7 +1419,8 @@ void main() {
       expect(errorDot(), findsNothing);
     });
 
-    testWidgets('opening the panel clears host app SnackBars', (tester) async {
+    testWidgets('opening the panel preserves host app SnackBars',
+        (tester) async {
       await _pumpAppWithOverlay(
         tester,
         child: Builder(
@@ -1445,10 +1446,10 @@ void main() {
       await tester.tap(find.byType(FloatingActionButton));
       await tester.pumpAndSettle();
       expect(find.byKey(const ValueKey('inspectorPanel')), findsOneWidget);
-      expect(find.text('host snackbar'), findsNothing);
+      expect(find.text('host snackbar'), findsOneWidget);
     });
 
-    testWidgets('tapping outside the panel closes it (scrim)', (tester) async {
+    testWidgets('tapping outside the panel leaves it open', (tester) async {
       await _pumpAppWithOverlay(tester);
       await tester.tap(find.byType(FloatingActionButton));
       await tester.pumpAndSettle();
@@ -1457,7 +1458,7 @@ void main() {
       // Tap a point below the panel and away from the FAB.
       await tester.tapAt(const Offset(60, 560));
       await tester.pumpAndSettle();
-      expect(find.byKey(const ValueKey('inspectorPanel')), findsNothing);
+      expect(find.byKey(const ValueKey('inspectorPanel')), findsOneWidget);
     });
 
     testWidgets('the header close (X) button closes the panel', (tester) async {

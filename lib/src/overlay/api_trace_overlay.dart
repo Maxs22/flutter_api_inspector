@@ -108,11 +108,6 @@ class _ApiTraceOverlayState extends State<ApiTraceOverlay> {
   /// been opened; the first open computes the default.
   double? _panelHeight;
 
-  // Host-app SnackBars are visually disruptive if one is active
-  // when the inspector opens, because the app's ScaffoldMessenger
-  // can paint it over the floating modal. Opening the inspector
-  // clears any current host SnackBar first.
-
   @override
   Widget build(BuildContext context) {
     // REQ-UI-001: kDebugMode guard. In release builds
@@ -137,23 +132,8 @@ class _ApiTraceOverlayState extends State<ApiTraceOverlay> {
 
     return Stack(
       children: <Widget>[
-        // Tap-outside-to-close scrim. Sits below the panel and
-        // the FAB, above the developer's app. The faint tint
-        // signals that the panel is dismissible.
-        if (_open)
-          Positioned.fill(
-            child: GestureDetector(
-              behavior: HitTestBehavior.opaque,
-              onTap: () {
-                setState(() {
-                  _setOpen(false);
-                });
-              },
-              child: ColoredBox(
-                color: Colors.black.withValues(alpha: 0.05),
-              ),
-            ),
-          ),
+        // No full-screen hit target: host controls outside the panel and
+        // launcher remain interactive. Close explicitly with X or the FAB.
         if (_open)
           Positioned(
             top: MediaQuery.of(context).padding.top + kToolbarHeight,
@@ -278,31 +258,7 @@ class _ApiTraceOverlayState extends State<ApiTraceOverlay> {
 
   void _setOpen(bool value) {
     if (_open == value) return;
-    if (value) {
-      _suppressHostSnackBars();
-    }
     _open = value;
-  }
-
-  void _suppressHostSnackBars() {
-    if (!mounted) return;
-
-    void removeSnackBar() {
-      final BuildContext? navigatorContext =
-          widget.navigatorKey?.currentContext;
-      final messenger = (navigatorContext != null
-              ? ScaffoldMessenger.maybeOf(navigatorContext)
-              : null) ??
-          ScaffoldMessenger.maybeOf(context);
-      messenger
-        ?..clearSnackBars()
-        ..removeCurrentSnackBar(reason: SnackBarClosedReason.hide);
-    }
-
-    removeSnackBar();
-    WidgetsBinding.instance.addPostFrameCallback((_) {
-      if (mounted) removeSnackBar();
-    });
   }
 
   static Offset _initialFabPosition(
