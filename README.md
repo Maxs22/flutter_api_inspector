@@ -1,16 +1,18 @@
 # flutter_api_inspector
 
+Desarrollado por [Maxs22](https://github.com/Maxs22).
+
 [![Flutter](https://img.shields.io/badge/Flutter-%3E%3D3.27.0-blue.svg)](https://flutter.dev)
 [![Dart](https://img.shields.io/badge/Dart-%3E%3D3.6.0-blue.svg)](https://dart.dev)
 
 <p align="center">
-  <img src="assets/demo-timeline.png"
+  <img src="https://raw.githubusercontent.com/Maxs22/flutter_api_inspector/98c23f30a1b5e0c015ae68786b6888f93b014521/assets/demo-timeline.png"
        alt="Timeline tab screenshot"
        width="220">
-  <img src="assets/demo-routes.png"
+  <img src="https://raw.githubusercontent.com/Maxs22/flutter_api_inspector/98c23f30a1b5e0c015ae68786b6888f93b014521/assets/demo-routes.png"
        alt="Routes tab screenshot"
        width="220">
-  <img src="assets/demo-endpoints.png"
+  <img src="https://raw.githubusercontent.com/Maxs22/flutter_api_inspector/98c23f30a1b5e0c015ae68786b6888f93b014521/assets/demo-endpoints.png"
        alt="Route endpoints screenshot"
        width="220">
 </p>
