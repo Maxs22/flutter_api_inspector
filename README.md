@@ -4,24 +4,18 @@
 [![Dart](https://img.shields.io/badge/Dart-%3E%3D3.6.0-blue.svg)](https://dart.dev)
 
 <p align="center">
-  <img src="https://raw.githubusercontent.com/Maxs22/flutter_api_inspector/v0.3.4/assets/demo.gif"
-       alt="flutter_api_inspector demo"
-       width="360">
-  <br>
-  <em>FAB → Timeline → Routes → Endpoint panel — all inside your running debug app.</em>
-</p>
-
-<p align="center">
-  <img src="https://raw.githubusercontent.com/Maxs22/flutter_api_inspector/v0.3.4/assets/demo-timeline.png"
+  <img src="assets/demo-timeline.png"
        alt="Timeline tab screenshot"
        width="220">
-  <img src="https://raw.githubusercontent.com/Maxs22/flutter_api_inspector/v0.3.4/assets/demo-routes.png"
+  <img src="assets/demo-routes.png"
        alt="Routes tab screenshot"
        width="220">
-  <img src="https://raw.githubusercontent.com/Maxs22/flutter_api_inspector/v0.3.4/assets/demo-endpoints.png"
+  <img src="assets/demo-endpoints.png"
        alt="Route endpoints screenshot"
        width="220">
 </p>
+
+[Request detail screenshot](assets/demo-detail.png) · [Capture provenance](assets/README.md)
 
 Debug-first in-app overlay that intercepts HTTP traffic and shows a
 live timeline with status codes, durations, and response bodies —
@@ -45,7 +39,14 @@ I care about."
 that opens a timeline panel inside your running debug app.
 The Breathing Room layout uses spacious request cards, rounded controls,
 and softer surfaces inherited from your app's light or dark `ColorScheme`.
-The demo images above show the previous released layout.
+The screenshots above show the current inspector running in the Android example app.
+
+## Third-party assets
+
+Inspector icons use a bundled Lucide subset (ISC); interface and technical text
+use bundled Inter and JetBrains Mono subsets (SIL OFL). No runtime downloads or
+additional package dependencies are required. Host colors and typography outside
+the inspector are preserved. See [asset sources and licenses](third_party/README.md).
 
 ## Quickstart
 
@@ -53,7 +54,7 @@ Add the dependency:
 
 ```yaml
 dependencies:
-  flutter_api_inspector: ^0.3.4
+  flutter_api_inspector: ^0.4.0
 ```
 
 ### Option A — Automatic capture (recommended)

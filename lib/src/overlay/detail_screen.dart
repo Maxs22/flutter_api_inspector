@@ -1,3 +1,4 @@
+import 'package:flutter_api_inspector/src/overlay/icons.dart';
 // The read-only detail screen shown when a row in the timeline
 // is tapped (REQ-UI-007).
 //
@@ -53,7 +54,7 @@ class ApiTraceDetailScreen extends StatelessWidget {
       backgroundColor: inspectorPanelBackground(context),
       appBar: AppBar(
         leading: IconButton(
-          icon: Icon(Icons.arrow_back_rounded, color: tint),
+          icon: Icon(InspectorIcons.arrowBack, color: tint),
           onPressed: onBack ?? () => Navigator.of(context).pop(),
         ),
         titleSpacing: 0,
@@ -256,7 +257,7 @@ class _Field extends StatelessWidget {
               style: TextStyle(
                 fontSize: 12,
                 color: Theme.of(context).textTheme.bodyLarge?.color,
-                fontFamily: 'monospace',
+                fontFamily: 'packages/flutter_api_inspector/InspectorMono',
                 height: 1.3,
               ),
             ),
@@ -297,14 +298,14 @@ class _CopyableText extends StatelessWidget {
                 style: TextStyle(
                   fontSize: 12,
                   color: Theme.of(context).textTheme.bodyLarge?.color,
-                  fontFamily: 'monospace',
+                  fontFamily: 'packages/flutter_api_inspector/InspectorMono',
                   height: 1.3,
                 ),
               ),
             ),
             const SizedBox(width: 6),
             Icon(
-              Icons.content_copy_rounded,
+              InspectorIcons.contentCopy,
               size: 12,
               color: inspectorMuted(context),
             ),
@@ -372,7 +373,7 @@ class _ParamRow extends StatelessWidget {
               fontSize: 11,
               fontWeight: FontWeight.w600,
               color: inspectorAccent(context),
-              fontFamily: 'monospace',
+              fontFamily: 'packages/flutter_api_inspector/InspectorMono',
             ),
           ),
           const SizedBox(width: 6),
@@ -390,7 +391,7 @@ class _ParamRow extends StatelessWidget {
               style: TextStyle(
                 fontSize: 11,
                 color: Theme.of(context).textTheme.bodyLarge?.color,
-                fontFamily: 'monospace',
+                fontFamily: 'packages/flutter_api_inspector/InspectorMono',
                 height: 1.3,
               ),
             ),
@@ -456,7 +457,7 @@ class _HeaderRow extends StatelessWidget {
                 fontSize: 10,
                 fontWeight: FontWeight.w600,
                 color: inspectorAccent(context),
-                fontFamily: 'monospace',
+                fontFamily: 'packages/flutter_api_inspector/InspectorMono',
               ),
               overflow: TextOverflow.ellipsis,
             ),
@@ -467,7 +468,7 @@ class _HeaderRow extends StatelessWidget {
               style: TextStyle(
                 fontSize: 10,
                 color: Theme.of(context).textTheme.bodyLarge?.color,
-                fontFamily: 'monospace',
+                fontFamily: 'packages/flutter_api_inspector/InspectorMono',
                 height: 1.3,
               ),
             ),
@@ -500,7 +501,7 @@ class _CodeBlock extends StatelessWidget {
         style: TextStyle(
           fontSize: 11,
           color: Theme.of(context).textTheme.bodyLarge?.color,
-          fontFamily: 'monospace',
+          fontFamily: 'packages/flutter_api_inspector/InspectorMono',
           height: 1.8,
         ),
       ),
@@ -558,9 +559,9 @@ class _StatusBadge extends StatelessWidget {
       ApiTraceOutcome.cancelled => 'CANCELLED',
     };
     final icon = switch (outcome) {
-      ApiTraceOutcome.success => Icons.check_circle_rounded,
-      ApiTraceOutcome.error => Icons.error_rounded,
-      ApiTraceOutcome.cancelled => Icons.cancel_rounded,
+      ApiTraceOutcome.success => InspectorIcons.checkCircle,
+      ApiTraceOutcome.error => InspectorIcons.error,
+      ApiTraceOutcome.cancelled => InspectorIcons.cancel,
     };
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),

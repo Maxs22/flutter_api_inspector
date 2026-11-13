@@ -1,3 +1,4 @@
+import 'package:flutter_api_inspector/src/overlay/icons.dart';
 // The debug-only in-app overlay (REQ-UI-001, REQ-UI-002,
 // REQ-UI-005).
 //
@@ -98,8 +99,8 @@ class _ApiTraceOverlayState extends State<ApiTraceOverlay> {
   RouteScopeEntry? _scopeEntry;
 
   /// Absolute position (left, top) of the FAB within the overlay
-  /// Stack. `null` until the first layout — initialized from
-  /// [ApiTraceConfig.overlayPosition] by [_initialFabPosition].
+  /// Stack after a user drag. Until then, compute the configured corner
+  /// from the current constraints so transient small layouts cannot pin it.
   /// Using absolute coordinates (instead of Transform.translate)
   /// guarantees the hit-test area always matches the visual position.
   Offset? _fabPosition;
@@ -110,6 +111,19 @@ class _ApiTraceOverlayState extends State<ApiTraceOverlay> {
 
   @override
   Widget build(BuildContext context) {
+    final host = Theme.of(context);
+    return Theme(
+      data: host.copyWith(
+        textTheme: host.textTheme
+            .apply(fontFamily: 'packages/flutter_api_inspector/InspectorSans'),
+        primaryTextTheme: host.primaryTextTheme
+            .apply(fontFamily: 'packages/flutter_api_inspector/InspectorSans'),
+      ),
+      child: Builder(builder: _buildOverlay),
+    );
+  }
+
+  Widget _buildOverlay(BuildContext context) {
     // REQ-UI-001: kDebugMode guard. In release builds
     // (kDebugMode == false), this branch is `const false`,
     // so the AOT compiler eliminates the entire overlay
@@ -197,12 +211,12 @@ class _ApiTraceOverlayState extends State<ApiTraceOverlay> {
           child: LayoutBuilder(
             builder: (BuildContext context, BoxConstraints constraints) {
               const double fabSlot = 56 + 32; // FAB (56) + padding (16*2)
-              _fabPosition ??= _initialFabPosition(
-                constraints,
-                widget.config.overlayPosition,
-                fabSlot,
-              );
-              final pos = _fabPosition!;
+              final pos = _fabPosition ??
+                  _initialFabPosition(
+                    constraints,
+                    widget.config.overlayPosition,
+                    fabSlot,
+                  );
               return Stack(
                 children: <Widget>[
                   Positioned(
@@ -421,7 +435,7 @@ class _PackageNavigatorState extends State<_PackageNavigator> {
             children: <Widget>[
               _buildTabButton(
                 label: 'Timeline',
-                icon: Icons.list_rounded,
+                icon: InspectorIcons.list,
                 selected: _activeTab == 0,
                 activeColor: activeColor,
                 inactiveColor: tabColor,
@@ -429,7 +443,7 @@ class _PackageNavigatorState extends State<_PackageNavigator> {
               ),
               _buildTabButton(
                 label: 'Routes',
-                icon: Icons.account_tree_rounded,
+                icon: InspectorIcons.accountTree,
                 selected: _activeTab == 1,
                 activeColor: activeColor,
                 inactiveColor: tabColor,
@@ -437,7 +451,7 @@ class _PackageNavigatorState extends State<_PackageNavigator> {
               ),
               if (widget.selectedScopeId != null)
                 IconButton(
-                  icon: const Icon(Icons.filter_alt_off_rounded, size: 18),
+                  icon: const Icon(InspectorIcons.filterAltOff, size: 18),
                   tooltip: 'Clear route filter',
                   onPressed: () => widget.onScopeSelected(null),
                   padding: const EdgeInsets.all(4),
@@ -452,7 +466,7 @@ class _PackageNavigatorState extends State<_PackageNavigator> {
                 ),
               if (_activeTab == 0 && widget.onExport != null)
                 IconButton(
-                  icon: const Icon(Icons.file_download_rounded, size: 18),
+                  icon: const Icon(InspectorIcons.fileDownload, size: 18),
                   tooltip: 'Export as cURL',
                   onPressed: _handleExport,
                   padding: const EdgeInsets.all(4),

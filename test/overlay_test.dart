@@ -1,3 +1,4 @@
+import 'package:flutter_api_inspector/src/overlay/icons.dart';
 // Strict TDD evidence for TASK-018..025: the debug-only overlay
 // surface for the `flutter_api_inspector` package (REQ-UI-001..008).
 //
@@ -152,7 +153,7 @@ void main() {
           recordCount: 1,
         ),
       ));
-      expect(find.byIcon(Icons.bolt_rounded), findsOneWidget);
+      expect(find.byIcon(InspectorIcons.bolt), findsOneWidget);
     });
 
     testWidgets('default label is icon-only (no count Text inside FAB subtree)',
@@ -298,7 +299,7 @@ void main() {
           ),
         ));
         expect(
-          find.byIcon(Icons.bolt_rounded),
+          find.byIcon(InspectorIcons.bolt),
           findsOneWidget,
           reason: 'icon should be present for label=$label',
         );
@@ -326,7 +327,7 @@ void main() {
           ),
         ));
         expect(
-          find.byIcon(Icons.bolt_rounded),
+          find.byIcon(InspectorIcons.bolt),
           findsOneWidget,
           reason: 'icon should be present for position=$position',
         );
@@ -431,7 +432,7 @@ void main() {
       // through inspectorEnsureContrast against the panel
       // background, so we assert the hue (green channel
       // dominates) rather than a pinned hex value.
-      final iconFinder = find.byIcon(Icons.check_circle_rounded);
+      final iconFinder = find.byIcon(InspectorIcons.checkCircle);
       expect(iconFinder, findsOneWidget);
       final iconWidget = tester.widget<Icon>(iconFinder);
       final Color c = iconWidget.color!;
@@ -455,7 +456,7 @@ void main() {
       // For outcome == error, the row's leading icon is
       // Icons.error (per design.md). The exact shade is
       // theme-dependent (contrast-adjusted); assert the hue.
-      final iconFinder = find.byIcon(Icons.error_rounded);
+      final iconFinder = find.byIcon(InspectorIcons.error);
       expect(iconFinder, findsOneWidget);
       final iconWidget = tester.widget<Icon>(iconFinder);
       final Color c = iconWidget.color!;
@@ -479,7 +480,7 @@ void main() {
         ),
       ));
       Color? color4xx;
-      final icon4xx = tester.widget<Icon>(find.byIcon(Icons.error_rounded));
+      final icon4xx = tester.widget<Icon>(find.byIcon(InspectorIcons.error));
       color4xx = icon4xx.color;
       await tester.pumpWidget(rowHost(
         TimelineRow(
@@ -492,7 +493,7 @@ void main() {
           onTap: () {},
         ),
       ));
-      final icon5xx = tester.widget<Icon>(find.byIcon(Icons.error_rounded));
+      final icon5xx = tester.widget<Icon>(find.byIcon(InspectorIcons.error));
       expect(icon5xx.color, equals(color4xx));
     });
 
@@ -1467,7 +1468,7 @@ void main() {
       await tester.pumpAndSettle();
       expect(find.byKey(const ValueKey('inspectorPanel')), findsOneWidget);
 
-      await tester.tap(find.byIcon(Icons.close_rounded));
+      await tester.tap(find.byIcon(InspectorIcons.close));
       await tester.pumpAndSettle();
       expect(find.byKey(const ValueKey('inspectorPanel')), findsNothing);
     });
@@ -1625,9 +1626,9 @@ void main() {
       )));
 
       // The list icon should be visible.
-      expect(find.byIcon(Icons.list_alt_rounded), findsOneWidget);
+      expect(find.byIcon(InspectorIcons.listAlt), findsOneWidget);
 
-      await tester.tap(find.byIcon(Icons.list_alt_rounded));
+      await tester.tap(find.byIcon(InspectorIcons.listAlt));
       await tester.pumpAndSettle();
 
       expect(capturedEntry, isNotNull);
@@ -1648,11 +1649,11 @@ void main() {
       )));
 
       expect(
-        find.widgetWithIcon(Tooltip, Icons.list_alt_rounded),
+        find.widgetWithIcon(Tooltip, InspectorIcons.listAlt),
         findsOneWidget,
       );
       final tooltip = tester.widget<Tooltip>(
-        find.widgetWithIcon(Tooltip, Icons.list_alt_rounded),
+        find.widgetWithIcon(Tooltip, InspectorIcons.listAlt),
       );
       expect(tooltip.message, equals('View endpoints'));
     });
@@ -1684,7 +1685,7 @@ void main() {
         records: const <ApiTraceRecord>[],
       )));
 
-      expect(find.byIcon(Icons.inbox_rounded), findsOneWidget);
+      expect(find.byIcon(InspectorIcons.inbox), findsOneWidget);
       expect(
           find.text('No endpoints recorded for this route.'), findsOneWidget);
       expect(find.text('Route: EmptyRoute'), findsOneWidget);
@@ -2000,7 +2001,7 @@ void main() {
       // Switch back to Timeline and tap the export icon.
       await tester.tap(find.text('Timeline'));
       await tester.pumpAndSettle();
-      await tester.tap(find.byIcon(Icons.file_download_rounded).first);
+      await tester.tap(find.byIcon(InspectorIcons.fileDownload).first);
       await tester.pumpAndSettle();
 
       expect(clipboardText, isNotNull);

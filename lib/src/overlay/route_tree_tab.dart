@@ -1,3 +1,4 @@
+import 'package:flutter_api_inspector/src/overlay/icons.dart';
 // Route Tree tab for the inspector overlay (REQ-RS-005, REQ-RS-006).
 //
 // Shows a hierarchical tree of visited routes. Tapping a route
@@ -150,7 +151,7 @@ class _RouteTreeTabState extends State<RouteTreeTab> {
           if (hasFilter)
             TextButton.icon(
               onPressed: () => widget.onScopeSelected(null),
-              icon: const Icon(Icons.clear_all_rounded, size: 18),
+              icon: const Icon(InspectorIcons.clearAll, size: 18),
               label: const Text('Clear', style: TextStyle(fontSize: 12)),
               style: TextButton.styleFrom(
                 padding: const EdgeInsets.symmetric(horizontal: 8),
@@ -322,8 +323,8 @@ class _RouteTreeRow extends StatelessWidget {
                       padding: const EdgeInsets.only(right: 4),
                       child: Icon(
                         isExpanded
-                            ? Icons.expand_more_rounded
-                            : Icons.chevron_right_rounded,
+                            ? InspectorIcons.expandMore
+                            : InspectorIcons.chevronRight,
                         size: 18,
                         color: inspectorMuted(context),
                       ),
@@ -334,8 +335,8 @@ class _RouteTreeRow extends StatelessWidget {
                 const SizedBox(width: 4),
                 Icon(
                   highlighted
-                      ? Icons.screen_search_desktop_rounded
-                      : Icons.screen_rotation_alt_rounded,
+                      ? InspectorIcons.screenSearchDesktop
+                      : InspectorIcons.screenRotationAlt,
                   size: 16,
                   color: highlighted
                       ? inspectorAccent(context)
@@ -389,7 +390,7 @@ class _RouteTreeRow extends StatelessWidget {
                         width: 44,
                         height: 44,
                         child: Icon(
-                          Icons.list_alt_rounded,
+                          InspectorIcons.listAlt,
                           size: 16,
                           color: inspectorMuted(context),
                         ),

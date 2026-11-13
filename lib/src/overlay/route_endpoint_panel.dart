@@ -1,3 +1,4 @@
+import 'package:flutter_api_inspector/src/overlay/icons.dart';
 // Endpoint detail panel for a single route scope (REQ-REP-002,
 // REQ-REP-004, REQ-REP-006).
 //
@@ -61,6 +62,14 @@ class _RouteEndpointPanelState extends State<RouteEndpointPanel> {
     return Scaffold(
       backgroundColor: inspectorPanelBackground(context),
       appBar: AppBar(
+        automaticallyImplyLeading: false,
+        leading: ModalRoute.of(context)?.canPop == true
+            ? IconButton(
+                tooltip: MaterialLocalizations.of(context).backButtonTooltip,
+                icon: const Icon(InspectorIcons.arrowBack),
+                onPressed: () => Navigator.of(context).maybePop(),
+              )
+            : null,
         title: Text('${widget.routeName} Endpoints'),
         backgroundColor: inspectorPanelBackground(context),
         elevation: 0,
@@ -79,7 +88,7 @@ class _RouteEndpointPanelState extends State<RouteEndpointPanel> {
       child: Column(
         mainAxisSize: MainAxisSize.min,
         children: <Widget>[
-          Icon(Icons.inbox_rounded, size: 48, color: inspectorMuted(context)),
+          Icon(InspectorIcons.inbox, size: 48, color: inspectorMuted(context)),
           const SizedBox(height: 16),
           Text(
             'No endpoints recorded for this route.',
@@ -149,7 +158,8 @@ class _RouteEndpointPanelState extends State<RouteEndpointPanel> {
                               background: inspectorRowBackground(context)),
                           fontSize: 10,
                           fontWeight: FontWeight.w800,
-                          fontFamily: 'monospace',
+                          fontFamily:
+                              'packages/flutter_api_inspector/InspectorMono',
                         ),
                       ),
                     ),
@@ -182,7 +192,8 @@ class _RouteEndpointPanelState extends State<RouteEndpointPanel> {
                             style: TextStyle(
                               fontSize: 11,
                               color: inspectorMuted(context),
-                              fontFamily: 'monospace',
+                              fontFamily:
+                                  'packages/flutter_api_inspector/InspectorMono',
                             ),
                             overflow: TextOverflow.ellipsis,
                           ),

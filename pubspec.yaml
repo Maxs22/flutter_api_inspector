@@ -3,7 +3,7 @@ description: >-
   Debug-first in-app HTTP inspector for Flutter mobile/desktop. Live
   timeline, route grouping, details, and QA force-enable support without
   proxy setup.
-version: 0.3.4
+version: 0.4.0
 repository: https://github.com/Maxs22/flutter_api_inspector
 
 # Color.withValues and the ColorScheme surfaceContainer* roles the
@@ -39,3 +39,23 @@ dev_dependencies:
 
 flutter:
   uses-material-design: true
+  fonts:
+    - family: InspectorIcons
+      fonts:
+        - asset: assets/fonts/inspector-icons.ttf
+    - family: InspectorSans
+      fonts:
+        - asset: assets/fonts/inspector-sans-400.ttf
+          weight: 400
+        - asset: assets/fonts/inspector-sans-500.ttf
+          weight: 500
+        - asset: assets/fonts/inspector-sans-600.ttf
+          weight: 600
+        - asset: assets/fonts/inspector-sans-700.ttf
+          weight: 700
+    - family: InspectorMono
+      fonts:
+        - asset: assets/fonts/inspector-mono-400.ttf
+          weight: 400
+        - asset: assets/fonts/inspector-mono-700.ttf
+          weight: 700

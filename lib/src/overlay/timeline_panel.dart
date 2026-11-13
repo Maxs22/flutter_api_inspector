@@ -1,3 +1,4 @@
+import 'package:flutter_api_inspector/src/overlay/icons.dart';
 // The timeline list panel shown above the developer's UI when
 // the FAB is tapped (REQ-UI-005, REQ-UI-006).
 //
@@ -172,7 +173,7 @@ class _TimelinePanelState extends State<TimelinePanel> {
               borderRadius: BorderRadius.circular(10),
             ),
             child: Icon(
-              Icons.bolt_rounded,
+              InspectorIcons.bolt,
               size: 16,
               color: inspectorAccent(context),
             ),
@@ -212,7 +213,7 @@ class _TimelinePanelState extends State<TimelinePanel> {
           if (widget.onExport != null)
             IconButton(
               onPressed: () => widget.onExport!(_applyFilters(widget.records)),
-              icon: const Icon(Icons.file_download_rounded),
+              icon: const Icon(InspectorIcons.fileDownload),
               iconSize: 18,
               padding: EdgeInsets.zero,
               constraints: const BoxConstraints(minWidth: 44, minHeight: 44),
@@ -222,7 +223,7 @@ class _TimelinePanelState extends State<TimelinePanel> {
           if (widget.onClear != null)
             IconButton(
               onPressed: widget.onClear,
-              icon: const Icon(Icons.delete_sweep_rounded),
+              icon: const Icon(InspectorIcons.deleteSweep),
               iconSize: 18,
               padding: EdgeInsets.zero,
               constraints: const BoxConstraints(minWidth: 44, minHeight: 44),
@@ -232,7 +233,7 @@ class _TimelinePanelState extends State<TimelinePanel> {
           if (widget.onClose != null)
             IconButton(
               onPressed: widget.onClose,
-              icon: const Icon(Icons.close_rounded),
+              icon: const Icon(InspectorIcons.close),
               iconSize: 18,
               padding: EdgeInsets.zero,
               constraints: const BoxConstraints(minWidth: 44, minHeight: 44),
@@ -260,7 +261,7 @@ class _TimelinePanelState extends State<TimelinePanel> {
                 color: inspectorMuted(context),
               ),
               prefixIcon: Icon(
-                Icons.search_rounded,
+                InspectorIcons.search,
                 size: 16,
                 color: inspectorMuted(context),
               ),
@@ -298,20 +299,20 @@ class _TimelinePanelState extends State<TimelinePanel> {
                 context,
                 label: 'All',
                 value: _PanelFilter.all,
-                icon: Icons.all_inclusive_rounded,
+                icon: InspectorIcons.allInclusive,
               ),
               _filterChip(
                 context,
                 label: 'Success',
                 value: _PanelFilter.success,
-                icon: Icons.check_circle_rounded,
+                icon: InspectorIcons.checkCircle,
                 color: inspectorSuccess(context),
               ),
               _filterChip(
                 context,
                 label: 'Errors',
                 value: _PanelFilter.error,
-                icon: Icons.error_rounded,
+                icon: InspectorIcons.error,
                 color: inspectorError(context),
               ),
             ],
@@ -380,7 +381,7 @@ class _TimelinePanelState extends State<TimelinePanel> {
           mainAxisSize: MainAxisSize.min,
           children: <Widget>[
             Icon(
-              Icons.inbox_rounded,
+              InspectorIcons.inbox,
               size: 40,
               color: inspectorMuted(context),
             ),

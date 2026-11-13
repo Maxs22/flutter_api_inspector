@@ -1,3 +1,4 @@
+import 'package:flutter_api_inspector/src/overlay/icons.dart';
 // One request card in the timeline list (REQ-UI-005, REQ-UI-008).
 //
 // `TimelineRow` is a `StatelessWidget` that renders a single
@@ -55,9 +56,9 @@ class TimelineRow extends StatelessWidget {
       ApiTraceOutcome.cancelled => inspectorMuted(context),
     };
     final iconData = switch (record.outcome) {
-      ApiTraceOutcome.success => Icons.check_circle_rounded,
-      ApiTraceOutcome.error => Icons.error_rounded,
-      ApiTraceOutcome.cancelled => Icons.cancel_rounded,
+      ApiTraceOutcome.success => InspectorIcons.checkCircle,
+      ApiTraceOutcome.error => InspectorIcons.error,
+      ApiTraceOutcome.cancelled => InspectorIcons.cancel,
     };
 
     return Padding(
@@ -99,7 +100,8 @@ class TimelineRow extends StatelessWidget {
                   style: TextStyle(
                       fontSize: 12,
                       color: inspectorMuted(context),
-                      fontFamily: 'monospace',
+                      fontFamily:
+                          'packages/flutter_api_inspector/InspectorMono',
                       height: 1.5),
                   maxLines: 2,
                   overflow: TextOverflow.ellipsis,
@@ -137,7 +139,7 @@ class TimelineRow extends StatelessWidget {
                             fontSize: 12,
                             color: inspectorMuted(context),
                             fontFamily: relativeTimestamp != null
-                                ? 'monospace'
+                                ? 'packages/flutter_api_inspector/InspectorMono'
                                 : null)),
                   ],
                 ),
@@ -206,7 +208,7 @@ class _MethodChip extends StatelessWidget {
               color: color,
               fontSize: 10,
               fontWeight: FontWeight.w700,
-              fontFamily: 'monospace',
+              fontFamily: 'packages/flutter_api_inspector/InspectorMono',
               letterSpacing: 0.3)),
     );
   }

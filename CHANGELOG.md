@@ -4,9 +4,12 @@ All notable changes to `flutter_api_inspector` are documented in this
 file. The format follows [Keep a Changelog](https://keepachangelog.com/)
 and the project adheres to [Semantic Versioning](https://semver.org/).
 
-## Unreleased
+## 0.4.0 — 2026-11-13
 
 ### Fixed
+
+- **Launcher placement**: the untouched FAB recomputes its configured corner
+  when the viewport grows after an initially constrained nested-host layout.
 
 - **Nonmodal inspector**: outside touches reach the app without closing the
   panel; close with X/FAB. Active and queued host SnackBars are preserved,
@@ -24,6 +27,9 @@ and the project adheres to [Semantic Versioning](https://semver.org/).
 
 ### Changed
 
+- **Icons and typography**: bundled Lucide line icons, Inter interface text,
+  and JetBrains Mono technical text replace rounded Material glyphs and
+  platform-dependent typography. Assets load offline and retain host colors.
 - **Breathing Room inspector**: roomier request and route cards, rounded
   touch controls, calmer detail sections, and readable semantic badges in
   light and dark host themes. Capture, configuration, and navigation are unchanged.

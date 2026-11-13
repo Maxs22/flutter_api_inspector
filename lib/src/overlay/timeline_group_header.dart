@@ -1,3 +1,4 @@
+import 'package:flutter_api_inspector/src/overlay/icons.dart';
 // Group header for the timeline panel.
 //
 // A "group" is a sequence of consecutive records whose
@@ -74,7 +75,7 @@ class _TimelineGroupHeaderState extends State<TimelineGroupHeader> {
                 turns: widget.expanded ? 0 : -0.25,
                 duration: const Duration(milliseconds: 150),
                 child: Icon(
-                  Icons.expand_more_rounded,
+                  InspectorIcons.expandMore,
                   size: 18,
                   color: inspectorMuted(context),
                 ),
@@ -82,8 +83,8 @@ class _TimelineGroupHeaderState extends State<TimelineGroupHeader> {
               const SizedBox(width: 8),
               Icon(
                 allOk
-                    ? Icons.check_circle_rounded
-                    : (anyError ? Icons.error_rounded : Icons.bolt_rounded),
+                    ? InspectorIcons.checkCircle
+                    : (anyError ? InspectorIcons.error : InspectorIcons.bolt),
                 size: 14,
                 color: tint,
               ),
@@ -100,14 +101,14 @@ class _TimelineGroupHeaderState extends State<TimelineGroupHeader> {
               const SizedBox(width: 10),
               _stat(
                 context,
-                icon: Icons.schedule_rounded,
+                icon: InspectorIcons.schedule,
                 text: _formatDuration(g.totalDuration),
                 color: inspectorMuted(context),
               ),
               const SizedBox(width: 8),
               _stat(
                 context,
-                icon: Icons.access_time_rounded,
+                icon: InspectorIcons.accessTime,
                 text: _formatTime(g.startedAt),
                 color: inspectorMuted(context),
               ),

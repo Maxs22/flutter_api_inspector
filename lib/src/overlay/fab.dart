@@ -1,9 +1,10 @@
+import 'package:flutter_api_inspector/src/overlay/icons.dart';
 // The debug-only floating action button that the developer taps
 // to open the API timeline panel (REQ-UI-003, REQ-UI-004).
 //
 // `ApiTraceFab` is a thin wrapper around `FloatingActionButton`
 // that:
-// - Renders `Icons.bolt_rounded` as the icon — the same bolt the
+// - Renders `InspectorIcons.bolt` as the icon — the same bolt the
 //   panel header uses, so FAB and panel share one identity.
 //   Colors come from the host scheme's primaryContainer /
 //   onPrimaryContainer pair (contrast-guaranteed by design), and
@@ -66,7 +67,7 @@ class ApiTraceFab extends StatelessWidget {
 
   /// The FAB icon: the same bolt used by the panel header, so
   /// the FAB and the panel read as one surface.
-  static const IconData _icon = Icons.bolt_rounded;
+  static const IconData _icon = InspectorIcons.bolt;
 
   @override
   Widget build(BuildContext context) {

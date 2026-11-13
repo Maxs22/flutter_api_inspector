@@ -1,3 +1,4 @@
+import 'package:flutter_api_inspector/src/overlay/icons.dart';
 import 'dart:async';
 
 import 'package:flutter/material.dart';
@@ -234,7 +235,7 @@ void main() {
     await secondPopup;
     expect(find.byType(ApiTraceDetailScreen), findsOneWidget);
     expect(tester.getTopLeft(find.byType(FloatingActionButton)), fabPosition);
-    await tester.tap(find.byIcon(Icons.arrow_back_rounded));
+    await tester.tap(find.byIcon(InspectorIcons.arrowBack));
     await tester.pumpAndSettle();
     expect(
         tester.widget<EditableText>(find.byType(EditableText)).controller.text,
